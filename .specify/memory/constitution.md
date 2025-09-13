@@ -1,50 +1,137 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# DEVELOPMENT_GUIDELINES.md – Web Development Guidelines for Qoder IDE
 
-## Core Principles
+This file defines best practices, workflows, and safety reminders for development within this project. All contributors — including solo development work — **must follow** these rules to ensure quality, stability, and maintainability.
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+---
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+## 🔒 General Principles
+- **Stability first**: Do not break existing features while adding new ones.
+- **Minimal impact**: Fix bugs in a targeted way, without introducing unrelated changes.
+- **Reversibility**: Always write changes in a way that can be easily rolled back.
+- **Consistency**: Follow the established coding style, patterns, and conventions.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+---
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+## 🛠 Bug Fixing Rules
+1. **Investigate carefully** before changing code. Understand the cause, not just the symptom.
+2. **Avoid collateral damage**: Ensure that bug fixes do not break existing features.
+3. **Write regression tests** whenever possible to prevent the same bug from reappearing.
+4. **Document changes** in commit messages and/or inline comments.
+5. **Do not optimize prematurely** – fix the bug first, optimize later if needed.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+---
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## 🌐 Web Development Best Practices
+- **Accessibility (a11y):** Ensure semantic HTML and ARIA attributes where needed.
+- **Performance:** Optimize assets, use lazy loading, minimize bundle size.
+- **Security:** Validate inputs, escape outputs, and avoid exposing sensitive data.
+- **Responsive design:** Support mobile, tablet, and desktop views.
+- **Code organization:** Use clear folder structures and meaningful naming conventions.
+- **Version control:** Commit small, focused changes with descriptive messages.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+---
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## 📋 Code Review Checklist (Self-Check)
+Before finalizing a change, ask:
+- Does this change fix only what it is supposed to?
+- Did I run all tests (unit, integration, UI if applicable)?
+- Could this unintentionally break another part of the system?
+- Is the code clean, readable, and documented?
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+---
 
-## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
+## 🔄 Step-by-Step Workflow (Solo Developer)
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+As a solo developer, you can streamline the branching strategy. Here’s the recommended approach:
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+### 1. Branching
+- **Default:** Work directly on `main` for **small, safe edits** (typos, text changes, CSS tweaks).
+- **Use a branch** for:
+  - New features that may take time to complete.
+  - Risky bug fixes or refactors that could break existing code.
+  - Experiments or alternative implementations.
+- Branch naming (when used):
+  - `feature/<short-description>`
+  - `bugfix/<short-description>`
+
+### 2. Development
+- Keep changes focused and incremental.
+- Run tests and manually verify functionality before committing.
+- Add or update tests alongside your changes.
+
+### 3. Commit Messages
+- Use descriptive messages:
+  - `feat: add user login form`
+  - `fix: resolve null pointer in dashboard`
+  - `chore: update dependencies`
+
+### 4. Testing
+- Run all tests (unit, integration, UI if applicable).
+- Manually check critical flows.
+- Verify responsive design and cross-browser behavior if relevant.
+
+### 5. Merge (if using branches)
+- Merge only after you’ve verified stability.
+- Delete branches after merge to keep the repo clean.
+
+### 6. Post-Merge
+- Verify that the application runs as expected.
+- Monitor logs and error reports if deployed.
+
+---
+
+## 🚫 Common Mistakes to Avoid
+- ❌ **Hardcoding values** (e.g., API URLs, credentials) → use config files or environment variables.
+- ❌ **Skipping tests** after changes → always run tests, even for small edits.
+- ❌ **Deleting migrations or database files** instead of creating proper migrations.
+- ❌ **Mixing unrelated changes** in one commit → keep commits focused.
+- ❌ **Ignoring accessibility** → always check basic a11y compliance.
+- ❌ **Committing sensitive data** (passwords, keys, tokens).
+- ❌ **Overwriting working code** when fixing bugs instead of understanding the root cause.
+- ❌ **Forgetting backups/branches** before risky refactors.
+
+---
+
+## 🚀 Deployment Checklist
+Before pushing changes live, always verify:
+
+1. **Code & Tests**
+   - All tests (unit, integration, UI) are passing.
+   - No linting or build errors remain.
+
+2. **Environment & Config**
+   - Environment variables are set correctly.
+   - No sensitive data (tokens, API keys) is hardcoded.
+   - Config matches the target environment (staging/production).
+
+3. **Database & Migrations**
+   - All new migrations are applied and tested.
+   - No manual changes were made that bypass migrations.
+
+4. **Performance & Security**
+   - Assets are optimized and minified.
+   - No obvious security vulnerabilities (e.g., open endpoints, missing validations).
+   - HTTPS and CORS policies are correctly configured.
+
+5. **User Experience**
+   - Application is responsive across devices.
+   - Key features work smoothly without regression.
+   - Accessibility is checked (basic keyboard navigation and ARIA roles).
+
+6. **Monitoring & Rollback**
+   - Error logging is enabled (server and client).
+   - Backups exist for database and critical files.
+   - Rollback strategy is ready in case of failure.
+
+---
+
+## ⚠️ Important Reminders
+- Be **careful with every change**.
+- When fixing bugs, **do not ruin another implementation or working feature**.
+- Communicate unclear requirements to yourself clearly (write notes/todos) before implementing.
+- Prioritize **maintainability over cleverness**.
+- Always keep a **backup or branch** before major changes.
+
+---
+
+✅ Following these rules, solo-friendly workflow, and deployment checklist will keep the project stable, maintainable, and scalable.
