@@ -8,7 +8,7 @@
 - [x] T002 [P] Install and configure Supabase client (`@supabase/supabase-js`).
 - [x] T003 [P] Install and configure Stripe client (`stripe`).
 - [x] T004 [P] Set up Jest and React Testing Library for testing.
-- [ ] T005 Create Supabase tables for `clients`, `projects`, `invoices`, and `notifications` based on `data-model.md`.
+- [x] T005 Create Supabase tables for `clients`, `projects`, `invoices`, and `notifications` based on `data-model.md`.
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
 - [ ] T006 [P] Contract test for `POST /api/auth/signup`.
