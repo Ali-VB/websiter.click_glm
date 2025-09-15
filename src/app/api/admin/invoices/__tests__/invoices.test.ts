@@ -1,214 +1,428 @@
-// This is a contract test that defines the expected behavior of the admin invoices API
-// The actual implementation doesn't exist yet, so these tests will fail initially
+import { createMocks } from 'node-mocks-http';
+import { NextRequest } from 'next/server';
+
+// Mock the supabase client
+jest.mock('@/lib/supabase', () => ({
+  supabase: {
+    auth: {
+      getUser: jest.fn(),
+    },
+    from: jest.fn(),
+  },
+}));
+
+// Import after mocking
+import { supabase } from '@/lib/supabase';
+import { GET } from '../route';
 
 describe('GET /api/admin/invoices', () => {
-  it('should return 200 and all invoices data on successful request', async () => {
-    // This test defines the contract for the admin invoices API
-    // When implemented, the API should:
-    // 1. Accept a GET request
-    // 2. Verify user is an admin
-    // 3. Fetch all invoices from Supabase
-    // 4. Return a 200 status with invoices data
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-    // Expected response
-    const expectedResponse = {
-      success: true,
-      message: 'Invoices retrieved successfully',
-      invoices: [
+  it('should return 200 and all invoices data on successful request', async () => {
+    // Mock admin user
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: {
+        user: {
+          id: 'admin-user-id',
+          email: 'admin@example.com',
+        },
+      },
+      error: null,
+    });
+
+    // Mock invoices query
+    const mockSelect = jest.fn().mockReturnThis();
+    const mockRange = jest.fn().mockResolvedValue({
+      data: [
         {
-          id: expect.any(String),
-          projectId: expect.any(String),
-          projectName: 'My Awesome Website',
-          clientName: 'John Doe',
-          clientEmail: 'john@example.com',
-          amount: 1500,
+          id: 'invoice-1',
+          project_id: 'project-1',
+          projects: [{ name: 'My Awesome Website', client_id: 'client-1' }],
+          clients: [{ name: 'John Doe', email: 'john@example.com' }],
           status: 'pending',
-          dueDate: expect.any(String),
-          createdAt: expect.any(String),
-          updatedAt: expect.any(String),
+          total_amount: 1500,
+          created_at: '2023-01-01T00:00:00Z',
+          updated_at: '2023-01-01T00:00:00Z',
         },
         {
-          id: expect.any(String),
-          projectId: expect.any(String),
-          projectName: 'Another Project',
-          clientName: 'Jane Smith',
-          clientEmail: 'jane@example.com',
-          amount: 2500,
+          id: 'invoice-2',
+          project_id: 'project-2',
+          projects: [{ name: 'Another Project', client_id: 'client-2' }],
+          clients: [{ name: 'Jane Smith', email: 'jane@example.com' }],
           status: 'paid',
-          dueDate: expect.any(String),
-          createdAt: expect.any(String),
-          updatedAt: expect.any(String),
+          total_amount: 2500,
+          created_at: '2023-01-02T00:00:00Z',
+          updated_at: '2023-01-02T00:00:00Z',
         },
       ],
-    };
+      error: null,
+      count: 2,
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    (supabase.from as jest.Mock).mockReturnValue({
+      select: mockSelect,
+      range: mockRange,
+    });
+
+    // Create request
+    const { req } = createMocks({
+      method: 'GET',
+      headers: {
+        authorization: 'Bearer valid-token',
+      },
+    });
+
+    const request = new NextRequest(new URL('http://localhost:3000/api/admin/invoices'), {
+      headers: req.headers as HeadersInit,
+    });
+
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.message).toBe('Invoices retrieved successfully');
+    expect(data.invoices).toHaveLength(2);
+    expect(data.invoices[0]).toMatchObject({
+      projectName: 'My Awesome Website',
+      clientName: 'John Doe',
+      clientEmail: 'john@example.com',
+      amount: 1500,
+      status: 'pending',
+    });
   });
 
   it('should return 200 and empty array when no invoices exist', async () => {
-    // This test defines the contract for when no invoices exist
-    // When implemented, the API should:
-    // 1. Accept a GET request
-    // 2. Verify user is an admin
-    // 3. Find no invoices in the database
-    // 4. Return a 200 status with an empty invoices array
+    // Mock admin user
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: {
+        user: {
+          id: 'admin-user-id',
+          email: 'admin@example.com',
+        },
+      },
+      error: null,
+    });
 
-    // Expected response
-    const expectedResponse = {
-      success: true,
-      message: 'No invoices found',
-      invoices: [],
-    };
+    // Mock empty invoices query
+    const mockSelect = jest.fn().mockReturnThis();
+    const mockRange = jest.fn().mockResolvedValue({
+      data: [],
+      error: null,
+      count: 0,
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    (supabase.from as jest.Mock).mockReturnValue({
+      select: mockSelect,
+      range: mockRange,
+    });
+
+    // Create request
+    const { req } = createMocks({
+      method: 'GET',
+      headers: {
+        authorization: 'Bearer valid-token',
+      },
+    });
+
+    const request = new NextRequest(new URL('http://localhost:3000/api/admin/invoices'), {
+      headers: req.headers as HeadersInit,
+    });
+
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.message).toBe('No invoices found');
+    expect(data.invoices).toEqual([]);
   });
 
   it('should return 401 if user is not authenticated', async () => {
-    // This test defines the contract for unauthenticated access
-    // When implemented, the API should:
-    // 1. Check if the user is authenticated
-    // 2. Return a 401 status if not authenticated
+    // Create request without authorization header
+    const { req } = createMocks({
+      method: 'GET',
+    });
 
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'Authentication required',
-    };
+    const request = new NextRequest(new URL('http://localhost:3000/api/admin/invoices'), {
+      headers: req.headers as HeadersInit,
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(data.success).toBe(false);
+    expect(data.message).toBe('Authentication required');
   });
 
   it('should return 403 if user is not an admin', async () => {
-    // This test defines the contract for non-admin access
-    // When implemented, the API should:
-    // 1. Check if the user has admin privileges
-    // 2. Return a 403 status if not an admin
+    // Mock non-admin user
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: {
+        user: {
+          id: 'user-id',
+          email: 'user@example.com',
+        },
+      },
+      error: null,
+    });
 
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'Admin access required',
-    };
+    // Create request
+    const { req } = createMocks({
+      method: 'GET',
+      headers: {
+        authorization: 'Bearer valid-token',
+      },
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    const request = new NextRequest(new URL('http://localhost:3000/api/admin/invoices'), {
+      headers: req.headers as HeadersInit,
+    });
+
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(data.success).toBe(false);
+    expect(data.message).toBe('Admin access required');
   });
 
   it('should support pagination with limit and offset parameters', async () => {
-    // This test defines the contract for pagination
-    // When implemented, the API should:
-    // 1. Accept limit and offset query parameters
-    // 2. Return a paginated list of invoices
-    // 3. Include pagination metadata in response
+    // Mock admin user
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: {
+        user: {
+          id: 'admin-user-id',
+          email: 'admin@example.com',
+        },
+      },
+      error: null,
+    });
 
-    // Expected response
-    const expectedResponse = {
-      success: true,
-      message: 'Invoices retrieved successfully',
-      invoices: [
+    // Mock invoices query with pagination
+    const mockSelect = jest.fn().mockReturnThis();
+    const mockRange = jest.fn().mockResolvedValue({
+      data: [
         {
-          id: expect.any(String),
-          projectId: expect.any(String),
-          projectName: 'My Awesome Website',
-          clientName: 'John Doe',
-          clientEmail: 'john@example.com',
-          amount: 1500,
+          id: 'invoice-1',
+          project_id: 'project-1',
+          projects: [{ name: 'My Awesome Website', client_id: 'client-1' }],
+          clients: [{ name: 'John Doe', email: 'john@example.com' }],
           status: 'pending',
-          dueDate: expect.any(String),
-          createdAt: expect.any(String),
-          updatedAt: expect.any(String),
+          total_amount: 1500,
+          created_at: '2023-01-01T00:00:00Z',
+          updated_at: '2023-01-01T00:00:00Z',
         },
       ],
-      pagination: {
-        total: 5,
-        limit: 1,
-        offset: 0,
-        hasNextPage: true,
-      },
-    };
+      error: null,
+      count: 5,
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    (supabase.from as jest.Mock).mockReturnValue({
+      select: mockSelect,
+      range: mockRange,
+    });
+
+    // Create request with pagination parameters
+    const { req } = createMocks({
+      method: 'GET',
+      headers: {
+        authorization: 'Bearer valid-token',
+      },
+      query: {
+        limit: '1',
+        offset: '0',
+      },
+    });
+
+    const request = new NextRequest(new URL('http://localhost:3000/api/admin/invoices?limit=1&offset=0'), {
+      headers: req.headers as HeadersInit,
+    });
+
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.invoices).toHaveLength(1);
+    expect(data.pagination).toEqual({
+      total: 5,
+      limit: 1,
+      offset: 0,
+      hasNextPage: true,
+    });
   });
 
   it('should support filtering by status', async () => {
-    // This test defines the contract for status filtering
-    // When implemented, the API should:
-    // 1. Accept a status query parameter
-    // 2. Filter invoices by the specified status
-    // 3. Return filtered invoices
+    // Mock admin user
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: {
+        user: {
+          id: 'admin-user-id',
+          email: 'admin@example.com',
+        },
+      },
+      error: null,
+    });
 
-    // Expected response
-    const expectedResponse = {
-      success: true,
-      message: 'Invoices retrieved successfully',
-      invoices: [
+    // Mock invoices query with status filter
+    const mockSelect = jest.fn().mockReturnThis();
+    const mockEq = jest.fn().mockReturnThis();
+    const mockRange = jest.fn().mockResolvedValue({
+      data: [
         {
-          id: expect.any(String),
-          projectId: expect.any(String),
-          projectName: 'My Awesome Website',
-          clientName: 'John Doe',
-          clientEmail: 'john@example.com',
-          amount: 1500,
+          id: 'invoice-1',
+          project_id: 'project-1',
+          projects: [{ name: 'My Awesome Website', client_id: 'client-1' }],
+          clients: [{ name: 'John Doe', email: 'john@example.com' }],
           status: 'pending',
-          dueDate: expect.any(String),
-          createdAt: expect.any(String),
-          updatedAt: expect.any(String),
+          total_amount: 1500,
+          created_at: '2023-01-01T00:00:00Z',
+          updated_at: '2023-01-01T00:00:00Z',
         },
       ],
-    };
+      error: null,
+      count: 1,
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    (supabase.from as jest.Mock).mockReturnValue({
+      select: mockSelect,
+      eq: mockEq,
+      range: mockRange,
+    });
+
+    // Create request with status filter
+    const { req } = createMocks({
+      method: 'GET',
+      headers: {
+        authorization: 'Bearer valid-token',
+      },
+      query: {
+        status: 'pending',
+      },
+    });
+
+    const request = new NextRequest(new URL('http://localhost:3000/api/admin/invoices?status=pending'), {
+      headers: req.headers as HeadersInit,
+    });
+
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.invoices).toHaveLength(1);
+    expect(data.invoices[0].status).toBe('pending');
+    expect(mockEq).toHaveBeenCalledWith('status', 'pending');
   });
 
   it('should support filtering by client', async () => {
-    // This test defines the contract for client filtering
-    // When implemented, the API should:
-    // 1. Accept a clientId query parameter
-    // 2. Filter invoices by the specified client
-    // 3. Return filtered invoices
+    // Mock admin user
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: {
+        user: {
+          id: 'admin-user-id',
+          email: 'admin@example.com',
+        },
+      },
+      error: null,
+    });
 
-    // Expected response
-    const expectedResponse = {
-      success: true,
-      message: 'Invoices retrieved successfully',
-      invoices: [
+    // Mock invoices query with client filter
+    const mockSelect = jest.fn().mockReturnThis();
+    const mockEq = jest.fn().mockReturnThis();
+    const mockRange = jest.fn().mockResolvedValue({
+      data: [
         {
-          id: expect.any(String),
-          projectId: expect.any(String),
-          projectName: 'My Awesome Website',
-          clientName: 'John Doe',
-          clientEmail: 'john@example.com',
-          amount: 1500,
+          id: 'invoice-1',
+          project_id: 'project-1',
+          projects: [{ name: 'My Awesome Website', client_id: 'client-1' }],
+          clients: [{ name: 'John Doe', email: 'john@example.com' }],
           status: 'pending',
-          dueDate: expect.any(String),
-          createdAt: expect.any(String),
-          updatedAt: expect.any(String),
+          total_amount: 1500,
+          created_at: '2023-01-01T00:00:00Z',
+          updated_at: '2023-01-01T00:00:00Z',
         },
       ],
-    };
+      error: null,
+      count: 1,
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    (supabase.from as jest.Mock).mockReturnValue({
+      select: mockSelect,
+      eq: mockEq,
+      range: mockRange,
+    });
+
+    // Create request with client filter
+    const { req } = createMocks({
+      method: 'GET',
+      headers: {
+        authorization: 'Bearer valid-token',
+      },
+      query: {
+        clientId: 'client-1',
+      },
+    });
+
+    const request = new NextRequest(new URL('http://localhost:3000/api/admin/invoices?clientId=client-1'), {
+      headers: req.headers as HeadersInit,
+    });
+
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.invoices).toHaveLength(1);
+    expect(mockEq).toHaveBeenCalledWith('projects.client_id', 'client-1');
   });
 
   it('should return 500 on server error', async () => {
-    // This test defines the contract for server errors
-    // When implemented, the API should:
-    // 1. Handle unexpected errors gracefully
-    // 2. Return a 500 status with a generic error message
+    // Mock admin user
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: {
+        user: {
+          id: 'admin-user-id',
+          email: 'admin@example.com',
+        },
+      },
+      error: null,
+    });
 
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'An error occurred while retrieving invoices',
-    };
+    // Mock server error
+    const mockSelect = jest.fn().mockReturnThis();
+    const mockRange = jest.fn().mockResolvedValue({
+      data: null,
+      error: { message: 'Database connection failed' },
+      count: null,
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    (supabase.from as jest.Mock).mockReturnValue({
+      select: mockSelect,
+      range: mockRange,
+    });
+
+    // Create request
+    const { req } = createMocks({
+      method: 'GET',
+      headers: {
+        authorization: 'Bearer valid-token',
+      },
+    });
+
+    const request = new NextRequest(new URL('http://localhost:3000/api/admin/invoices'), {
+      headers: req.headers as HeadersInit,
+    });
+
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.success).toBe(false);
+    expect(data.message).toBe('An error occurred while retrieving invoices');
   });
 });
