@@ -43,13 +43,7 @@ jest.mock('next/server', () => ({
     constructor(input, init) {
       this.url = input;
       this.method = init?.method || 'GET';
-      this.headers = {
-        get: (key) => {
-          if (key === 'host') return 'localhost';
-          if (key === 'x-forwarded-proto') return 'http';
-          return null;
-        }
-      };
+      this.headers = new Headers(init?.headers);
       this.json = () => Promise.resolve(init?.body ? JSON.parse(init.body) : {});
     }
   },
@@ -60,7 +54,6 @@ jest.mock('next/server', () => ({
     }
     static json(data, init) {
       const body = JSON.stringify(data);
-      // This is a simplified mock. In a real scenario, you'd return a proper Response-like object.
       return {
         status: init?.status || 200,
         json: () => Promise.resolve(data),

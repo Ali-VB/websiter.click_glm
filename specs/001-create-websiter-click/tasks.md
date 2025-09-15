@@ -24,7 +24,7 @@
 
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
 - [x] T016 Implement `POST /api/auth/signup` API route.
-- [ ] T017 Implement `POST /api/auth/login` API route.
+- [x] T017 Implement `POST /api/auth/login` API route.
 - [ ] T018 Implement `POST /api/onboarding` API route.
 - [ ] T019 Implement `GET /api/invoices` API route.
 - [ ] T020 Implement `GET /api/admin/invoices` API route.

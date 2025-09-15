@@ -1,157 +1,265 @@
-// This is a contract test that defines the expected behavior of the onboarding API
-// The actual implementation doesn't exist yet, so these tests will fail initially
+import { NextRequest } from 'next/server';
+import { POST } from '../route';
+
+// Mock the supabase module before importing
+jest.mock('@/lib/supabase', () => ({
+  supabase: {
+    auth: {
+      getUser: jest.fn(),
+    },
+    from: jest.fn(),
+  },
+}));
+
+import { supabase } from '@/lib/supabase';
 
 describe('POST /api/onboarding', () => {
+  beforeEach(() => {
+    // Reset mocks
+    jest.clearAllMocks();
+  });
+
   it('should return 201 and project data on successful onboarding', async () => {
-    // This test defines the contract for the onboarding API
-    // When implemented, the API should:
-    // 1. Accept a POST request with project details
-    // 2. Validate the input
-    // 3. Create a new project in Supabase
-    // 4. Return a 201 status with project data
-    
-    const requestBody = {
-      projectName: 'My Awesome Website',
-      projectDescription: 'A website for my small business',
-      businessType: 'restaurant',
-      targetAudience: 'local customers',
-      features: ['menu', 'gallery', 'contact form'],
-      colorScheme: 'warm',
-      logoUrl: 'https://example.com/logo.png',
-      additionalNotes: 'Need mobile responsive design',
+    // Mock authentication
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: { user: { id: 'user-id-123' } },
+      error: null,
+    });
+
+    // Mock project creation
+    const mockProjectData = {
+      id: 'project-id-456',
+      client_id: 'user-id-123',
+      status: 'pending',
+      website_type: 'restaurant',
+      design_preferences: { colorScheme: 'warm', logoUrl: 'https://example.com/logo.png' },
+      add_ons: {
+        features: ['menu', 'gallery', 'contact form'],
+        targetAudience: 'local customers',
+        additionalNotes: 'Need mobile responsive design'
+      },
+      created_at: '2023-01-01T00:00:00.000Z',
+      updated_at: '2023-01-01T00:00:00.000Z',
     };
 
-    // Expected response
-    const expectedResponse = {
-      success: true,
-      message: 'Project created successfully',
-      project: {
-        id: expect.any(String),
-        name: 'My Awesome Website',
-        description: 'A website for my small business',
+    (supabase.from as jest.Mock).mockReturnValue({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: mockProjectData,
+            error: null,
+          }),
+        }),
+      }),
+    });
+
+    // Create a mock request
+    const request = new NextRequest('http://localhost:3000/api/onboarding', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer valid-token',
+      },
+      body: JSON.stringify({
+        projectName: 'My Awesome Website',
+        projectDescription: 'A website for my small business',
         businessType: 'restaurant',
         targetAudience: 'local customers',
         features: ['menu', 'gallery', 'contact form'],
         colorScheme: 'warm',
         logoUrl: 'https://example.com/logo.png',
         additionalNotes: 'Need mobile responsive design',
-        status: 'pending',
-        createdAt: expect.any(String),
-        updatedAt: expect.any(String),
-      },
-    };
+      }),
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    // Call the API
+    const response = await POST(request);
+    const data = await response.json();
+
+    // Verify the response
+    expect(response.status).toBe(201);
+    expect(data.success).toBe(true);
+    expect(data.message).toBe('Project created successfully');
+    expect(data.project).toEqual({
+      id: 'project-id-456',
+      name: 'My Awesome Website',
+      description: 'A website for my small business',
+      businessType: 'restaurant',
+      targetAudience: 'local customers',
+      features: ['menu', 'gallery', 'contact form'],
+      colorScheme: 'warm',
+      logoUrl: 'https://example.com/logo.png',
+      additionalNotes: 'Need mobile responsive design',
+      status: 'pending',
+      createdAt: '2023-01-01T00:00:00.000Z',
+      updatedAt: '2023-01-01T00:00:00.000Z',
+    });
   });
 
   it('should return 400 if required fields are missing', async () => {
-    // This test defines the contract for missing required fields
-    // When implemented, the API should:
-    // 1. Validate that projectName, projectDescription, and businessType are provided
-    // 2. Return a 400 status with an error message if any are missing
-    
-    const requestBody = {
-      projectName: 'My Awesome Website',
-      // Missing projectDescription and businessType
-    };
+    // Mock authentication for this test
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: { user: { id: 'user-id-123' } },
+      error: null,
+    });
 
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'Project name, description, and business type are required',
-    };
+    // Create a mock request with missing required fields
+    const request = new NextRequest('http://localhost:3000/api/onboarding', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer valid-token',
+      },
+      body: JSON.stringify({
+        projectName: 'My Awesome Website',
+        // Missing projectDescription and businessType
+      }),
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    // Call the API
+    const response = await POST(request);
+    const data = await response.json();
+
+    // Verify the response
+    expect(response.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.message).toBe('Project name, description, and business type are required');
   });
 
   it('should return 400 if businessType is invalid', async () => {
-    // This test defines the contract for invalid business type
-    // When implemented, the API should:
-    // 1. Validate that businessType is one of the allowed values
-    // 2. Return a 400 status with an error message if invalid
-    
-    const requestBody = {
-      projectName: 'My Awesome Website',
-      projectDescription: 'A website for my small business',
-      businessType: 'invalid-type', // Invalid type
-    };
+    // Mock authentication for this test
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: { user: { id: 'user-id-123' } },
+      error: null,
+    });
 
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'Invalid business type',
-    };
+    // Create a mock request with invalid business type
+    const request = new NextRequest('http://localhost:3000/api/onboarding', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer valid-token',
+      },
+      body: JSON.stringify({
+        projectName: 'My Awesome Website',
+        projectDescription: 'A website for my small business',
+        businessType: 'invalid-type', // Invalid type
+      }),
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    // Call the API
+    const response = await POST(request);
+    const data = await response.json();
+
+    // Verify the response
+    expect(response.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.message).toBe('Invalid business type');
   });
 
   it('should return 400 if features array contains invalid values', async () => {
-    // This test defines the contract for invalid features
-    // When implemented, the API should:
-    // 1. Validate that all features are from the allowed list
-    // 2. Return a 400 status with an error message if any are invalid
-    
-    const requestBody = {
-      projectName: 'My Awesome Website',
-      projectDescription: 'A website for my small business',
-      businessType: 'restaurant',
-      features: ['menu', 'invalid-feature'], // Invalid feature
-    };
+    // Mock authentication for this test
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: { user: { id: 'user-id-123' } },
+      error: null,
+    });
 
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'Invalid feature(s) in features array',
-    };
+    // Create a mock request with invalid features
+    const request = new NextRequest('http://localhost:3000/api/onboarding', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer valid-token',
+      },
+      body: JSON.stringify({
+        projectName: 'My Awesome Website',
+        projectDescription: 'A website for my small business',
+        businessType: 'restaurant',
+        features: ['menu', 'invalid-feature'], // Invalid feature
+      }),
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    // Call the API
+    const response = await POST(request);
+    const data = await response.json();
+
+    // Verify the response
+    expect(response.status).toBe(400);
+    expect(data.success).toBe(false);
+    expect(data.message).toBe('Invalid feature(s) in features array');
   });
 
   it('should return 401 if user is not authenticated', async () => {
-    // This test defines the contract for unauthenticated access
-    // When implemented, the API should:
-    // 1. Check if the user is authenticated
-    // 2. Return a 401 status if not authenticated
-    
-    const requestBody = {
-      projectName: 'My Awesome Website',
-      projectDescription: 'A website for my small business',
-      businessType: 'restaurant',
-    };
+    // Mock authentication failure
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: { user: null },
+      error: { message: 'Invalid token' },
+    });
 
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'Authentication required',
-    };
+    // Create a mock request
+    const request = new NextRequest('http://localhost:3000/api/onboarding', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer invalid-token',
+      },
+      body: JSON.stringify({
+        projectName: 'My Awesome Website',
+        projectDescription: 'A website for my small business',
+        businessType: 'restaurant',
+      }),
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    // Call the API
+    const response = await POST(request);
+    const data = await response.json();
+
+    // Verify the response
+    expect(response.status).toBe(401);
+    expect(data.success).toBe(false);
+    expect(data.message).toBe('Authentication required');
   });
 
   it('should return 500 on server error', async () => {
-    // This test defines the contract for server errors
-    // When implemented, the API should:
-    // 1. Handle unexpected errors gracefully
-    // 2. Return a 500 status with a generic error message
-    
-    const requestBody = {
-      projectName: 'My Awesome Website',
-      projectDescription: 'A website for my small business',
-      businessType: 'restaurant',
-    };
+    // Mock authentication
+    (supabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: { user: { id: 'user-id-123' } },
+      error: null,
+    });
 
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'An error occurred during project creation',
-    };
+    // Mock database error
+    (supabase.from as jest.Mock).mockReturnValue({
+      insert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: null,
+            error: { message: 'Database error' },
+          }),
+        }),
+      }),
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    // Create a mock request
+    const request = new NextRequest('http://localhost:3000/api/onboarding', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer valid-token',
+      },
+      body: JSON.stringify({
+        projectName: 'My Awesome Website',
+        projectDescription: 'A website for my small business',
+        businessType: 'restaurant',
+      }),
+    });
+
+    // Call the API
+    const response = await POST(request);
+    const data = await response.json();
+
+    // Verify the response
+    expect(response.status).toBe(500);
+    expect(data.success).toBe(false);
+    expect(data.message).toBe('An error occurred during project creation');
   });
 });
