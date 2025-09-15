@@ -5,7 +5,7 @@
 
 ## Phase 3.1: Setup
 - [x] T001 [P] Install and configure shadcn/ui.
-- [ ] T002 [P] Install and configure Supabase client (`@supabase/supabase-js`).
+- [x] T002 [P] Install and configure Supabase client (`@supabase/supabase-js`).
 - [ ] T003 [P] Install and configure Stripe client (`stripe`).
 - [ ] T004 [P] Set up Jest and React Testing Library for testing.
 - [ ] T005 Create Supabase tables for `clients`, `projects`, `invoices`, and `notifications` based on `data-model.md`.
