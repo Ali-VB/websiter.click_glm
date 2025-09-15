@@ -4,7 +4,7 @@
 **Prerequisites**: plan.md, research.md, data-model.md, contracts/
 
 ## Phase 3.1: Setup
-- [ ] T001 [P] Install and configure shadcn/ui.
+- [x] T001 [P] Install and configure shadcn/ui.
 - [ ] T002 [P] Install and configure Supabase client (`@supabase/supabase-js`).
 - [ ] T003 [P] Install and configure Stripe client (`stripe`).
 - [ ] T004 [P] Set up Jest and React Testing Library for testing.
