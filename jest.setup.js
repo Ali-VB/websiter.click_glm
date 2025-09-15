@@ -36,3 +36,41 @@ jest.mock('next/image', () => ({
     return <img {...props} />
   },
 }))
+
+// Mock Next.js server components
+jest.mock('next/server', () => ({
+  NextRequest: class MockNextRequest {
+    constructor(input, init) {
+      this.url = input;
+      this.method = init?.method || 'GET';
+      this.headers = {
+        get: (key) => {
+          if (key === 'host') return 'localhost';
+          if (key === 'x-forwarded-proto') return 'http';
+          return null;
+        }
+      };
+      this.json = () => Promise.resolve(init?.body ? JSON.parse(init.body) : {});
+    }
+  },
+  NextResponse: class MockNextResponse {
+    constructor(body, init) {
+      this.status = init?.status || 200;
+      this.body = body;
+    }
+    static json(data, init) {
+      const body = JSON.stringify(data);
+      // This is a simplified mock. In a real scenario, you'd return a proper Response-like object.
+      return {
+        status: init?.status || 200,
+        json: () => Promise.resolve(data),
+      };
+    }
+    static redirect(url, init) {
+        return {
+            status: init?.status || 302,
+            headers: { location: url }
+        }
+    }
+  },
+}));
