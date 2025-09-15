@@ -11,7 +11,7 @@
 - [x] T005 Create Supabase tables for `clients`, `projects`, `invoices`, and `notifications` based on `data-model.md`.
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
-- [ ] T006 [P] Contract test for `POST /api/auth/signup`.
+- [x] T006 [P] Contract test for `POST /api/auth/signup`.
 - [ ] T007 [P] Contract test for `POST /api/auth/login`.
 - [ ] T008 [P] Contract test for `POST /api/onboarding`.
 - [ ] T009 [P] Contract test for `GET /api/invoices`.
