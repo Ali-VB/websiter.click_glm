@@ -12,15 +12,15 @@
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
 - [x] T006 [P] Contract test for `POST /api/auth/signup`.
-- [ ] T007 [P] Contract test for `POST /api/auth/login`.
-- [ ] T008 [P] Contract test for `POST /api/onboarding`.
-- [ ] T009 [P] Contract test for `GET /api/invoices`.
-- [ ] T010 [P] Contract test for `GET /api/admin/invoices`.
-- [ ] T011 [P] Contract test for `PUT /api/admin/invoices/:id`.
-- [ ] T012 [P] Contract test for `POST /api/stripe/checkout-session`.
-- [ ] T013 [P] Contract test for `POST /api/stripe/webhook`.
-- [ ] T014 [P] Integration test for the client onboarding flow.
-- [ ] T015 [P] Integration test for the admin invoice approval flow.
+- [x] T007 [P] Contract test for `POST /api/auth/login`.
+- [x] T008 [P] Contract test for `POST /api/onboarding`.
+- [x] T009 [P] Contract test for `GET /api/invoices`.
+- [x] T010 [P] Contract test for `GET /api/admin/invoices`.
+- [x] T011 [P] Contract test for `PUT /api/admin/invoices/:id`.
+- [x] T012 [P] Contract test for `POST /api/stripe/checkout-session`.
+- [x] T013 [P] Contract test for `POST /api/stripe/webhook`.
+- [x] T014 [P] Integration test for the client onboarding flow.
+- [x] T015 [P] Integration test for the admin invoice approval flow.
 
 ## Phase 3.3: Core Implementation (ONLY after tests are failing)
 - [ ] T016 Implement `POST /api/auth/signup` API route.

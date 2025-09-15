@@ -1,142 +1,196 @@
-// This is a contract test that defines the expected behavior of the signup API
-// The actual implementation doesn't exist yet, so these tests will fail initially
+import { createMocks } from 'node-mocks-http';
+import { NextRequest } from 'next/server';
+import { POST } from '../signup/route';
+import { supabase } from '@/lib/supabase';
+
+// Mock the supabase client
+jest.mock('@/lib/supabase');
+
+// Mock Next.js server components
+jest.mock('next/server', () => ({
+  NextRequest: jest.fn(),
+  NextResponse: {
+    json: jest.fn().mockImplementation((body, init) => ({
+      status: init?.status || 200,
+      json: () => Promise.resolve(body),
+    })),
+  },
+}));
 
 describe('POST /api/auth/signup', () => {
-  it('should return 201 and user data on successful signup', async () => {
-    // This test defines the contract for the signup API
-    // When implemented, the API should:
-    // 1. Accept a POST request with name, email, and password
-    // 2. Validate the input
-    // 3. Create a new user in Supabase
-    // 4. Return a 201 status with user data
-    
-    const requestBody = {
-      name: 'Test User',
-      email: 'test@example.com',
-      password: 'password123',
-    };
+  beforeEach(() => {
+    // Clear all mocks before each test
+    jest.clearAllMocks();
+  });
 
-    // Expected response
-    const expectedResponse = {
+  it('should return 201 and user data on successful signup', async () => {
+    // Create a mock NextRequest
+    const request = {
+      json: () => Promise.resolve({
+        name: 'Test User',
+        email: 'test@example.com',
+        password: 'password123',
+      }),
+    } as unknown as NextRequest;
+
+    // Mock successful auth signup
+    (supabase.auth.signUp as jest.Mock).mockResolvedValue({
+      data: { user: { id: 'user-id-123' } },
+      error: null,
+    });
+
+    // Mock no existing user
+    (supabase.from as jest.Mock).mockReturnValueOnce({
+      select: jest.fn().mockReturnValueOnce({
+        eq: jest.fn().mockReturnValueOnce({
+          single: jest.fn().mockResolvedValue({ data: null }),
+        }),
+      }),
+    });
+
+    // Mock successful user creation
+    (supabase.from as jest.Mock).mockReturnValueOnce({
+      insert: jest.fn().mockReturnValueOnce({
+        select: jest.fn().mockReturnValueOnce({
+          single: jest.fn().mockResolvedValue({
+            data: {
+              id: 'user-id-123',
+              name: 'Test User',
+              email: 'test@example.com',
+            },
+          }),
+        }),
+      }),
+    });
+
+    const res = await POST(request);
+    const data = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(data).toEqual({
       success: true,
       message: 'User created successfully',
       user: {
-        id: expect.any(String),
+        id: 'user-id-123',
         email: 'test@example.com',
         name: 'Test User',
       },
-    };
-
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    });
   });
 
   it('should return 400 if required fields are missing', async () => {
-    // This test defines the contract for missing required fields
-    // When implemented, the API should:
-    // 1. Validate that name, email, and password are provided
-    // 2. Return a 400 status with an error message if any are missing
-    
-    const requestBody = {
-      name: 'Test User',
-      // Missing email and password
-    };
+    // Create a mock NextRequest
+    const request = {
+      json: () => Promise.resolve({
+        name: 'Test User',
+        // Missing email and password
+      }),
+    } as unknown as NextRequest;
 
-    // Expected response
-    const expectedResponse = {
+    const res = await POST(request);
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data).toEqual({
       success: false,
       message: 'Name, email, and password are required',
-    };
-
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    });
   });
 
   it('should return 400 if email is invalid', async () => {
-    // This test defines the contract for invalid email format
-    // When implemented, the API should:
-    // 1. Validate the email format
-    // 2. Return a 400 status with an error message if invalid
-    
-    const requestBody = {
-      name: 'Test User',
-      email: 'invalid-email',
-      password: 'password123',
-    };
+    // Create a mock NextRequest
+    const request = {
+      json: () => Promise.resolve({
+        name: 'Test User',
+        email: 'invalid-email',
+        password: 'password123',
+      }),
+    } as unknown as NextRequest;
 
-    // Expected response
-    const expectedResponse = {
+    const res = await POST(request);
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data).toEqual({
       success: false,
       message: 'Invalid email format',
-    };
-
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    });
   });
 
   it('should return 400 if password is too short', async () => {
-    // This test defines the contract for password length validation
-    // When implemented, the API should:
-    // 1. Validate that password is at least 8 characters
-    // 2. Return a 400 status with an error message if too short
-    
-    const requestBody = {
-      name: 'Test User',
-      email: 'test@example.com',
-      password: '123', // Too short
-    };
+    // Create a mock NextRequest
+    const request = {
+      json: () => Promise.resolve({
+        name: 'Test User',
+        email: 'test@example.com',
+        password: '123', // Too short
+      }),
+    } as unknown as NextRequest;
 
-    // Expected response
-    const expectedResponse = {
+    const res = await POST(request);
+    const data = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(data).toEqual({
       success: false,
       message: 'Password must be at least 8 characters',
-    };
-
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    });
   });
 
   it('should return 409 if email already exists', async () => {
-    // This test defines the contract for duplicate email
-    // When implemented, the API should:
-    // 1. Check if email is already registered
-    // 2. Return a 409 status with an error message if duplicate
-    
-    const requestBody = {
-      name: 'Test User',
-      email: 'existing@example.com',
-      password: 'password123',
-    };
+    // Create a mock NextRequest
+    const request = {
+      json: () => Promise.resolve({
+        name: 'Test User',
+        email: 'existing@example.com',
+        password: 'password123',
+      }),
+    } as unknown as NextRequest;
 
-    // Expected response
-    const expectedResponse = {
+    // Mock existing user
+    (supabase.from as jest.Mock).mockReturnValueOnce({
+      select: jest.fn().mockReturnValueOnce({
+        eq: jest.fn().mockReturnValueOnce({
+          single: jest.fn().mockResolvedValue({
+            data: { id: 'existing-user-id' },
+          }),
+        }),
+      }),
+    });
+
+    const res = await POST(request);
+    const data = await res.json();
+
+    expect(res.status).toBe(409);
+    expect(data).toEqual({
       success: false,
       message: 'Email already registered',
-    };
-
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    });
   });
 
   it('should return 500 on server error', async () => {
-    // This test defines the contract for server errors
-    // When implemented, the API should:
-    // 1. Handle unexpected errors gracefully
-    // 2. Return a 500 status with a generic error message
-    
-    const requestBody = {
-      name: 'Test User',
-      email: 'test@example.com',
-      password: 'password123',
-    };
+    // Create a mock NextRequest
+    const request = {
+      json: () => Promise.resolve({
+        name: 'Test User',
+        email: 'test@example.com',
+        password: 'password123',
+      }),
+    } as unknown as NextRequest;
 
-    // Expected response
-    const expectedResponse = {
+    // Mock auth error
+    (supabase.auth.signUp as jest.Mock).mockResolvedValue({
+      data: { user: null },
+      error: { message: 'Auth error' },
+    });
+
+    const res = await POST(request);
+    const data = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(data).toEqual({
       success: false,
       message: 'An error occurred during signup',
-    };
-
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    });
   });
 });
