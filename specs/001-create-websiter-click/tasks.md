@@ -60,8 +60,8 @@
 - [x] T044: Build System Administration view (stats, config, debug tools).
 
 ## Phase 3.7: Integration
-- [ ] T045: Connect Auth pages (Signup/Login) to Supabase Auth & implement email verification.
-- [ ] T046: Connect Onboarding Wizard state to the backend API.
+- [x] T045: Connect Auth pages (Signup/Login) to Supabase Auth & implement email verification.
+- [x] T046: Connect Onboarding Wizard state to the backend API.
 - [ ] T047: Connect Asset Upload interface to Supabase Storage.
 - [ ] T048: Connect the full Support Ticket system to the database.
 - [ ] T049: Connect the public Contact Form to the `contact_submissions` table.

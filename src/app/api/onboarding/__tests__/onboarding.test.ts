@@ -26,27 +26,44 @@ describe('POST /api/onboarding', () => {
       error: null,
     });
 
-    // Mock project creation
-    const mockProjectData = {
-      id: 'project-id-456',
-      client_id: 'user-id-123',
-      status: 'pending',
-      website_type: 'restaurant',
-      design_preferences: { colorScheme: 'warm', logoUrl: 'https://example.com/logo.png' },
-      add_ons: {
-        features: ['menu', 'gallery', 'contact form'],
-        targetAudience: 'local customers',
-        additionalNotes: 'Need mobile responsive design'
-      },
-      created_at: '2023-01-01T00:00:00.000Z',
-      updated_at: '2023-01-01T00:00:00.000Z',
-    };
-
+    // Mock client creation/update
     (supabase.from as jest.Mock).mockReturnValue({
+      upsert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: {
+              id: 'user-id-123',
+              email: 'test@example.com',
+              name: 'test',
+              created_at: '2023-01-01T00:00:00.000Z'
+            },
+            error: null,
+          }),
+        }),
+      }),
       insert: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           single: jest.fn().mockResolvedValue({
-            data: mockProjectData,
+            data: {
+              id: 'project-id-456',
+              client_id: 'user-id-123',
+              status: 'pending',
+              website_type: 'business',
+              design_preferences: {
+                designStyle: 'modern',
+                referenceWebsites: 'example.com',
+                colorScheme: 'cool',
+                layoutPreferences: 'simple'
+              },
+              add_ons: ['contact-form', 'photo-gallery'],
+              domain_info: {
+                domainOption: 'com',
+                hostingOption: 'basic'
+              },
+              maintenance_plan: 'basic',
+              created_at: '2023-01-01T00:00:00.000Z',
+              updated_at: '2023-01-01T00:00:00.000Z',
+            },
             error: null,
           }),
         }),
@@ -61,14 +78,17 @@ describe('POST /api/onboarding', () => {
         'Authorization': 'Bearer valid-token',
       },
       body: JSON.stringify({
-        projectName: 'My Awesome Website',
-        projectDescription: 'A website for my small business',
-        businessType: 'restaurant',
-        targetAudience: 'local customers',
-        features: ['menu', 'gallery', 'contact form'],
-        colorScheme: 'warm',
-        logoUrl: 'https://example.com/logo.png',
-        additionalNotes: 'Need mobile responsive design',
+        selectedPackage: 'business',
+        addOns: ['contact-form', 'photo-gallery'],
+        designStyle: 'modern',
+        referenceWebsites: 'example.com',
+        colorScheme: 'cool',
+        layoutPreferences: 'simple',
+        domainOption: 'com',
+        hostingOption: 'basic',
+        maintenancePlan: 'basic',
+        email: 'test@example.com',
+        password: 'password123'
       }),
     });
 
@@ -82,14 +102,16 @@ describe('POST /api/onboarding', () => {
     expect(data.message).toBe('Project created successfully');
     expect(data.project).toEqual({
       id: 'project-id-456',
-      name: 'My Awesome Website',
-      description: 'A website for my small business',
-      businessType: 'restaurant',
-      targetAudience: 'local customers',
-      features: ['menu', 'gallery', 'contact form'],
-      colorScheme: 'warm',
-      logoUrl: 'https://example.com/logo.png',
-      additionalNotes: 'Need mobile responsive design',
+      selectedPackage: 'business',
+      addOns: ['contact-form', 'photo-gallery'],
+      designStyle: 'modern',
+      referenceWebsites: 'example.com',
+      colorScheme: 'cool',
+      layoutPreferences: 'simple',
+      domainOption: 'com',
+      hostingOption: 'basic',
+      maintenancePlan: 'basic',
+      email: 'test@example.com',
       status: 'pending',
       createdAt: '2023-01-01T00:00:00.000Z',
       updatedAt: '2023-01-01T00:00:00.000Z',
@@ -111,8 +133,8 @@ describe('POST /api/onboarding', () => {
         'Authorization': 'Bearer valid-token',
       },
       body: JSON.stringify({
-        projectName: 'My Awesome Website',
-        // Missing projectDescription and businessType
+        selectedPackage: 'business',
+        // Missing other required fields
       }),
     });
 
@@ -123,17 +145,17 @@ describe('POST /api/onboarding', () => {
     // Verify the response
     expect(response.status).toBe(400);
     expect(data.success).toBe(false);
-    expect(data.message).toBe('Project name, description, and business type are required');
+    expect(data.message).toBe('All required fields must be filled');
   });
 
-  it('should return 400 if businessType is invalid', async () => {
+  it('should return 400 if selectedPackage is invalid', async () => {
     // Mock authentication for this test
     (supabase.auth.getUser as jest.Mock).mockResolvedValue({
       data: { user: { id: 'user-id-123' } },
       error: null,
     });
 
-    // Create a mock request with invalid business type
+    // Create a mock request with invalid package
     const request = new NextRequest('http://localhost:3000/api/onboarding', {
       method: 'POST',
       headers: {
@@ -141,9 +163,15 @@ describe('POST /api/onboarding', () => {
         'Authorization': 'Bearer valid-token',
       },
       body: JSON.stringify({
-        projectName: 'My Awesome Website',
-        projectDescription: 'A website for my small business',
-        businessType: 'invalid-type', // Invalid type
+        selectedPackage: 'invalid-package', // Invalid package
+        addOns: ['contact-form'],
+        designStyle: 'modern',
+        layoutPreferences: 'simple',
+        domainOption: 'com',
+        hostingOption: 'basic',
+        maintenancePlan: 'basic',
+        email: 'test@example.com',
+        password: 'password123'
       }),
     });
 
@@ -154,17 +182,17 @@ describe('POST /api/onboarding', () => {
     // Verify the response
     expect(response.status).toBe(400);
     expect(data.success).toBe(false);
-    expect(data.message).toBe('Invalid business type');
+    expect(data.message).toBe('Invalid package selection');
   });
 
-  it('should return 400 if features array contains invalid values', async () => {
+  it('should return 400 if addOns array contains invalid values', async () => {
     // Mock authentication for this test
     (supabase.auth.getUser as jest.Mock).mockResolvedValue({
       data: { user: { id: 'user-id-123' } },
       error: null,
     });
 
-    // Create a mock request with invalid features
+    // Create a mock request with invalid add-ons
     const request = new NextRequest('http://localhost:3000/api/onboarding', {
       method: 'POST',
       headers: {
@@ -172,10 +200,15 @@ describe('POST /api/onboarding', () => {
         'Authorization': 'Bearer valid-token',
       },
       body: JSON.stringify({
-        projectName: 'My Awesome Website',
-        projectDescription: 'A website for my small business',
-        businessType: 'restaurant',
-        features: ['menu', 'invalid-feature'], // Invalid feature
+        selectedPackage: 'business',
+        addOns: ['contact-form', 'invalid-addon'], // Invalid add-on
+        designStyle: 'modern',
+        layoutPreferences: 'simple',
+        domainOption: 'com',
+        hostingOption: 'basic',
+        maintenancePlan: 'basic',
+        email: 'test@example.com',
+        password: 'password123'
       }),
     });
 
@@ -186,7 +219,7 @@ describe('POST /api/onboarding', () => {
     // Verify the response
     expect(response.status).toBe(400);
     expect(data.success).toBe(false);
-    expect(data.message).toBe('Invalid feature(s) in features array');
+    expect(data.message).toBe('Invalid add-on(s) in selection');
   });
 
   it('should return 401 if user is not authenticated', async () => {
@@ -204,9 +237,14 @@ describe('POST /api/onboarding', () => {
         'Authorization': 'Bearer invalid-token',
       },
       body: JSON.stringify({
-        projectName: 'My Awesome Website',
-        projectDescription: 'A website for my small business',
-        businessType: 'restaurant',
+        selectedPackage: 'business',
+        designStyle: 'modern',
+        layoutPreferences: 'simple',
+        domainOption: 'com',
+        hostingOption: 'basic',
+        maintenancePlan: 'basic',
+        email: 'test@example.com',
+        password: 'password123'
       }),
     });
 
@@ -229,6 +267,19 @@ describe('POST /api/onboarding', () => {
 
     // Mock database error
     (supabase.from as jest.Mock).mockReturnValue({
+      upsert: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          single: jest.fn().mockResolvedValue({
+            data: {
+              id: 'user-id-123',
+              email: 'test@example.com',
+              name: 'test',
+              created_at: '2023-01-01T00:00:00.000Z'
+            },
+            error: null,
+          }),
+        }),
+      }),
       insert: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
           single: jest.fn().mockResolvedValue({
@@ -247,9 +298,14 @@ describe('POST /api/onboarding', () => {
         'Authorization': 'Bearer valid-token',
       },
       body: JSON.stringify({
-        projectName: 'My Awesome Website',
-        projectDescription: 'A website for my small business',
-        businessType: 'restaurant',
+        selectedPackage: 'business',
+        designStyle: 'modern',
+        layoutPreferences: 'simple',
+        domainOption: 'com',
+        hostingOption: 'basic',
+        maintenancePlan: 'basic',
+        email: 'test@example.com',
+        password: 'password123'
       }),
     });
 

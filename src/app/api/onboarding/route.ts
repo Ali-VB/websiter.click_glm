@@ -1,26 +1,73 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// Valid business types based on the test
-const VALID_BUSINESS_TYPES = [
-  'restaurant',
-  'retail',
-  'service',
-  'professional',
-  'nonprofit',
-  'other'
-];
-
-// Valid features based on the test
-const VALID_FEATURES = [
-  'menu',
-  'gallery',
-  'contact form',
+// Valid package options from the onboarding wizard
+const VALID_PACKAGES = [
+  'business',
+  'portfolio',
+  'landing',
   'booking',
   'ecommerce',
-  'blog',
-  'map',
-  'reviews'
+  'custom'
+];
+
+// Valid add-on options from the onboarding wizard
+const VALID_ADD_ONS = [
+  'contact-form',
+  'photo-gallery',
+  'booking-advanced',
+  'ecommerce-expansion',
+  'multilingual',
+  'blog-addon',
+  'custom-ui',
+  'seo-starter',
+  'analytics',
+  'social-integration'
+];
+
+// Valid design styles from the onboarding wizard
+const VALID_DESIGN_STYLES = [
+  'modern',
+  'minimal',
+  'classic',
+  'corporate',
+  'creative'
+];
+
+// Valid color schemes from the onboarding wizard
+const VALID_COLOR_SCHEMES = [
+  'warm',
+  'cool',
+  'neutral',
+  'vibrant',
+  'minimal'
+];
+
+// Valid layout preferences from the onboarding wizard
+const VALID_LAYOUT_PREFERENCES = [
+  'simple',
+  'multi-section',
+  'grid-based'
+];
+
+// Valid domain options from the onboarding wizard
+const VALID_DOMAIN_OPTIONS = [
+  'none',
+  'com',
+  'ca'
+];
+
+// Valid hosting options from the onboarding wizard
+const VALID_HOSTING_OPTIONS = [
+  'basic',
+  'ecommerce',
+  'custom'
+];
+
+// Valid maintenance plans from the onboarding wizard
+const VALID_MAINTENANCE_PLANS = [
+  'basic',
+  'growth'
 ];
 
 export async function POST(request: NextRequest) {
@@ -48,41 +95,114 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      projectName,
-      projectDescription,
-      businessType,
-      targetAudience,
-      features,
+      selectedPackage,
+      addOns,
+      designStyle,
+      referenceWebsites,
       colorScheme,
-      logoUrl,
-      additionalNotes
+      layoutPreferences,
+      domainOption,
+      hostingOption,
+      maintenancePlan,
+      email,
+      password
     } = body;
 
     // Validate required fields
-    if (!projectName || !projectDescription || !businessType) {
+    if (!selectedPackage || !designStyle || !layoutPreferences ||
+        !domainOption || !hostingOption || !maintenancePlan ||
+        !email || !password) {
       return NextResponse.json(
-        { success: false, message: 'Project name, description, and business type are required' },
+        { success: false, message: 'All required fields must be filled' },
         { status: 400 }
       );
     }
 
-    // Validate business type
-    if (!VALID_BUSINESS_TYPES.includes(businessType)) {
+    // Validate package
+    if (!VALID_PACKAGES.includes(selectedPackage)) {
       return NextResponse.json(
-        { success: false, message: 'Invalid business type' },
+        { success: false, message: 'Invalid package selection' },
         { status: 400 }
       );
     }
 
-    // Validate features if provided
-    if (features && Array.isArray(features)) {
-      const invalidFeatures = features.filter(feature => !VALID_FEATURES.includes(feature));
-      if (invalidFeatures.length > 0) {
+    // Validate add-ons if provided
+    if (addOns && Array.isArray(addOns)) {
+      const invalidAddOns = addOns.filter(addOn => !VALID_ADD_ONS.includes(addOn));
+      if (invalidAddOns.length > 0) {
         return NextResponse.json(
-          { success: false, message: 'Invalid feature(s) in features array' },
+          { success: false, message: 'Invalid add-on(s) in selection' },
           { status: 400 }
         );
       }
+    }
+
+    // Validate design style
+    if (!VALID_DESIGN_STYLES.includes(designStyle)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid design style' },
+        { status: 400 }
+      );
+    }
+
+    // Validate color scheme if provided
+    if (colorScheme && !VALID_COLOR_SCHEMES.includes(colorScheme)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid color scheme' },
+        { status: 400 }
+      );
+    }
+
+    // Validate layout preferences
+    if (!VALID_LAYOUT_PREFERENCES.includes(layoutPreferences)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid layout preference' },
+        { status: 400 }
+      );
+    }
+
+    // Validate domain option
+    if (!VALID_DOMAIN_OPTIONS.includes(domainOption)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid domain option' },
+        { status: 400 }
+      );
+    }
+
+    // Validate hosting option
+    if (!VALID_HOSTING_OPTIONS.includes(hostingOption)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid hosting option' },
+        { status: 400 }
+      );
+    }
+
+    // Validate maintenance plan
+    if (!VALID_MAINTENANCE_PLANS.includes(maintenancePlan)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid maintenance plan' },
+        { status: 400 }
+      );
+    }
+
+    // Create or update client record
+    const { data: clientData, error: clientError } = await supabase
+      .from('clients')
+      .upsert({
+        id: user.id,
+        email: email,
+        name: email.split('@')[0], // Use part of email as name for now
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (clientError) {
+      console.error('Client creation error:', clientError);
+      return NextResponse.json(
+        { success: false, message: 'An error occurred during client creation' },
+        { status: 500 }
+      );
     }
 
     // Create project in Supabase
@@ -92,16 +212,19 @@ export async function POST(request: NextRequest) {
         {
           client_id: user.id,
           status: 'pending',
-          website_type: businessType,
+          website_type: selectedPackage,
           design_preferences: {
+            designStyle,
+            referenceWebsites,
             colorScheme,
-            logoUrl
+            layoutPreferences
           },
-          add_ons: {
-            features,
-            targetAudience,
-            additionalNotes
-          }
+          add_ons: addOns || [],
+          domain_info: {
+            domainOption,
+            hostingOption
+          },
+          maintenance_plan: maintenancePlan
         },
       ])
       .select()
@@ -121,14 +244,16 @@ export async function POST(request: NextRequest) {
       message: 'Project created successfully',
       project: {
         id: projectData.id,
-        name: projectName,
-        description: projectDescription,
-        businessType,
-        targetAudience,
-        features,
+        selectedPackage,
+        addOns: addOns || [],
+        designStyle,
+        referenceWebsites,
         colorScheme,
-        logoUrl,
-        additionalNotes,
+        layoutPreferences,
+        domainOption,
+        hostingOption,
+        maintenancePlan,
+        email,
         status: projectData.status,
         createdAt: projectData.created_at,
         updatedAt: projectData.updated_at || projectData.created_at,
