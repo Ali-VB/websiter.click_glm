@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import AssetUpload from "@/components/AssetUpload";
 
 interface Project {
   id: string;
@@ -502,131 +503,7 @@ export default function DashboardPage() {
                         </Button>
                       </div>
                     ) : (
-                      <div className="space-y-6">
-                        {/* Project Selection */}
-                        <div className="space-y-2">
-                          <Label htmlFor="project-select">Select Project</Label>
-                          <select
-                            id="project-select"
-                            className="w-full p-2 border border-input rounded-md bg-background"
-                          >
-                            <option value="">Choose a project...</option>
-                            {projects.map(project => (
-                              <option key={project.id} value={project.id}>
-                                {project.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        
-                        {/* Asset Type Selection */}
-                        <div className="space-y-2">
-                          <Label>Asset Type</Label>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <div className="flex flex-col items-center p-4 border border-input rounded-md cursor-pointer hover:bg-muted/50">
-                              <div className="text-2xl mb-2">🖼️</div>
-                              <span className="text-sm">Images</span>
-                            </div>
-                            <div className="flex flex-col items-center p-4 border border-input rounded-md cursor-pointer hover:bg-muted/50">
-                              <div className="text-2xl mb-2">📄</div>
-                              <span className="text-sm">Documents</span>
-                            </div>
-                            <div className="flex flex-col items-center p-4 border border-input rounded-md cursor-pointer hover:bg-muted/50">
-                              <div className="text-2xl mb-2">🎨</div>
-                              <span className="text-sm">Logos</span>
-                            </div>
-                            <div className="flex flex-col items-center p-4 border border-input rounded-md cursor-pointer hover:bg-muted/50">
-                              <div className="text-2xl mb-2">📝</div>
-                              <span className="text-sm">Content</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* File Upload Area */}
-                        <div className="space-y-2">
-                          <Label htmlFor="file-upload">Upload Files</Label>
-                          <div className="border-2 border-dashed border-input rounded-md p-8 text-center cursor-pointer hover:bg-muted/50">
-                            <div className="flex flex-col items-center justify-center">
-                              <div className="text-3xl mb-2">📁</div>
-                              <p className="text-lg font-medium">Drag & drop files here</p>
-                              <p className="text-sm text-muted-foreground mt-1">or click to browse</p>
-                              <p className="text-xs text-muted-foreground mt-2">
-                                Supported formats: JPG, PNG, PDF, DOC, DOCX (Max 10MB)
-                              </p>
-                            </div>
-                            <Input
-                              id="file-upload"
-                              type="file"
-                              className="hidden"
-                              multiple
-                            />
-                          </div>
-                        </div>
-                        
-                        {/* File Description */}
-                        <div className="space-y-2">
-                          <Label htmlFor="file-description">Description (Optional)</Label>
-                          <textarea
-                            id="file-description"
-                            className="w-full p-2 border border-input rounded-md bg-background min-h-[100px]"
-                            placeholder="Add a description for the files you're uploading..."
-                          />
-                        </div>
-                        
-                        {/* Upload Button */}
-                        <div className="flex justify-end">
-                          <Button>Upload Files</Button>
-                        </div>
-                        
-                        {/* Uploaded Files List */}
-                        <div className="space-y-4">
-                          <h3 className="text-lg font-semibold">Recently Uploaded</h3>
-                          <div className="border border-input rounded-md">
-                            <div className="p-4 border-b border-input">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-10 h-10 bg-blue-100 rounded-md flex items-center justify-center">
-                                    <span className="text-blue-800">📄</span>
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">company-logo.png</p>
-                                    <p className="text-sm text-muted-foreground">2.4 MB • Uploaded today</p>
-                                  </div>
-                                </div>
-                                <Button variant="outline" size="sm">View</Button>
-                              </div>
-                            </div>
-                            <div className="p-4 border-b border-input">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-10 h-10 bg-green-100 rounded-md flex items-center justify-center">
-                                    <span className="text-green-800">📝</span>
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">website-content.docx</p>
-                                    <p className="text-sm text-muted-foreground">1.1 MB • Uploaded 2 days ago</p>
-                                  </div>
-                                </div>
-                                <Button variant="outline" size="sm">View</Button>
-                              </div>
-                            </div>
-                            <div className="p-4">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-10 h-10 bg-purple-100 rounded-md flex items-center justify-center">
-                                    <span className="text-purple-800">🖼️</span>
-                                  </div>
-                                  <div>
-                                    <p className="font-medium">hero-image.jpg</p>
-                                    <p className="text-sm text-muted-foreground">3.7 MB • Uploaded 1 week ago</p>
-                                  </div>
-                                </div>
-                                <Button variant="outline" size="sm">View</Button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      <AssetUpload projects={projects} />
                     )}
                   </CardContent>
                 </Card>
