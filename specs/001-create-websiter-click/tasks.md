@@ -29,8 +29,8 @@
 - [x] T019 Implement `GET /api/invoices` API route.
 - [x] T020 Implement `GET /api/admin/invoices` API route.
 - [x] T021 Implement `PUT /api/admin/invoices/:id` API route.
-- [ ] T022 Implement `POST /api/stripe/checkout-session` API route.
-- [ ] T023 Implement `POST /api/stripe/webhook` API route.
+- [x] T022 Implement `POST /api/stripe/checkout-session` API route.
+- [x] T023 Implement `POST /api/stripe/webhook` API route.
 - [ ] T024 [P] Create the landing page UI (`src/app/page.tsx`).
 - [ ] T025 [P] Create the sign-up page UI (`src/app/signup/page.tsx`).
 - [ ] T026 [P] Create the login page UI (`src/app/login/page.tsx`).

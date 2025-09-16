@@ -4,6 +4,7 @@ import '@testing-library/jest-dom'
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
 process.env.STRIPE_SECRET_KEY = 'sk_test_dummykey'; // Add dummy Stripe key
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test_dummykey'; // Add dummy Stripe webhook secret
 
 // Mock Next.js router
 jest.mock('next/router', () => ({
@@ -45,7 +46,9 @@ jest.mock('next/server', () => ({
       this.url = input;
       this.method = init?.method || 'GET';
       this.headers = new Headers(init?.headers);
-      this.json = () => Promise.resolve(init?.body ? JSON.parse(init.body) : {});
+      this._body = init?.body;
+      this.json = () => Promise.resolve(this._body ? JSON.parse(this._body) : {});
+      this.text = () => Promise.resolve(this._body || '');
     }
   },
   NextResponse: class MockNextResponse {
