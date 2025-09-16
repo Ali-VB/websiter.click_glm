@@ -28,7 +28,7 @@
 - [x] T018 Implement `POST /api/onboarding` API route.
 - [x] T019 Implement `GET /api/invoices` API route.
 - [x] T020 Implement `GET /api/admin/invoices` API route.
-- [ ] T021 Implement `PUT /api/admin/invoices/:id` API route.
+- [x] T021 Implement `PUT /api/admin/invoices/:id` API route.
 - [ ] T022 Implement `POST /api/stripe/checkout-session` API route.
 - [ ] T023 Implement `POST /api/stripe/webhook` API route.
 - [ ] T024 [P] Create the landing page UI (`src/app/page.tsx`).

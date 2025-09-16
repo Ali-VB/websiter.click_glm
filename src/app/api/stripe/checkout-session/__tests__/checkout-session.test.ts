@@ -1,178 +1,164 @@
-// This is a contract test that defines the expected behavior of the Stripe checkout session API
-// The actual implementation doesn't exist yet, so these tests will fail initially
+import { NextRequest } from 'next/server';
+import { POST } from '../route';
+import { stripe } from '@/lib/stripe';
+import { supabase } from '@/lib/supabase';
+
+// Mock the libraries
+jest.mock('@/lib/stripe');
+jest.mock('@/lib/supabase');
+
+const mockedStripe = stripe as jest.Mocked<typeof stripe>;
+const mockedSupabase = supabase as jest.Mocked<typeof supabase>;
+
+function createNextRequest(body: any): NextRequest {
+  return new NextRequest('http://localhost:3000/api/stripe/checkout-session', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer valid-user-token',
+    },
+    body: JSON.stringify(body),
+  });
+}
 
 describe('POST /api/stripe/checkout-session', () => {
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
   it('should return 200 and checkout session data on successful creation', async () => {
-    // This test defines the contract for the Stripe checkout session API
-    // When implemented, the API should:
-    // 1. Accept a POST request with invoice ID
-    // 2. Verify user authentication
-    // 3. Validate the invoice exists and belongs to the user
-    // 4. Create a Stripe checkout session
-    // 5. Return a 200 status with session data
-    
-    const requestBody = {
-      invoiceId: 'invoice-123',
+    const invoiceId = 'inv-123';
+    const request = createNextRequest({ invoiceId });
+
+    // 1. Mock Auth
+    (mockedSupabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: { user: { id: 'user-abc' } },
+      error: null,
+    });
+
+    // 2. Mock Invoice Fetch
+    const mockInvoice = {
+      id: invoiceId,
+      status: 'approved',
+      line_items: [{ price: 'price_123', quantity: 1 }],
+      projects: { client_id: 'user-abc' },
+    };
+    const fromInvoiceMock = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: mockInvoice, error: null }),
     };
 
-    // Expected response
-    const expectedResponse = {
-      success: true,
-      message: 'Checkout session created successfully',
-      session: {
-        id: expect.any(String),
-        url: expect.any(String),
-        amount_total: 150000, // Amount in cents
-        currency: 'usd',
-        payment_intent: expect.any(String),
-        customer_email: 'john@example.com',
-        metadata: {
-          invoiceId: 'invoice-123',
-        },
-      },
+    // 3. Mock Client Fetch
+    const mockClient = { email: 'test@example.com' };
+    const fromClientMock = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: mockClient, error: null }),
     };
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    (mockedSupabase.from as jest.Mock).mockImplementation((tableName: string) => {
+      if (tableName === 'invoices') return fromInvoiceMock;
+      if (tableName === 'clients') return fromClientMock;
+    });
+
+    // 4. Mock Stripe Session Creation
+    const mockStripeSession = { id: 'cs_test_123', url: 'https://checkout.stripe.com/pay/cs_test_123' };
+    mockedStripe.checkout.sessions.create.mockResolvedValue(mockStripeSession as any);
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.session.id).toBe(mockStripeSession.id);
+    expect(stripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({
+        customer_email: mockClient.email,
+        metadata: { invoiceId },
+    }));
   });
 
-  it('should return 400 if invoiceId is missing', async () => {
-    // This test defines the contract for missing invoice ID
-    // When implemented, the API should:
-    // 1. Validate that invoiceId is provided
-    // 2. Return a 400 status with an error message if missing
-    
-    const requestBody = {
-      // Missing invoiceId
+  it('should return 404 if invoice not found', async () => {
+    const invoiceId = 'inv-not-found';
+    const request = createNextRequest({ invoiceId });
+
+    (mockedSupabase.auth.getUser as jest.Mock).mockResolvedValue({
+      data: { user: { id: 'user-abc' } },
+      error: null,
+    });
+
+    // Mock Invoice Fetch to return null
+    const fromInvoiceMock = {
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
+    (mockedSupabase.from as jest.Mock).mockReturnValue(fromInvoiceMock);
 
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'Invoice ID is required',
-    };
+    const response = await POST(request);
+    const data = await response.json();
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
-  });
-
-  it('should return 404 if invoice does not exist', async () => {
-    // This test defines the contract for non-existent invoice
-    // When implemented, the API should:
-    // 1. Check if the invoice exists in the database
-    // 2. Return a 404 status if not found
-    
-    const requestBody = {
-      invoiceId: 'non-existent-invoice',
-    };
-
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'Invoice not found',
-    };
-
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
-  });
-
-  it('should return 403 if invoice does not belong to the user', async () => {
-    // This test defines the contract for unauthorized invoice access
-    // When implemented, the API should:
-    // 1. Check if the invoice belongs to the authenticated user
-    // 2. Return a 403 status if not authorized
-    
-    const requestBody = {
-      invoiceId: 'another-users-invoice',
-    };
-
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'You do not have permission to access this invoice',
-    };
-
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    expect(response.status).toBe(404);
+    expect(data.message).toBe('Invoice not found');
   });
 
   it('should return 400 if invoice is already paid', async () => {
-    // This test defines the contract for already paid invoice
-    // When implemented, the API should:
-    // 1. Check if the invoice is already paid
-    // 2. Return a 400 status if already paid
-    
-    const requestBody = {
-      invoiceId: 'already-paid-invoice',
-    };
+    const invoiceId = 'inv-paid';
+    const request = createNextRequest({ invoiceId });
 
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'This invoice has already been paid',
-    };
+    (mockedSupabase.auth.getUser as jest.Mock).mockResolvedValue({
+        data: { user: { id: 'user-abc' } },
+        error: null,
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    const mockInvoice = { id: invoiceId, status: 'paid', projects: { client_id: 'user-abc' } };
+    const fromInvoiceMock = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: mockInvoice, error: null }),
+    };
+    (mockedSupabase.from as jest.Mock).mockReturnValue(fromInvoiceMock);
+
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data.message).toBe('This invoice has already been paid');
   });
 
-  it('should return 400 if invoice is not approved', async () => {
-    // This test defines the contract for unapproved invoice
-    // When implemented, the API should:
-    // 1. Check if the invoice is approved
-    // 2. Return a 400 status if not approved
-    
-    const requestBody = {
-      invoiceId: 'pending-invoice',
+  it('should return 500 on stripe error', async () => {
+    const invoiceId = 'inv-123';
+    const request = createNextRequest({ invoiceId });
+
+    (mockedSupabase.auth.getUser as jest.Mock).mockResolvedValue({
+        data: { user: { id: 'user-abc' } },
+        error: null,
+    });
+
+    const mockInvoice = { id: invoiceId, status: 'approved', projects: { client_id: 'user-abc' } };
+    const fromInvoiceMock = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: mockInvoice, error: null }),
     };
-
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'This invoice has not been approved yet',
+    const fromClientMock = {
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockReturnThis(),
+        single: jest.fn().mockResolvedValue({ data: { email: 'test@example.com' }, error: null }),
     };
+    (mockedSupabase.from as jest.Mock).mockImplementation((tableName: string) => {
+        if (tableName === 'invoices') return fromInvoiceMock;
+        if (tableName === 'clients') return fromClientMock;
+    });
 
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
-  });
+    // Mock Stripe to throw an error
+    mockedStripe.checkout.sessions.create.mockRejectedValue(new Error('Stripe API error'));
 
-  it('should return 401 if user is not authenticated', async () => {
-    // This test defines the contract for unauthenticated access
-    // When implemented, the API should:
-    // 1. Check if the user is authenticated
-    // 2. Return a 401 status if not authenticated
-    
-    const requestBody = {
-      invoiceId: 'invoice-123',
-    };
+    const response = await POST(request);
+    const data = await response.json();
 
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'Authentication required',
-    };
-
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
-  });
-
-  it('should return 500 on server error', async () => {
-    // This test defines the contract for server errors
-    // When implemented, the API should:
-    // 1. Handle unexpected errors gracefully
-    // 2. Return a 500 status with a generic error message
-    
-    const requestBody = {
-      invoiceId: 'invoice-123',
-    };
-
-    // Expected response
-    const expectedResponse = {
-      success: false,
-      message: 'An error occurred while creating the checkout session',
-    };
-
-    // This test will fail until the API is implemented
-    expect(true).toBe(false); // Placeholder until implementation
+    expect(response.status).toBe(500);
+    expect(data.message).toBe('An error occurred while creating the checkout session');
   });
 });

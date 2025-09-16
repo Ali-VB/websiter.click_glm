@@ -3,6 +3,7 @@ import '@testing-library/jest-dom'
 // Mock environment variables
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co';
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
+process.env.STRIPE_SECRET_KEY = 'sk_test_dummykey'; // Add dummy Stripe key
 
 // Mock Next.js router
 jest.mock('next/router', () => ({
@@ -67,3 +68,10 @@ jest.mock('next/server', () => ({
     }
   },
 }));
+
+// Polyfill fetch for libraries like Stripe that use it internally
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    json: () => Promise.resolve({}),
+  })
+);
