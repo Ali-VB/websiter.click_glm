@@ -62,9 +62,9 @@
 ## Phase 3.7: Integration
 - [x] T045: Connect Auth pages (Signup/Login) to Supabase Auth & implement email verification.
 - [x] T046: Connect Onboarding Wizard state to the backend API.
-- [ ] T047: Connect Asset Upload interface to Supabase Storage.
-- [ ] T048: Connect the full Support Ticket system to the database.
-- [ ] T049: Connect the public Contact Form to the `contact_submissions` table.
+- [x] T047: Connect Asset Upload interface to Supabase Storage.
+- [x] T048: Connect the full Support Ticket system to the database.
+- [x] T049: Connect the public Contact Form to the `contact_submissions` table.
 - [ ] T050: Update Invoice & Payment APIs to handle tax calculations.
 - [ ] T051: Implement Role-Based Access Control for all admin routes.
 

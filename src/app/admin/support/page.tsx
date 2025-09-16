@@ -157,17 +157,6 @@ export default function AdminSupportPage() {
         return;
       }
 
-      // In a real implementation, we would fetch from the API
-      // For now, we'll use mock data
-      setTimeout(() => {
-        setTickets(mockTickets);
-        setFilteredTickets(mockTickets);
-        setTeamMembers(mockTeamMembers);
-        setIsLoading(false);
-      }, 1000);
-      
-      // Actual implementation would be:
-      /*
       const response = await fetch("/api/admin/support", {
         method: "GET",
         headers: {
@@ -177,17 +166,47 @@ export default function AdminSupportPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setTickets(data.tickets || []);
-        setFilteredTickets(data.tickets || []);
-        setTeamMembers(data.teamMembers || []);
+        // Transform the data to match the expected format
+        const transformedTickets = data.tickets.map((ticket: any) => ({
+          id: ticket.id,
+          title: ticket.subject,
+          description: ticket.replies && ticket.replies.length > 0 ? ticket.replies[0].message : "",
+          clientName: ticket.client.name,
+          clientEmail: ticket.client.email,
+          status: ticket.status,
+          priority: ticket.priority,
+          category: ticket.category,
+          assignedTo: ticket.assigned_to,
+          createdAt: ticket.created_at,
+          updatedAt: ticket.updated_at,
+          attachments: [],
+          responses: ticket.replies ? ticket.replies.map((reply: any) => ({
+            id: reply.id,
+            content: reply.message,
+            author: reply.author.name,
+            createdAt: reply.created_at,
+            isInternal: reply.is_internal || false
+          })) : []
+        }));
+        
+        const transformedTeamMembers = data.teamMembers.map((member: any) => ({
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          role: member.role
+        }));
+        
+        setTickets(transformedTickets);
+        setFilteredTickets(transformedTickets);
+        setTeamMembers(transformedTeamMembers);
       } else {
         const errorData = await response.json();
-        setError(errorData.message || "Failed to fetch support tickets");
+        setError(errorData.error || "Failed to fetch support tickets");
       }
-      */
     } catch (err) {
       setError("An error occurred while loading support tickets");
       console.error("Admin support error:", err);
+    } finally {
       setIsLoading(false);
     }
   }, [router]);
@@ -299,28 +318,6 @@ export default function AdminSupportPage() {
     setIsAddingResponse(true);
     
     try {
-      // In a real implementation, we would save to the API
-      // For now, we'll update the local state
-      const newResponseObj = {
-        id: Date.now().toString(),
-        content: newResponse,
-        author: "Admin",
-        createdAt: new Date().toISOString(),
-        isInternal
-      };
-      
-      setSelectedTicket({
-        ...selectedTicket,
-        responses: [...selectedTicket.responses, newResponseObj],
-        status: isInternal ? selectedTicket.status : "in_progress",
-        updatedAt: new Date().toISOString()
-      });
-      
-      setNewResponse("");
-      setIsInternal(false);
-      
-      // Actual implementation would be:
-      /*
       const token = localStorage.getItem("supabase.auth.token");
       
       if (!token) {
@@ -328,31 +325,34 @@ export default function AdminSupportPage() {
         return;
       }
 
-      const response = await fetch(`/api/admin/support/${selectedTicket.id}/responses`, {
+      const response = await fetch(`/api/admin/support/${selectedTicket.id}/replies`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${JSON.parse(token).access_token}`,
         },
         body: JSON.stringify({
-          content: newResponse,
+          message: newResponse,
           isInternal
         }),
       });
 
       if (response.ok) {
-        // Refresh the ticket data
-        const updatedTicket = await fetchTicketDetails(selectedTicket.id);
+        // Refresh the tickets list to get the updated data
+        await fetchTickets();
+        
+        // Find the updated ticket in the refreshed list
+        const updatedTicket = tickets.find(t => t.id === selectedTicket.id);
         if (updatedTicket) {
           setSelectedTicket(updatedTicket);
         }
+        
         setNewResponse("");
         setIsInternal(false);
       } else {
         const errorData = await response.json();
-        setError(errorData.message || "Failed to add response");
+        setError(errorData.error || "Failed to add response");
       }
-      */
     } catch (err) {
       setError("An error occurred while adding the response");
       console.error("Add response error:", err);
@@ -367,16 +367,6 @@ export default function AdminSupportPage() {
     setIsUpdatingAssignment(true);
     
     try {
-      // In a real implementation, we would save to the API
-      // For now, we'll update the local state
-      setSelectedTicket({
-        ...selectedTicket,
-        assignedTo: assignedTo || undefined,
-        updatedAt: new Date().toISOString()
-      });
-      
-      // Actual implementation would be:
-      /*
       const token = localStorage.getItem("supabase.auth.token");
       
       if (!token) {
@@ -384,7 +374,7 @@ export default function AdminSupportPage() {
         return;
       }
 
-      const response = await fetch(`/api/admin/support/${selectedTicket.id}/assign`, {
+      const response = await fetch(`/api/admin/support/${selectedTicket.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -396,16 +386,18 @@ export default function AdminSupportPage() {
       });
 
       if (response.ok) {
-        // Refresh the ticket data
-        const updatedTicket = await fetchTicketDetails(selectedTicket.id);
+        // Refresh the tickets list to get the updated data
+        await fetchTickets();
+        
+        // Find the updated ticket in the refreshed list
+        const updatedTicket = tickets.find(t => t.id === selectedTicket.id);
         if (updatedTicket) {
           setSelectedTicket(updatedTicket);
         }
       } else {
         const errorData = await response.json();
-        setError(errorData.message || "Failed to update assignment");
+        setError(errorData.error || "Failed to update assignment");
       }
-      */
     } catch (err) {
       setError("An error occurred while updating the assignment");
       console.error("Update assignment error:", err);
@@ -418,16 +410,6 @@ export default function AdminSupportPage() {
     if (!selectedTicket) return;
     
     try {
-      // In a real implementation, we would save to the API
-      // For now, we'll update the local state
-      setSelectedTicket({
-        ...selectedTicket,
-        status: newStatus as SupportTicket["status"],
-        updatedAt: new Date().toISOString()
-      });
-      
-      // Actual implementation would be:
-      /*
       const token = localStorage.getItem("supabase.auth.token");
       
       if (!token) {
@@ -435,7 +417,7 @@ export default function AdminSupportPage() {
         return;
       }
 
-      const response = await fetch(`/api/admin/support/${selectedTicket.id}/status`, {
+      const response = await fetch(`/api/admin/support/${selectedTicket.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -447,16 +429,18 @@ export default function AdminSupportPage() {
       });
 
       if (response.ok) {
-        // Refresh the ticket data
-        const updatedTicket = await fetchTicketDetails(selectedTicket.id);
+        // Refresh the tickets list to get the updated data
+        await fetchTickets();
+        
+        // Find the updated ticket in the refreshed list
+        const updatedTicket = tickets.find(t => t.id === selectedTicket.id);
         if (updatedTicket) {
           setSelectedTicket(updatedTicket);
         }
       } else {
         const errorData = await response.json();
-        setError(errorData.message || "Failed to update status");
+        setError(errorData.error || "Failed to update status");
       }
-      */
     } catch (err) {
       setError("An error occurred while updating the status");
       console.error("Update status error:", err);

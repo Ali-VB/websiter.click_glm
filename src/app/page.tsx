@@ -20,6 +20,9 @@ export default function Home() {
           <Link href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
             Pricing
           </Link>
+          <Link href="/contact" className="text-muted-foreground hover:text-foreground transition-colors">
+            Contact
+          </Link>
         </nav>
         <div className="flex space-x-4">
           <Button variant="outline" asChild>

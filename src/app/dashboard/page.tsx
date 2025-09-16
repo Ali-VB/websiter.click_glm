@@ -33,6 +33,25 @@ interface Invoice {
   due_date?: string;
 }
 
+interface SupportTicket {
+  id: string;
+  subject: string;
+  status: "open" | "in_progress" | "resolved" | "closed";
+  priority: "low" | "medium" | "high" | "urgent";
+  category: string;
+  created_at: string;
+  updated_at: string;
+  replies: Array<{
+    id: string;
+    message: string;
+    created_at: string;
+    author: {
+      name: string;
+      email: string;
+    };
+  }>;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +59,7 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
 
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
@@ -79,6 +99,19 @@ export default function DashboardPage() {
       if (invoicesResponse.ok) {
         const invoicesData = await invoicesResponse.json();
         setInvoices(invoicesData.invoices || []);
+      }
+
+      // Fetch support tickets
+      const ticketsResponse = await fetch("/api/support", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${JSON.parse(token).access_token}`,
+        },
+      });
+
+      if (ticketsResponse.ok) {
+        const ticketsData = await ticketsResponse.json();
+        setSupportTickets(ticketsData.tickets || []);
       }
     } catch (err) {
       setError("An error occurred while loading your dashboard");
@@ -531,7 +564,9 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-between">
                               <div>
                                 <p className="text-sm text-muted-foreground">Open Tickets</p>
-                                <p className="text-2xl font-bold">2</p>
+                                <p className="text-2xl font-bold">
+                                  {supportTickets.filter(t => t.status === "open").length}
+                                </p>
                               </div>
                               <div className="w-8 h-8 bg-yellow-100 text-yellow-800 rounded-full flex items-center justify-center">
                                 !
@@ -544,7 +579,9 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-between">
                               <div>
                                 <p className="text-sm text-muted-foreground">In Progress</p>
-                                <p className="text-2xl font-bold">1</p>
+                                <p className="text-2xl font-bold">
+                                  {supportTickets.filter(t => t.status === "in_progress").length}
+                                </p>
                               </div>
                               <div className="w-8 h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center">
                                 →
@@ -557,7 +594,9 @@ export default function DashboardPage() {
                             <div className="flex items-center justify-between">
                               <div>
                                 <p className="text-sm text-muted-foreground">Resolved</p>
-                                <p className="text-2xl font-bold">5</p>
+                                <p className="text-2xl font-bold">
+                                  {supportTickets.filter(t => t.status === "resolved").length}
+                                </p>
                               </div>
                               <div className="w-8 h-8 bg-green-100 text-green-800 rounded-full flex items-center justify-center">
                                 ✓
@@ -580,77 +619,58 @@ export default function DashboardPage() {
                       <div className="space-y-4">
                         <h3 className="text-lg font-semibold">Recent Tickets</h3>
                         
-                        {/* Ticket 1 */}
-                        <Card>
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <h4 className="font-medium">Website layout issue on mobile</h4>
-                                  <Badge variant="outline" className="bg-red-100 text-red-800">High</Badge>
-                                  <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Open</Badge>
+                        {supportTickets.length === 0 ? (
+                          <div className="text-center py-8">
+                            <p className="text-muted-foreground">You don't have any support tickets yet.</p>
+                            <Button className="mt-4">Create Your First Ticket</Button>
+                          </div>
+                        ) : (
+                          supportTickets.slice(0, 3).map((ticket) => (
+                            <Card key={ticket.id}>
+                              <CardContent className="p-4">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      <h4 className="font-medium">{ticket.subject}</h4>
+                                      <Badge
+                                        variant="outline"
+                                        className={
+                                          ticket.priority === "high" ? "bg-red-100 text-red-800" :
+                                          ticket.priority === "medium" ? "bg-yellow-100 text-yellow-800" :
+                                          "bg-green-100 text-green-800"
+                                        }
+                                      >
+                                        {ticket.priority}
+                                      </Badge>
+                                      <Badge
+                                        variant="outline"
+                                        className={
+                                          ticket.status === "open" ? "bg-yellow-100 text-yellow-800" :
+                                          ticket.status === "in_progress" ? "bg-blue-100 text-blue-800" :
+                                          ticket.status === "resolved" ? "bg-green-100 text-green-800" :
+                                          "bg-gray-100 text-gray-800"
+                                        }
+                                      >
+                                        {ticket.status.replace("_", " ")}
+                                      </Badge>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground mb-2">
+                                      {ticket.replies && ticket.replies.length > 0 ? ticket.replies[0].message : "No description"}
+                                    </p>
+                                    <div className="flex items-center text-xs text-muted-foreground space-x-4">
+                                      <span>Category: {ticket.category}</span>
+                                      <span>Created: {formatDate(ticket.created_at)}</span>
+                                      {ticket.updated_at !== ticket.created_at && (
+                                        <span>Last update: {formatDate(ticket.updated_at)}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Button variant="outline" size="sm">View Details</Button>
                                 </div>
-                                <p className="text-sm text-muted-foreground mb-2">
-                                  The navigation menu is not displaying correctly on mobile devices. It overlaps with the content.
-                                </p>
-                                <div className="flex items-center text-xs text-muted-foreground space-x-4">
-                                  <span>Category: Design</span>
-                                  <span>Created: 2 days ago</span>
-                                  <span>Last update: 1 day ago</span>
-                                </div>
-                              </div>
-                              <Button variant="outline" size="sm">View Details</Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                        
-                        {/* Ticket 2 */}
-                        <Card>
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <h4 className="font-medium">Need to update contact information</h4>
-                                  <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Medium</Badge>
-                                  <Badge variant="outline" className="bg-blue-100 text-blue-800">In Progress</Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-2">
-                                  Please update the phone number and email address on the contact page.
-                                </p>
-                                <div className="flex items-center text-xs text-muted-foreground space-x-4">
-                                  <span>Category: Content</span>
-                                  <span>Created: 5 days ago</span>
-                                  <span>Last update: 2 days ago</span>
-                                </div>
-                              </div>
-                              <Button variant="outline" size="sm">View Details</Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                        
-                        {/* Ticket 3 */}
-                        <Card>
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  <h4 className="font-medium">Add new testimonial</h4>
-                                  <Badge variant="outline" className="bg-green-100 text-green-800">Low</Badge>
-                                  <Badge variant="outline" className="bg-green-100 text-green-800">Resolved</Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground mb-2">
-                                  I'd like to add a new customer testimonial to the homepage.
-                                </p>
-                                <div className="flex items-center text-xs text-muted-foreground space-x-4">
-                                  <span>Category: Content</span>
-                                  <span>Created: 1 week ago</span>
-                                  <span>Resolved: 5 days ago</span>
-                                </div>
-                              </div>
-                              <Button variant="outline" size="sm">View Details</Button>
-                            </div>
-                          </CardContent>
-                        </Card>
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
                       </div>
                       
                       {/* View All Tickets Button */}
