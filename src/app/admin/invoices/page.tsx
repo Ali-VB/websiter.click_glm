@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 interface Invoice {
   id: string;
@@ -186,31 +189,77 @@ export default function AdminInvoicesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted">
-      {/* Header */}
-      <header className="container mx-auto px-4 py-6 flex justify-between items-center">
-        <div className="flex items-center space-x-2">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted flex">
+      {/* Sidebar Navigation */}
+      <aside className="w-64 bg-card border-r min-h-screen p-4">
+        <div className="flex items-center space-x-2 mb-8">
           <div className="w-8 h-8 bg-primary rounded-full"></div>
           <span className="font-bold text-xl">websiter.click</span>
-          <span className="text-sm text-muted-foreground">Admin Portal</span>
         </div>
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" asChild>
+        
+        <div className="mb-2">
+          <p className="text-sm font-medium text-muted-foreground mb-2">Admin Portal</p>
+        </div>
+        
+        <nav className="space-y-1">
+          <Link href="/admin" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
+            Dashboard
+          </Link>
+          <Link href="/admin/projects" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
+            Project Management
+          </Link>
+          <Link href="/admin/clients" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
+            Client Management
+          </Link>
+          <Link href="/admin/invoices" className="flex items-center px-3 py-2 text-sm font-medium rounded-md bg-accent text-accent-foreground">
+            Invoice Management
+          </Link>
+          <Link href="/admin/support" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
+            Support Tickets
+          </Link>
+          <Link href="/admin/contacts" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
+            Contact Submissions
+          </Link>
+          <Link href="/admin/notifications" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
+            Broadcast Notifications
+          </Link>
+          <Link href="/admin/system" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
+            System Administration
+          </Link>
+        </nav>
+        
+        <Separator className="my-6" />
+        
+        <div className="space-y-1">
+          <Button variant="outline" asChild className="w-full justify-start">
             <Link href="/">Home</Link>
           </Button>
-          <Button variant="outline" asChild>
+          <Button variant="outline" asChild className="w-full justify-start">
             <Link href="/dashboard">Client Dashboard</Link>
           </Button>
-          <Button variant="outline" onClick={handleLogout}>
+          <Button variant="outline" onClick={handleLogout} className="w-full justify-start">
             Log Out
           </Button>
         </div>
-      </header>
+      </aside>
 
-      {/* Admin Invoices Content */}
-      <section className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Invoice Management</h1>
+      {/* Main Content */}
+      <main className="flex-1">
+        {/* Header */}
+        <header className="bg-background border-b p-4">
+          <div className="container mx-auto flex justify-between items-center">
+            <h1 className="text-2xl font-bold">Invoice Management</h1>
+            <div className="flex items-center space-x-4">
+              <Button onClick={fetchInvoices} disabled={isLoading}>
+                {isLoading ? "Loading..." : "Refresh"}
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        {/* Admin Invoices Content */}
+        <section className="container mx-auto px-4 py-8">
+        <div className="mb-6">
           <p className="text-muted-foreground">
             Review, edit, and approve client invoices
           </p>
@@ -241,11 +290,6 @@ export default function AdminInvoicesPage() {
               <option value="rejected">Rejected</option>
             </select>
           </div>
-          <div className="flex items-end">
-            <Button onClick={fetchInvoices} disabled={isLoading}>
-              {isLoading ? "Loading..." : "Refresh"}
-            </Button>
-          </div>
         </div>
 
         {isLoading ? (
@@ -253,7 +297,7 @@ export default function AdminInvoicesPage() {
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <div className="bg-background p-6 rounded-lg border">
+          <Card className="p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">Invoices</h2>
               <div className="text-sm text-muted-foreground">
@@ -316,7 +360,7 @@ export default function AdminInvoicesPage() {
                 </table>
               </div>
             )}
-          </div>
+          </Card>
         )}
       </section>
 
@@ -390,6 +434,7 @@ export default function AdminInvoicesPage() {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 }
