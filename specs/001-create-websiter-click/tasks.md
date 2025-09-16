@@ -33,9 +33,9 @@
 - [x] T023 Implement `POST /api/stripe/webhook` API route.
 - [x] T024 [P] Create the landing page UI (`src/app/page.tsx`).
 - [x] T025 [P] Create the sign-up page UI (`src/app/signup/page.tsx`).
-- [ ] T026 [P] Create the login page UI (`src/app/login/page.tsx`).
-- [ ] T027 Create the multi-step onboarding wizard UI (`src/app/onboarding/page.tsx`).
-- [ ] T028 Create the client dashboard UI (`src/app/dashboard/page.tsx`).
+- [x] T026 [P] Create the login page UI (`src/app/login/page.tsx`).
+- [x] T027 Create the multi-step onboarding wizard UI (`src/app/onboarding/page.tsx`).
+- [x] T028 Create the client dashboard UI (`src/app/dashboard/page.tsx`).
 - [ ] T029 Create the admin portal UI for invoice management (`src/app/admin/invoices/page.tsx`).
 
 ## Phase 3.4: Integration
