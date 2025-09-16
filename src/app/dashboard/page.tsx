@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface Project {
   id: string;
@@ -294,6 +295,7 @@ export default function DashboardPage() {
             <Tabs defaultValue="projects" className="space-y-4">
               <TabsList>
                 <TabsTrigger value="projects">Projects</TabsTrigger>
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
                 <TabsTrigger value="invoices">Invoices</TabsTrigger>
               </TabsList>
               
@@ -354,6 +356,122 @@ export default function DashboardPage() {
                             ))}
                           </tbody>
                         </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="timeline" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Project Timeline</CardTitle>
+                    <CardDescription>
+                      Track the progress and milestones of your projects
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {projects.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground">No projects to display in timeline.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-8">
+                        {projects.map((project, index) => (
+                          <div key={project.id} className="flex">
+                            <div className="flex flex-col items-center mr-4">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                project.status === "completed" ? "bg-green-100 text-green-800" :
+                                project.status === "in_progress" ? "bg-blue-100 text-blue-800" :
+                                project.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                                "bg-gray-100 text-gray-800"
+                              }`}>
+                                {project.status === "completed" ? "✓" :
+                                 project.status === "in_progress" ? "→" :
+                                 project.status === "pending" ? "!" : "✗"}
+                              </div>
+                              {index < projects.length - 1 && (
+                                <div className="w-0.5 h-full bg-gray-200 mt-2"></div>
+                              )}
+                            </div>
+                            <div className="pb-8 flex-1">
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-semibold">{project.name}</h3>
+                                <Badge variant="outline" className={getStatusColor(project.status)}>
+                                  {project.status.replace("_", " ")}
+                                </Badge>
+                              </div>
+                              <p className="text-muted-foreground mt-1">{project.description}</p>
+                              <div className="mt-4 space-y-2">
+                                <div className="flex items-center text-sm text-muted-foreground">
+                                  <span className="font-medium">Created:</span>
+                                  <span className="ml-2">{formatDate(project.created_at)}</span>
+                                </div>
+                                <div className="flex items-center text-sm text-muted-foreground">
+                                  <span className="font-medium">Last Updated:</span>
+                                  <span className="ml-2">{formatDate(project.updated_at)}</span>
+                                </div>
+                              </div>
+                              
+                              {/* Project Timeline Events */}
+                              <div className="mt-4 space-y-3">
+                                <div className="flex items-start">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 mr-3"></div>
+                                  <div>
+                                    <p className="text-sm font-medium">Project Created</p>
+                                    <p className="text-xs text-muted-foreground">{formatDate(project.created_at)}</p>
+                                  </div>
+                                </div>
+                                
+                                {project.status !== "pending" && (
+                                  <div className="flex items-start">
+                                    <div className="w-2 h-2 bg-yellow-500 rounded-full mt-1.5 mr-3"></div>
+                                    <div>
+                                      <p className="text-sm font-medium">Project Approved</p>
+                                      <p className="text-xs text-muted-foreground">Waiting for developer assignment</p>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {project.status === "in_progress" && (
+                                  <div className="flex items-start">
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 mr-3"></div>
+                                    <div>
+                                      <p className="text-sm font-medium">In Development</p>
+                                      <p className="text-xs text-muted-foreground">Currently being worked on</p>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {project.status === "completed" && (
+                                  <div className="flex items-start">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 mr-3"></div>
+                                    <div>
+                                      <p className="text-sm font-medium">Project Completed</p>
+                                      <p className="text-xs text-muted-foreground">{formatDate(project.updated_at)}</p>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {project.status === "cancelled" && (
+                                  <div className="flex items-start">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full mt-1.5 mr-3"></div>
+                                    <div>
+                                      <p className="text-sm font-medium">Project Cancelled</p>
+                                      <p className="text-xs text-muted-foreground">{formatDate(project.updated_at)}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="mt-4">
+                                <Button variant="outline" size="sm" asChild>
+                                  <Link href={`/projects/${project.id}`}>View Details</Link>
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </CardContent>
