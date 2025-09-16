@@ -43,21 +43,21 @@
 - [x] T031: Implement real-time cost calculator for the wizard.
 
 ## Phase 3.5: UI - Client Dashboard
-- [ ] T032: Build main dashboard layout and overview component.
-- [ ] T033: Build project status tracking view with timeline.
-- [ ] T034: Build asset upload interface.
-- [ ] T035: Build billing and invoice history page (with PDF download).
-- [ ] T036: Build support ticket system (create, track, view history).
-- [ ] T037: Build account management page (password, notification preferences).
+- [x] T032: Build main dashboard layout and overview component.
+- [x] T033: Build project status tracking view with timeline.
+- [x] T034: Build asset upload interface.
+- [x] T035: Build billing and invoice history page (with PDF download).
+- [x] T036: Build support ticket system (create, track, view history).
+- [x] T037: Build account management page (password, notification preferences).
 
 ## Phase 3.6: UI - Admin Dashboard
-- [ ] T038: Build main admin layout and navigation.
-- [ ] T039: Build Project Management view (list with filters, detail view).
-- [ ] T040: Build Client Management view (list, details, internal notes).
-- [ ] T041: Build Support Ticket Management interface (view, assign, resolve).
-- [ ] T042: Build Contact Submission inbox view.
-- [ ] T043: Build Broadcast Notification tool.
-- [ ] T044: Build System Administration view (stats, config, debug tools).
+- [x] T038: Build main admin layout and navigation.
+- [x] T039: Build Project Management view (list with filters, detail view).
+- [x] T040: Build Client Management view (list, details, internal notes).
+- [x] T041: Build Support Ticket Management interface (view, assign, resolve).
+- [x] T042: Build Contact Submission inbox view.
+- [x] T043: Build Broadcast Notification tool.
+- [x] T044: Build System Administration view (stats, config, debug tools).
 
 ## Phase 3.7: Integration
 - [ ] T045: Connect Auth pages (Signup/Login) to Supabase Auth & implement email verification.
