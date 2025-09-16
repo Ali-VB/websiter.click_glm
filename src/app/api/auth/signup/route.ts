@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
           name,
           email,
           email_verified: false, // Initially set to false until email is verified
+          role: 'client', // Default role for new users
         },
       ])
       .select()
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
           email: userData.email,
           name: userData.name,
           emailVerified: false,
+          role: userData.role,
         },
         requiresEmailVerification: true,
       }, { status: 201 });
@@ -108,6 +110,7 @@ export async function POST(request: NextRequest) {
         email: userData.email,
         name: userData.name,
         emailVerified: true,
+        role: userData.role,
       },
       requiresEmailVerification: false,
     }, { status: 201 });

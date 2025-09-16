@@ -9,6 +9,7 @@ CREATE TABLE clients (
     name TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE,
     phone TEXT,
+    role TEXT NOT NULL DEFAULT 'client',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
