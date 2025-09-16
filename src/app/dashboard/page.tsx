@@ -302,6 +302,7 @@ export default function DashboardPage() {
                 <TabsTrigger value="timeline">Timeline</TabsTrigger>
                 <TabsTrigger value="assets">Assets</TabsTrigger>
                 <TabsTrigger value="support">Support</TabsTrigger>
+                <TabsTrigger value="account">Account</TabsTrigger>
                 <TabsTrigger value="invoices">Invoices</TabsTrigger>
               </TabsList>
               
@@ -778,6 +779,171 @@ export default function DashboardPage() {
                       {/* View All Tickets Button */}
                       <div className="flex justify-center">
                         <Button variant="outline">View All Tickets</Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="account" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Account Settings</CardTitle>
+                    <CardDescription>
+                      Manage your account preferences and security settings
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Profile Information */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Profile Information</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email Address</Label>
+                          <Input id="email" type="email" defaultValue="client@example.com" disabled />
+                          <p className="text-xs text-muted-foreground">Contact support to change your email</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Full Name</Label>
+                          <Input id="name" type="text" defaultValue="John Doe" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    {/* Password Management */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Password Management</h3>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="current-password">Current Password</Label>
+                          <Input id="current-password" type="password" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="new-password">New Password</Label>
+                            <Input id="new-password" type="password" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="confirm-password">Confirm New Password</Label>
+                            <Input id="confirm-password" type="password" />
+                          </div>
+                        </div>
+                        <div className="flex justify-end">
+                          <Button>Update Password</Button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    {/* Notification Preferences */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Notification Preferences</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Email Notifications</p>
+                            <p className="text-sm text-muted-foreground">Receive updates about your projects via email</p>
+                          </div>
+                          <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                            <input type="checkbox" id="email-toggle" className="sr-only" defaultChecked />
+                            <div className="block bg-gray-300 w-10 h-6 rounded-full"></div>
+                            <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Project Status Updates</p>
+                            <p className="text-sm text-muted-foreground">Get notified when your project status changes</p>
+                          </div>
+                          <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                            <input type="checkbox" id="project-toggle" className="sr-only" defaultChecked />
+                            <div className="block bg-gray-300 w-10 h-6 rounded-full"></div>
+                            <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Invoice Notifications</p>
+                            <p className="text-sm text-muted-foreground">Receive alerts for new invoices and payment reminders</p>
+                          </div>
+                          <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                            <input type="checkbox" id="invoice-toggle" className="sr-only" defaultChecked />
+                            <div className="block bg-gray-300 w-10 h-6 rounded-full"></div>
+                            <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Support Ticket Updates</p>
+                            <p className="text-sm text-muted-foreground">Get notified when your support tickets are updated</p>
+                          </div>
+                          <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                            <input type="checkbox" id="support-toggle" className="sr-only" defaultChecked />
+                            <div className="block bg-gray-300 w-10 h-6 rounded-full"></div>
+                            <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Marketing Communications</p>
+                            <p className="text-sm text-muted-foreground">Receive news, updates, and promotional offers</p>
+                          </div>
+                          <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                            <input type="checkbox" id="marketing-toggle" className="sr-only" />
+                            <div className="block bg-gray-300 w-10 h-6 rounded-full"></div>
+                            <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button>Save Preferences</Button>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    {/* Security Settings */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Security Settings</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Two-Factor Authentication</p>
+                            <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
+                          </div>
+                          <Button variant="outline">Enable</Button>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">Active Sessions</p>
+                            <p className="text-sm text-muted-foreground">Current session: Chrome on Windows • Last active: Now</p>
+                          </div>
+                          <Button variant="outline">Sign Out All Sessions</Button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    {/* Danger Zone */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-md bg-destructive/5">
+                          <div>
+                            <p className="font-medium">Delete Account</p>
+                            <p className="text-sm text-muted-foreground">Permanently delete your account and all data</p>
+                          </div>
+                          <Button variant="destructive">Delete Account</Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
