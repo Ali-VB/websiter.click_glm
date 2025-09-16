@@ -32,7 +32,7 @@
 - [x] T022 Implement `POST /api/stripe/checkout-session` API route.
 - [x] T023 Implement `POST /api/stripe/webhook` API route.
 - [x] T024 [P] Create the landing page UI (`src/app/page.tsx`).
-- [ ] T025 [P] Create the sign-up page UI (`src/app/signup/page.tsx`).
+- [x] T025 [P] Create the sign-up page UI (`src/app/signup/page.tsx`).
 - [ ] T026 [P] Create the login page UI (`src/app/login/page.tsx`).
 - [ ] T027 Create the multi-step onboarding wizard UI (`src/app/onboarding/page.tsx`).
 - [ ] T028 Create the client dashboard UI (`src/app/dashboard/page.tsx`).
