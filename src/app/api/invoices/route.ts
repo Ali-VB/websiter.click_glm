@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency } from '@/lib/tax';
+
+// Type for tax details
+interface TaxDetails {
+  provinceCode?: string;
+  taxType?: string;
+  taxRate?: number;
+  subtotal?: number;
+  taxAmount?: number;
+  totalAmount?: number;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,6 +65,8 @@ export async function GET(request: NextRequest) {
         projects(name),
         status,
         total_amount,
+        tax_amount,
+        tax_details,
         created_at,
         updated_at
       `, { count: 'exact' })
@@ -81,15 +94,27 @@ export async function GET(request: NextRequest) {
     // Transform the data to match the expected format
     const invoices = data?.map(invoice => {
       const projects = invoice.projects as { name: string }[] | null;
+      const taxDetails = invoice.tax_details as TaxDetails || {};
+      
+      // Calculate subtotal (total amount - tax amount)
+      const subtotal = invoice.total_amount - (invoice.tax_amount || 0);
+      
       return {
         id: invoice.id,
         projectId: invoice.project_id,
         projectName: projects?.[0]?.name || 'Unknown Project',
-        amount: invoice.total_amount,
+        subtotal,
+        taxAmount: invoice.tax_amount || 0,
+        totalAmount: invoice.total_amount,
+        currency: 'CAD',
         status: invoice.status,
+        taxDetails,
         dueDate: invoice.created_at, // Using created_at as dueDate for now
         createdAt: invoice.created_at,
         updatedAt: invoice.updated_at || invoice.created_at,
+        formattedSubtotal: formatCurrency(subtotal),
+        formattedTaxAmount: formatCurrency(invoice.tax_amount || 0),
+        formattedTotalAmount: formatCurrency(invoice.total_amount),
       };
     }) || [];
 
@@ -101,11 +126,18 @@ export async function GET(request: NextRequest) {
         id: string;
         projectId: string;
         projectName: string;
-        amount: number;
+        subtotal: number;
+        taxAmount: number;
+        totalAmount: number;
+        currency: string;
         status: string;
+        taxDetails: TaxDetails;
         dueDate: string;
         createdAt: string;
         updatedAt: string;
+        formattedSubtotal: string;
+        formattedTaxAmount: string;
+        formattedTotalAmount: string;
       }>;
       pagination?: {
         total: number;

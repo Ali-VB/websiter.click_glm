@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { POST } from '../route'
 import { stripe } from '@/lib/stripe'
 import { supabase } from '@/lib/supabase'
+import Stripe from 'stripe'
 
 // Mock the libraries
 jest.mock('@/lib/stripe')
@@ -10,6 +11,26 @@ jest.mock('@/lib/supabase')
 // Mock types
 const mockStripe = stripe as jest.Mocked<typeof stripe>
 const mockSupabase = supabase as jest.Mocked<typeof supabase>
+
+// Define types for Stripe objects
+interface MockPaymentIntent {
+  id: string;
+  latest_charge: string;
+}
+
+interface MockCharge {
+  id: string;
+  balance_transaction: string;
+}
+
+interface MockBalanceTransaction {
+  id: string;
+  currency: string;
+  fee_details: Array<{
+    type: string;
+    amount: number;
+  }>;
+}
 
 describe('POST /api/stripe/webhook', () => {
   beforeEach(() => {
@@ -49,6 +70,32 @@ describe('POST /api/stripe/webhook', () => {
     // Mock the webhook constructEvent method
     mockStripe.webhooks.constructEvent = jest.fn().mockReturnValue(mockEvent as unknown)
 
+    // Mock the Stripe API calls
+    const mockPaymentIntent: MockPaymentIntent = {
+      id: 'pi_test_123',
+      latest_charge: 'ch_test_123',
+    }
+    
+    const mockCharge: MockCharge = {
+      id: 'ch_test_123',
+      balance_transaction: 'txn_test_123',
+    }
+    
+    const mockBalanceTransaction: MockBalanceTransaction = {
+      id: 'txn_test_123',
+      currency: 'cad',
+      fee_details: [
+        {
+          type: 'tax',
+          amount: 19500, // $195.00 in cents
+        }
+      ],
+    }
+    
+    mockStripe.paymentIntents.retrieve = jest.fn().mockResolvedValue(mockPaymentIntent as unknown as Stripe.PaymentIntent)
+    mockStripe.charges.retrieve = jest.fn().mockResolvedValue(mockCharge as unknown as Stripe.Charge)
+    mockStripe.balanceTransactions.retrieve = jest.fn().mockResolvedValue(mockBalanceTransaction as unknown as Stripe.BalanceTransaction)
+
     // Mock the Supabase update method
     const mockEq = jest.fn().mockResolvedValue({ error: null })
     const mockUpdate = jest.fn().mockReturnValue({ eq: mockEq })
@@ -72,7 +119,18 @@ describe('POST /api/stripe/webhook', () => {
       expect.any(String)
     )
     expect(mockSupabase.from).toHaveBeenCalledWith('invoices')
-    expect(mockUpdate).toHaveBeenCalledWith({ status: 'paid' })
+    expect(mockUpdate).toHaveBeenCalledWith({
+      status: 'paid',
+      tax_amount: 19500,
+      tax_details: {
+        paymentIntentId: 'pi_test_123',
+        chargeId: 'ch_test_123',
+        balanceTransactionId: 'txn_test_123',
+        taxAmount: 19500,
+        currency: 'cad',
+      },
+      updated_at: expect.any(String),
+    })
     expect(mockEq).toHaveBeenCalledWith('id', 'invoice-123')
   })
 
@@ -230,6 +288,32 @@ describe('POST /api/stripe/webhook', () => {
     // Mock the webhook constructEvent method
     mockStripe.webhooks.constructEvent = jest.fn().mockReturnValue(mockEvent as unknown)
 
+    // Mock the Stripe API calls
+    const mockPaymentIntent: MockPaymentIntent = {
+      id: 'pi_test_123',
+      latest_charge: 'ch_test_123',
+    }
+    
+    const mockCharge: MockCharge = {
+      id: 'ch_test_123',
+      balance_transaction: 'txn_test_123',
+    }
+    
+    const mockBalanceTransaction: MockBalanceTransaction = {
+      id: 'txn_test_123',
+      currency: 'cad',
+      fee_details: [
+        {
+          type: 'tax',
+          amount: 19500, // $195.00 in cents
+        }
+      ],
+    }
+    
+    mockStripe.paymentIntents.retrieve = jest.fn().mockResolvedValue(mockPaymentIntent as unknown as Stripe.PaymentIntent)
+    mockStripe.charges.retrieve = jest.fn().mockResolvedValue(mockCharge as unknown as Stripe.Charge)
+    mockStripe.balanceTransactions.retrieve = jest.fn().mockResolvedValue(mockBalanceTransaction as unknown as Stripe.BalanceTransaction)
+
     // Mock the Supabase update method to return an error
     const mockEq = jest.fn().mockResolvedValue({ error: { message: 'Database error' } })
     const mockUpdate = jest.fn().mockReturnValue({ eq: mockEq })
@@ -253,7 +337,12 @@ describe('POST /api/stripe/webhook', () => {
       expect.any(String)
     )
     expect(mockSupabase.from).toHaveBeenCalledWith('invoices')
-    expect(mockUpdate).toHaveBeenCalledWith({ status: 'paid' })
+    expect(mockUpdate).toHaveBeenCalledWith({
+      status: 'paid',
+      tax_amount: 0,
+      tax_details: {},
+      updated_at: expect.any(String),
+    })
     expect(mockEq).toHaveBeenCalledWith('id', 'invoice-123')
   })
 

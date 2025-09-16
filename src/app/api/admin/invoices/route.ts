@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency } from '@/lib/tax';
+
+// Type for tax details
+interface TaxDetails {
+  provinceCode?: string;
+  taxType?: string;
+  taxRate?: number;
+  subtotal?: number;
+  taxAmount?: number;
+  totalAmount?: number;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,6 +77,8 @@ export async function GET(request: NextRequest) {
         clients(name, email),
         status,
         total_amount,
+        tax_amount,
+        tax_details,
         created_at,
         updated_at
       `, { count: 'exact' });
@@ -98,17 +111,29 @@ export async function GET(request: NextRequest) {
     const invoices = data?.map(invoice => {
       const projects = invoice.projects as { name: string; client_id: string }[] | null;
       const clients = invoice.clients as { name: string; email: string }[] | null;
+      const taxDetails = invoice.tax_details as TaxDetails || {};
+      
+      // Calculate subtotal (total amount - tax amount)
+      const subtotal = invoice.total_amount - (invoice.tax_amount || 0);
+      
       return {
         id: invoice.id,
         projectId: invoice.project_id,
         projectName: projects?.[0]?.name || 'Unknown Project',
         clientName: clients?.[0]?.name || 'Unknown Client',
         clientEmail: clients?.[0]?.email || 'unknown@example.com',
-        amount: invoice.total_amount,
+        subtotal,
+        taxAmount: invoice.tax_amount || 0,
+        totalAmount: invoice.total_amount,
+        currency: 'CAD',
         status: invoice.status,
+        taxDetails,
         dueDate: invoice.created_at, // Using created_at as dueDate for now
         createdAt: invoice.created_at,
         updatedAt: invoice.updated_at || invoice.created_at,
+        formattedSubtotal: formatCurrency(subtotal),
+        formattedTaxAmount: formatCurrency(invoice.tax_amount || 0),
+        formattedTotalAmount: formatCurrency(invoice.total_amount),
       };
     }) || [];
 
@@ -122,11 +147,18 @@ export async function GET(request: NextRequest) {
         projectName: string;
         clientName: string;
         clientEmail: string;
-        amount: number;
+        subtotal: number;
+        taxAmount: number;
+        totalAmount: number;
+        currency: string;
         status: string;
+        taxDetails: TaxDetails;
         dueDate: string;
         createdAt: string;
         updatedAt: string;
+        formattedSubtotal: string;
+        formattedTaxAmount: string;
+        formattedTotalAmount: string;
       }>;
       pagination?: {
         total: number;

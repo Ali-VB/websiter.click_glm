@@ -71,10 +71,57 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       throw new Error('Invoice ID not found in session metadata')
     }
 
-    // Update the invoice status to 'paid' in the database
+    // Get the payment intent to retrieve tax information
+    let taxAmount = 0;
+    let taxDetails = {};
+    
+    try {
+      if (session.payment_intent) {
+        const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent as string);
+        
+        // Extract tax information from the payment intent if available
+        if (paymentIntent.latest_charge) {
+          const charge = await stripe.charges.retrieve(paymentIntent.latest_charge as string);
+          
+          // Calculate tax amount from the charge if tax details are available
+          if (charge.balance_transaction) {
+            const balanceTransaction = await stripe.balanceTransactions.retrieve(charge.balance_transaction as string);
+            
+            // Extract fee details to calculate tax
+            if (balanceTransaction.fee_details) {
+              const taxFeeDetail = balanceTransaction.fee_details.find(detail => detail.type === 'tax');
+              if (taxFeeDetail) {
+                taxAmount = Math.abs(taxFeeDetail.amount);
+                
+                // Create tax details object
+                taxDetails = {
+                  paymentIntentId: paymentIntent.id,
+                  chargeId: charge.id,
+                  balanceTransactionId: balanceTransaction.id,
+                  taxAmount,
+                  currency: balanceTransaction.currency,
+                };
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Error retrieving tax information from Stripe:', error);
+      // Continue with default tax values if retrieval fails
+    }
+
+    console.log('Updating invoice with:', { taxAmount, taxDetails });
+
+    // Update the invoice status to 'paid' and include tax information in the database
     const { error } = await supabase
       .from('invoices')
-      .update({ status: 'paid' })
+      .update({
+        status: 'paid',
+        tax_amount: taxAmount,
+        tax_details: taxDetails,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', invoiceId)
 
     if (error) {
@@ -82,7 +129,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       throw new Error('Failed to update invoice status')
     }
 
-    console.log(`Invoice ${invoiceId} marked as paid`)
+    console.log(`Invoice ${invoiceId} marked as paid with tax amount: ${taxAmount}`)
   } catch (error) {
     console.error('Error in handleCheckoutSessionCompleted:', error)
     throw error

@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { calculateTax } from '@/lib/tax';
+
+// Type for tax details
+interface TaxDetails {
+  provinceCode?: string;
+  taxType?: string;
+  taxRate?: number;
+  subtotal?: number;
+  taxAmount?: number;
+  totalAmount?: number;
+}
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -60,6 +71,14 @@ export async function PUT(
       );
     }
     
+    // Validate provinceCode if provided
+    if (body.provinceCode && typeof body.provinceCode !== 'string') {
+      return NextResponse.json(
+        { success: false, message: 'Province code must be a string' },
+        { status: 400 }
+      );
+    }
+    
     // Check if the invoice exists
     const { data: existingInvoice, error: fetchError } = await supabase
       .from('invoices')
@@ -78,6 +97,8 @@ export async function PUT(
     interface UpdateData {
       status?: string;
       amount?: number;
+      tax_amount?: number;
+      tax_details?: TaxDetails;
       due_date?: string;
       notes?: string;
       updated_at: string;
@@ -85,7 +106,27 @@ export async function PUT(
     
     const updateData: UpdateData = { updated_at: new Date().toISOString() };
     if (body.status !== undefined) updateData.status = body.status;
-    if (body.amount !== undefined) updateData.amount = body.amount;
+    
+    // Handle amount updates with tax calculations
+    if (body.amount !== undefined) {
+      // If province code is provided, recalculate tax
+      const provinceCode = body.provinceCode || existingInvoice.tax_details?.provinceCode || 'ON';
+      const { taxAmount, taxDetails, totalAmount } = calculateTax(body.amount, provinceCode);
+      
+      updateData.amount = body.amount;
+      updateData.tax_amount = taxAmount;
+      updateData.tax_details = taxDetails;
+    }
+    
+    // If only province code is provided (without amount), recalculate tax based on existing amount
+    if (body.provinceCode !== undefined && body.amount === undefined) {
+      const subtotal = existingInvoice.amount;
+      const { taxAmount, taxDetails, totalAmount } = calculateTax(subtotal, body.provinceCode);
+      
+      updateData.tax_amount = taxAmount;
+      updateData.tax_details = taxDetails;
+    }
+    
     if (body.dueDate !== undefined) updateData.due_date = body.dueDate;
     if (body.notes !== undefined) updateData.notes = body.notes;
     updateData.updated_at = new Date().toISOString();
@@ -115,6 +156,7 @@ export async function PUT(
       .single();
     
     // Format the response to match test expectations
+    const taxDetails = updatedInvoice.tax_details as TaxDetails || {};
     const response = {
       success: true,
       message: 'Invoice updated successfully',
@@ -125,7 +167,11 @@ export async function PUT(
         clientName: client?.name || 'John Doe', // Match test expectation
         clientEmail: client?.email || 'john@example.com', // Match test expectation
         amount: updatedInvoice.amount,
+        taxAmount: updatedInvoice.tax_amount || 0,
+        totalAmount: updatedInvoice.amount + (updatedInvoice.tax_amount || 0),
+        currency: 'CAD',
         status: updatedInvoice.status,
+        taxDetails,
         dueDate: updatedInvoice.due_date,
         notes: updatedInvoice.notes || '',
         createdAt: updatedInvoice.created_at,

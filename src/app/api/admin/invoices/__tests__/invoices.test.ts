@@ -43,6 +43,8 @@ describe('GET /api/admin/invoices', () => {
           clients: [{ name: 'John Doe', email: 'john@example.com' }],
           status: 'pending',
           total_amount: 1500,
+          tax_amount: 195, // 13% tax
+          tax_details: { provinceCode: 'ON', taxType: 'HST', taxRate: 0.13 },
           created_at: '2023-01-01T00:00:00Z',
           updated_at: '2023-01-01T00:00:00Z',
         },
@@ -53,6 +55,8 @@ describe('GET /api/admin/invoices', () => {
           clients: [{ name: 'Jane Smith', email: 'jane@example.com' }],
           status: 'paid',
           total_amount: 2500,
+          tax_amount: 325, // 13% tax
+          tax_details: { provinceCode: 'ON', taxType: 'HST', taxRate: 0.13 },
           created_at: '2023-01-02T00:00:00Z',
           updated_at: '2023-01-02T00:00:00Z',
         },
@@ -89,7 +93,10 @@ describe('GET /api/admin/invoices', () => {
       projectName: 'My Awesome Website',
       clientName: 'John Doe',
       clientEmail: 'john@example.com',
-      amount: 1500,
+      subtotal: 1305, // 1500 - 195 tax
+      taxAmount: 195,
+      totalAmount: 1500,
+      currency: 'CAD',
       status: 'pending',
     });
   });
@@ -213,6 +220,8 @@ describe('GET /api/admin/invoices', () => {
           clients: [{ name: 'John Doe', email: 'john@example.com' }],
           status: 'pending',
           total_amount: 1500,
+          tax_amount: 195, // 13% tax
+          tax_details: { provinceCode: 'ON', taxType: 'HST', taxRate: 0.13 },
           created_at: '2023-01-01T00:00:00Z',
           updated_at: '2023-01-01T00:00:00Z',
         },
@@ -280,6 +289,8 @@ describe('GET /api/admin/invoices', () => {
           clients: [{ name: 'John Doe', email: 'john@example.com' }],
           status: 'pending',
           total_amount: 1500,
+          tax_amount: 195, // 13% tax
+          tax_details: { provinceCode: 'ON', taxType: 'HST', taxRate: 0.13 },
           created_at: '2023-01-01T00:00:00Z',
           updated_at: '2023-01-01T00:00:00Z',
         },
@@ -343,6 +354,8 @@ describe('GET /api/admin/invoices', () => {
           clients: [{ name: 'John Doe', email: 'john@example.com' }],
           status: 'pending',
           total_amount: 1500,
+          tax_amount: 195, // 13% tax
+          tax_details: { provinceCode: 'ON', taxType: 'HST', taxRate: 0.13 },
           created_at: '2023-01-01T00:00:00Z',
           updated_at: '2023-01-01T00:00:00Z',
         },

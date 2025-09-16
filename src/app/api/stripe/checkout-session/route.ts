@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { supabase } from '@/lib/supabase'
+import { fromCents } from '@/lib/tax'
 
 export async function POST(request: NextRequest) {
   try {
@@ -105,6 +106,10 @@ export async function POST(request: NextRequest) {
       metadata: {
         invoiceId: invoice.id,
       },
+      // Add tax information to the session
+      tax_id_collection: {
+        enabled: true,
+      },
     })
 
     // Return the session data
@@ -114,6 +119,8 @@ export async function POST(request: NextRequest) {
       session: {
         id: session.id,
         url: session.url,
+        subtotal: fromCents(invoice.total_amount - (invoice.tax_amount || 0)),
+        taxAmount: fromCents(invoice.tax_amount || 0),
         amount_total: session.amount_total,
         currency: session.currency,
         payment_intent: session.payment_intent,

@@ -45,6 +45,8 @@ describe('GET /api/invoices', () => {
                 project_id: 'project-id-1',
                 projects: [{ name: 'My Awesome Website' }],
                 total_amount: 1500,
+                tax_amount: 195, // 13% tax
+                tax_details: { provinceCode: 'ON', taxType: 'HST', taxRate: 0.13 },
                 status: 'pending',
                 created_at: '2023-01-01T00:00:00Z',
                 updated_at: '2023-01-01T00:00:00Z',
@@ -54,6 +56,8 @@ describe('GET /api/invoices', () => {
                 project_id: 'project-id-2',
                 projects: [{ name: 'Another Project' }],
                 total_amount: 2500,
+                tax_amount: 325, // 13% tax
+                tax_details: { provinceCode: 'ON', taxType: 'HST', taxRate: 0.13 },
                 status: 'paid',
                 created_at: '2023-01-02T00:00:00Z',
                 updated_at: '2023-01-02T00:00:00Z',
@@ -87,12 +91,18 @@ describe('GET /api/invoices', () => {
     expect(data.invoices).toHaveLength(2);
     expect(data.invoices[0]).toMatchObject({
       projectName: 'My Awesome Website',
-      amount: 1500,
+      subtotal: 1305, // 1500 - 195 tax
+      taxAmount: 195,
+      totalAmount: 1500,
+      currency: 'CAD',
       status: 'pending',
     });
     expect(data.invoices[1]).toMatchObject({
       projectName: 'Another Project',
-      amount: 2500,
+      subtotal: 2175, // 2500 - 325 tax
+      taxAmount: 325,
+      totalAmount: 2500,
+      currency: 'CAD',
       status: 'paid',
     });
   });
@@ -204,6 +214,8 @@ describe('GET /api/invoices', () => {
                 project_id: 'project-id-1',
                 projects: [{ name: 'My Awesome Website' }],
                 total_amount: 1500,
+                tax_amount: 195, // 13% tax
+                tax_details: { provinceCode: 'ON', taxType: 'HST', taxRate: 0.13 },
                 status: 'pending',
                 created_at: '2023-01-01T00:00:00Z',
                 updated_at: '2023-01-01T00:00:00Z',
@@ -269,6 +281,8 @@ describe('GET /api/invoices', () => {
                       project_id: 'project-id-1',
                       projects: [{ name: 'My Awesome Website' }],
                       total_amount: 1500,
+                      tax_amount: 195, // 13% tax
+                      tax_details: { provinceCode: 'ON', taxType: 'HST', taxRate: 0.13 },
                       status: 'pending',
                       created_at: '2023-01-01T00:00:00Z',
                       updated_at: '2023-01-01T00:00:00Z',
@@ -288,6 +302,8 @@ describe('GET /api/invoices', () => {
                   project_id: 'project-id-1',
                   projects: [{ name: 'My Awesome Website' }],
                   total_amount: 1500,
+                  tax_amount: 195, // 13% tax
+                  tax_details: { provinceCode: 'ON', taxType: 'HST', taxRate: 0.13 },
                   status: 'pending',
                   created_at: '2023-01-01T00:00:00Z',
                   updated_at: '2023-01-01T00:00:00Z',
