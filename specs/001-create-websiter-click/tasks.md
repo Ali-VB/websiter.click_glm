@@ -22,7 +22,7 @@
 - [x] T014 [P] Integration test for the client onboarding flow.
 - [x] T015 [P] Integration test for the admin invoice approval flow.
 
-## Phase 3.3: Core Implementation (ONLY after tests are failing)
+## Phase 3.3: Core API Implementation
 - [x] T016 Implement `POST /api/auth/signup` API route.
 - [x] T017 Implement `POST /api/auth/login` API route.
 - [x] T018 Implement `POST /api/onboarding` API route.
@@ -31,43 +31,45 @@
 - [x] T021 Implement `PUT /api/admin/invoices/:id` API route.
 - [x] T022 Implement `POST /api/stripe/checkout-session` API route.
 - [x] T023 Implement `POST /api/stripe/webhook` API route.
-- [x] T024 [P] Create the landing page UI (`src/app/page.tsx`).
-- [x] T025 [P] Create the sign-up page UI (`src/app/signup/page.tsx`).
-- [x] T026 [P] Create the login page UI (`src/app/login/page.tsx`).
-- [x] T027 Create the multi-step onboarding wizard UI (`src/app/onboarding/page.tsx`).
-- [x] T028 Create the client dashboard UI (`src/app/dashboard/page.tsx`).
-- [ ] T029 Create the admin portal UI for invoice management (`src/app/admin/invoices/page.tsx`).
 
-## Phase 3.4: Integration
-- [ ] T030 Connect auth API routes to Supabase Auth.
-- [ ] T031 Connect onboarding and invoice API routes to Supabase database.
-- [ ] T032 Integrate Stripe checkout session creation.
-- [ ] T033 Implement email verification flow using Supabase.
-- [ ] T034 Implement email notifications for invoice approval and payment confirmation.
+## Phase 3.4: UI - Onboarding Wizard
+- [x] T024: Build UI for Step 1: Base Package Selection.
+- [x] T025: Build UI for Step 2: Add-on Selection.
+- [x] T026: Build UI for Step 3: Website Inspiration & Design.
+- [x] T027: Build UI for Step 4: Domain & Hosting Selection.
+- [x] T028: Build UI for Step 5: Maintenance Plan Selection.
+- [x] T029: Build UI for Step 6: Account Creation & Order Summary.
+- [x] T030: Implement visual progress tracker for the wizard.
+- [x] T031: Implement real-time cost calculator for the wizard.
 
-## Phase 3.5: Polish
-- [ ] T035 [P] Write unit tests for critical utility functions.
-- [ ] T036 [P] Ensure all pages are responsive and mobile-friendly.
-- [ ] T037 [P] Add accessibility features (e.g., ARIA attributes).
-- [ ] T038 [P] Write README.md with detailed setup and usage instructions.
+## Phase 3.5: UI - Client Dashboard
+- [ ] T032: Build main dashboard layout and overview component.
+- [ ] T033: Build project status tracking view with timeline.
+- [ ] T034: Build asset upload interface.
+- [ ] T035: Build billing and invoice history page (with PDF download).
+- [ ] T036: Build support ticket system (create, track, view history).
+- [ ] T037: Build account management page (password, notification preferences).
 
-## Dependencies
-- Setup (T001-T005) must be completed before all other tasks.
-- Tests (T006-T015) must be completed before core implementation (T016-T029).
-- Core implementation tasks for API routes (T016-T023) should be completed before the UI tasks that depend on them (T024-T029).
-- Integration tasks (T030-T034) depend on core implementation tasks.
+## Phase 3.6: UI - Admin Dashboard
+- [ ] T038: Build main admin layout and navigation.
+- [ ] T039: Build Project Management view (list with filters, detail view).
+- [ ] T040: Build Client Management view (list, details, internal notes).
+- [ ] T041: Build Support Ticket Management interface (view, assign, resolve).
+- [ ] T042: Build Contact Submission inbox view.
+- [ ] T043: Build Broadcast Notification tool.
+- [ ] T044: Build System Administration view (stats, config, debug tools).
 
-## Parallel Example
-```
-# The following setup tasks can be run in parallel:
-Task: "Install and configure shadcn/ui."
-Task: "Install and configure Supabase client (`@supabase/supabase-js`)."
-Task: "Install and configure Stripe client (`stripe`)."
-Task: "Set up Jest and React Testing Library for testing."
+## Phase 3.7: Integration
+- [ ] T045: Connect Auth pages (Signup/Login) to Supabase Auth & implement email verification.
+- [ ] T046: Connect Onboarding Wizard state to the backend API.
+- [ ] T047: Connect Asset Upload interface to Supabase Storage.
+- [ ] T048: Connect the full Support Ticket system to the database.
+- [ ] T049: Connect the public Contact Form to the `contact_submissions` table.
+- [ ] T050: Update Invoice & Payment APIs to handle tax calculations.
+- [ ] T051: Implement Role-Based Access Control for all admin routes.
 
-# The following test tasks can be run in parallel:
-Task: "Contract test for POST /api/auth/signup."
-Task: "Contract test for POST /api/auth/login."
-Task: "Contract test for POST /api/onboarding."
-...
-```
+## Phase 3.8: Polish
+- [ ] T052: Write unit tests for critical utility functions.
+- [ ] T053: Ensure all pages are responsive and mobile-friendly.
+- [ ] T054: Add accessibility features (e.g., ARIA attributes).
+- [ ] T055: Write README.md with detailed setup and usage instructions.
