@@ -28,6 +28,7 @@ interface Invoice {
   amount: number;
   status: "draft" | "pending_payment" | "paid" | "cancelled";
   created_at: string;
+  updated_at: string;
   due_date?: string;
 }
 
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
@@ -672,8 +674,16 @@ export default function DashboardPage() {
                                     {invoice.status === "pending_payment" && (
                                       <Button size="sm">Pay Now</Button>
                                     )}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="ml-2"
+                                      onClick={() => setSelectedInvoice(invoice)}
+                                    >
+                                      View Details
+                                    </Button>
                                     <Button variant="outline" size="sm" className="ml-2">
-                                      View
+                                      Download PDF
                                     </Button>
                                   </td>
                                 </tr>
@@ -687,6 +697,135 @@ export default function DashboardPage() {
                 </Card>
               </TabsContent>
             </Tabs>
+            
+            {/* Invoice Detail Modal */}
+            {selectedInvoice && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle>Invoice #{selectedInvoice.id}</CardTitle>
+                        <CardDescription>
+                          Detailed invoice information
+                        </CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedInvoice(null)}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Invoice Header */}
+                    <div className="flex justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold">websiter.click</h3>
+                        <p className="text-sm text-muted-foreground">Website Development Services</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">Invoice Date</p>
+                        <p className="text-sm text-muted-foreground">{formatDate(selectedInvoice.created_at)}</p>
+                        {selectedInvoice.due_date && (
+                          <>
+                            <p className="font-medium mt-2">Due Date</p>
+                            <p className="text-sm text-muted-foreground">{formatDate(selectedInvoice.due_date)}</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Bill To */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Bill To</h3>
+                      <div className="bg-muted/50 p-4 rounded-md">
+                        <p className="font-medium">Client Name</p>
+                        <p className="text-sm text-muted-foreground">client@example.com</p>
+                        <p className="text-sm text-muted-foreground">123 Client Street, City, Country</p>
+                      </div>
+                    </div>
+                    
+                    {/* Project Information */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Project Information</h3>
+                      <div className="bg-muted/50 p-4 rounded-md">
+                        {(() => {
+                          const project = projects.find(p => p.id === selectedInvoice.project_id);
+                          return project ? (
+                            <>
+                              <p className="font-medium">{project.name}</p>
+                              <p className="text-sm text-muted-foreground">{project.description}</p>
+                              <div className="mt-2">
+                                <Badge variant="outline" className={getStatusColor(project.status)}>
+                                  {project.status.replace("_", " ")}
+                                </Badge>
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-muted-foreground">Project information not available</p>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                    
+                    {/* Invoice Items */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Invoice Items</h3>
+                      <div className="border border-input rounded-md">
+                        <div className="grid grid-cols-12 gap-4 p-4 border-b border-input font-medium">
+                          <div className="col-span-6">Description</div>
+                          <div className="col-span-3 text-right">Qty</div>
+                          <div className="col-span-3 text-right">Amount</div>
+                        </div>
+                        <div className="grid grid-cols-12 gap-4 p-4 border-b border-input">
+                          <div className="col-span-6">Website Development</div>
+                          <div className="col-span-3 text-right">1</div>
+                          <div className="col-span-3 text-right">{formatCurrency(selectedInvoice.amount)}</div>
+                        </div>
+                        <div className="grid grid-cols-12 gap-4 p-4 border-b border-input">
+                          <div className="col-span-6">GST (5%)</div>
+                          <div className="col-span-3 text-right">1</div>
+                          <div className="col-span-3 text-right">{formatCurrency(selectedInvoice.amount * 0.05)}</div>
+                        </div>
+                        <div className="grid grid-cols-12 gap-4 p-4 font-medium">
+                          <div className="col-span-9 text-right">Total</div>
+                          <div className="col-span-3 text-right">{formatCurrency(selectedInvoice.amount * 1.05)}</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Payment Status */}
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Payment Status</h3>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="outline" className={getStatusColor(selectedInvoice.status)}>
+                          {selectedInvoice.status.replace("_", " ")}
+                        </Badge>
+                        {selectedInvoice.status === "paid" && (
+                          <p className="text-sm text-muted-foreground">Paid on {formatDate(selectedInvoice.updated_at)}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="flex justify-between pt-4 border-t border-input">
+                      <Button variant="outline" onClick={() => setSelectedInvoice(null)}>
+                        Close
+                      </Button>
+                      <div className="space-x-2">
+                        {selectedInvoice.status === "pending_payment" && (
+                          <Button>Pay Now</Button>
+                        )}
+                        <Button variant="outline">Download PDF</Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         )}
       </section>
