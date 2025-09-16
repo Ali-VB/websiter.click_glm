@@ -47,11 +47,19 @@ export default function SignupPage() {
       const data = await response.json();
 
       if (data.success) {
-        setSuccess("Account created successfully! Please check your email to verify your account.");
-        // Redirect to login after successful signup
-        setTimeout(() => {
-          router.push("/login");
-        }, 3000);
+        if (data.requiresEmailVerification) {
+          setSuccess("Account created successfully! Please check your email to verify your account.");
+          // Redirect to login after successful signup
+          setTimeout(() => {
+            router.push("/login");
+          }, 3000);
+        } else {
+          setSuccess("Account created successfully! Redirecting to login...");
+          // Redirect to login after successful signup
+          setTimeout(() => {
+            router.push("/login");
+          }, 2000);
+        }
       } else {
         setError(data.message || "An error occurred during signup");
       }

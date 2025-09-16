@@ -73,7 +73,7 @@ describe('POST /api/auth/login', () => {
     const mockSelect = jest.fn().mockReturnThis();
     const mockEq = jest.fn().mockReturnThis();
     const mockSingle = jest.fn().mockResolvedValue({
-      data: { name: 'Test User' },
+      data: { name: 'Test User', email_verified: true },
       error: null,
     });
 
@@ -105,6 +105,7 @@ describe('POST /api/auth/login', () => {
     expect(data.user.id).toBe('user-id-123');
     expect(data.user.email).toBe('test@example.com');
     expect(data.user.name).toBe('Test User');
+    expect(data.user.emailVerified).toBe(true);
     expect(data.session.access_token).toBe('access-token');
     expect(data.session.refresh_token).toBe('refresh-token');
     expect(data.session.expires_in).toBe(3600);

@@ -33,9 +33,15 @@ describe('POST /api/auth/signup', () => {
       }),
     } as unknown as NextRequest;
 
-    // Mock successful auth signup
+    // Mock successful auth signup with email confirmation required
     (supabase.auth.signUp as jest.Mock).mockResolvedValue({
-      data: { user: { id: 'user-id-123' } },
+      data: {
+        user: {
+          id: 'user-id-123',
+          email: 'test@example.com',
+          email_confirmed_at: null, // Email not confirmed yet
+        }
+      },
       error: null,
     });
 
@@ -57,6 +63,7 @@ describe('POST /api/auth/signup', () => {
               id: 'user-id-123',
               name: 'Test User',
               email: 'test@example.com',
+              email_verified: false,
             },
           }),
         }),
@@ -69,12 +76,14 @@ describe('POST /api/auth/signup', () => {
     expect(res.status).toBe(201);
     expect(data).toEqual({
       success: true,
-      message: 'User created successfully',
+      message: 'Account created successfully! Please check your email to verify your account.',
       user: {
         id: 'user-id-123',
         email: 'test@example.com',
         name: 'Test User',
+        emailVerified: false,
       },
+      requiresEmailVerification: true,
     });
   });
 

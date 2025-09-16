@@ -9,13 +9,51 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [requiresVerification, setRequiresVerification] = useState(false);
   const router = useRouter();
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError("Please enter your email address");
+      return;
+    }
+
+    setIsResending(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccess("Verification email sent successfully. Please check your inbox.");
+      } else {
+        setError(data.message || "Failed to resend verification email");
+      }
+    } catch (err) {
+      setError("An error occurred while resending verification email");
+      console.error("Resend verification error:", err);
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -32,7 +70,13 @@ export default function LoginPage() {
         // Redirect to dashboard after successful login
         router.push("/dashboard");
       } else {
-        setError(data.message || "Invalid email or password");
+        if (data.requiresEmailVerification) {
+          setError(data.message || "Please verify your email before logging in.");
+          setRequiresVerification(true);
+        } else {
+          setError(data.message || "Invalid email or password");
+          setRequiresVerification(false);
+        }
       }
     } catch (err) {
       setError("An error occurred during login");
@@ -66,6 +110,12 @@ export default function LoginPage() {
           {error && (
             <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
               {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-md text-green-700">
+              {success}
             </div>
           )}
 
@@ -131,6 +181,19 @@ export default function LoginPage() {
               {isLoading ? "Signing In..." : "Sign In"}
             </Button>
           </form>
+          {requiresVerification && (
+            <div className="mt-6 text-center">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleResendVerification}
+                disabled={isResending || !email}
+                className="w-full"
+              >
+                {isResending ? "Sending..." : "Resend Verification Email"}
+              </Button>
+            </div>
+          )}
 
           <div className="mt-6 text-center">
             <p className="text-muted-foreground">

@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     // Get user profile data
     const { data: userData, error: userError } = await supabase
       .from('clients')
-      .select('name')
+      .select('name, email_verified')
       .eq('id', data.user?.id)
       .single();
 
@@ -51,6 +51,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if email is verified
+    if (!userData.email_verified && !data.user?.email_confirmed_at) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Please verify your email before logging in. Check your inbox for the verification link.',
+          requiresEmailVerification: true
+        },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Login successful',
@@ -58,6 +70,7 @@ export async function POST(request: NextRequest) {
         id: data.user?.id,
         email: data.user?.email,
         name: userData.name,
+        emailVerified: userData.email_verified,
       },
       session: {
         access_token: data.session?.access_token,
