@@ -301,6 +301,7 @@ export default function DashboardPage() {
                 <TabsTrigger value="projects">Projects</TabsTrigger>
                 <TabsTrigger value="timeline">Timeline</TabsTrigger>
                 <TabsTrigger value="assets">Assets</TabsTrigger>
+                <TabsTrigger value="support">Support</TabsTrigger>
                 <TabsTrigger value="invoices">Invoices</TabsTrigger>
               </TabsList>
               
@@ -626,6 +627,159 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="support" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Support Tickets</CardTitle>
+                        <CardDescription>
+                          Create and track your support requests
+                        </CardDescription>
+                      </div>
+                      <Button>New Ticket</Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {/* Ticket Stats */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-muted-foreground">Open Tickets</p>
+                                <p className="text-2xl font-bold">2</p>
+                              </div>
+                              <div className="w-8 h-8 bg-yellow-100 text-yellow-800 rounded-full flex items-center justify-center">
+                                !
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-muted-foreground">In Progress</p>
+                                <p className="text-2xl font-bold">1</p>
+                              </div>
+                              <div className="w-8 h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center">
+                                →
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-muted-foreground">Resolved</p>
+                                <p className="text-2xl font-bold">5</p>
+                              </div>
+                              <div className="w-8 h-8 bg-green-100 text-green-800 rounded-full flex items-center justify-center">
+                                ✓
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                      
+                      {/* Ticket Filters */}
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" size="sm">All Tickets</Button>
+                        <Button variant="outline" size="sm">Open</Button>
+                        <Button variant="outline" size="sm">In Progress</Button>
+                        <Button variant="outline" size="sm">Resolved</Button>
+                        <Button variant="outline" size="sm">High Priority</Button>
+                      </div>
+                      
+                      {/* Tickets List */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Recent Tickets</h3>
+                        
+                        {/* Ticket 1 */}
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <h4 className="font-medium">Website layout issue on mobile</h4>
+                                  <Badge variant="outline" className="bg-red-100 text-red-800">High</Badge>
+                                  <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Open</Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  The navigation menu is not displaying correctly on mobile devices. It overlaps with the content.
+                                </p>
+                                <div className="flex items-center text-xs text-muted-foreground space-x-4">
+                                  <span>Category: Design</span>
+                                  <span>Created: 2 days ago</span>
+                                  <span>Last update: 1 day ago</span>
+                                </div>
+                              </div>
+                              <Button variant="outline" size="sm">View Details</Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        
+                        {/* Ticket 2 */}
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <h4 className="font-medium">Need to update contact information</h4>
+                                  <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Medium</Badge>
+                                  <Badge variant="outline" className="bg-blue-100 text-blue-800">In Progress</Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  Please update the phone number and email address on the contact page.
+                                </p>
+                                <div className="flex items-center text-xs text-muted-foreground space-x-4">
+                                  <span>Category: Content</span>
+                                  <span>Created: 5 days ago</span>
+                                  <span>Last update: 2 days ago</span>
+                                </div>
+                              </div>
+                              <Button variant="outline" size="sm">View Details</Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        
+                        {/* Ticket 3 */}
+                        <Card>
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <h4 className="font-medium">Add new testimonial</h4>
+                                  <Badge variant="outline" className="bg-green-100 text-green-800">Low</Badge>
+                                  <Badge variant="outline" className="bg-green-100 text-green-800">Resolved</Badge>
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  I'd like to add a new customer testimonial to the homepage.
+                                </p>
+                                <div className="flex items-center text-xs text-muted-foreground space-x-4">
+                                  <span>Category: Content</span>
+                                  <span>Created: 1 week ago</span>
+                                  <span>Resolved: 5 days ago</span>
+                                </div>
+                              </div>
+                              <Button variant="outline" size="sm">View Details</Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                      
+                      {/* View All Tickets Button */}
+                      <div className="flex justify-center">
+                        <Button variant="outline">View All Tickets</Button>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
