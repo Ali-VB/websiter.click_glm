@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
 interface Project {
   id: string;
@@ -117,6 +122,22 @@ export default function DashboardPage() {
     }).format(amount);
   };
 
+  // Calculate project statistics
+  const projectStats = {
+    total: projects.length,
+    pending: projects.filter(p => p.status === "pending").length,
+    inProgress: projects.filter(p => p.status === "in_progress").length,
+    completed: projects.filter(p => p.status === "completed").length,
+  };
+
+  // Calculate invoice statistics
+  const invoiceStats = {
+    total: invoices.length,
+    pending: invoices.filter(i => i.status === "pending_payment").length,
+    paid: invoices.filter(i => i.status === "paid").length,
+    totalAmount: invoices.reduce((sum, invoice) => sum + invoice.amount, 0),
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("supabase.auth.token");
     router.push("/");
@@ -161,119 +182,243 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Projects Section */}
-            <div className="bg-background p-6 rounded-lg border">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Your Projects</h2>
-                <Button asChild>
-                  <Link href="/onboarding">New Project</Link>
-                </Button>
-              </div>
-
-              {projects.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">You don&apos;t have any projects yet.</p>
-                  <Button asChild>
-                    <Link href="/onboarding">Create Your First Project</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4">Project Name</th>
-                        <th className="text-left py-3 px-4">Description</th>
-                        <th className="text-left py-3 px-4">Status</th>
-                        <th className="text-left py-3 px-4">Created</th>
-                        <th className="text-left py-3 px-4">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {projects.map((project) => (
-                        <tr key={project.id} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-4 font-medium">{project.name}</td>
-                          <td className="py-3 px-4 text-muted-foreground max-w-xs truncate">
-                            {project.description}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                project.status
-                              )}`}
-                            >
-                              {project.status.replace("_", " ")}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">{formatDate(project.created_at)}</td>
-                          <td className="py-3 px-4">
-                            <Button variant="outline" size="sm" asChild>
-                              <Link href={`/projects/${project.id}`}>View</Link>
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+            {/* Dashboard Overview Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
+                  <div className="w-4 h-4 text-muted-foreground">📁</div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{projectStats.total}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {projectStats.completed} completed
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+                  <div className="w-4 h-4 text-muted-foreground">⏳</div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{projectStats.inProgress}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {projectStats.pending} pending
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
+                  <div className="w-4 h-4 text-muted-foreground">📄</div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{invoiceStats.total}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {invoiceStats.paid} paid
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
+                  <div className="w-4 h-4 text-muted-foreground">💰</div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(invoiceStats.totalAmount)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {invoiceStats.pending} pending payment
+                  </p>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Invoices Section */}
-            <div className="bg-background p-6 rounded-lg border">
-              <h2 className="text-2xl font-bold mb-6">Your Invoices</h2>
+            {/* Project Status Overview */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Project Status Overview</CardTitle>
+                <CardDescription>
+                  Summary of all your projects and their current status
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Pending</Badge>
+                      <span className="text-sm">Projects awaiting approval</span>
+                    </div>
+                    <span className="font-medium">{projectStats.pending}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline" className="bg-blue-100 text-blue-800">In Progress</Badge>
+                      <span className="text-sm">Projects currently being developed</span>
+                    </div>
+                    <span className="font-medium">{projectStats.inProgress}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline" className="bg-green-100 text-green-800">Completed</Badge>
+                      <span className="text-sm">Projects that have been finished</span>
+                    </div>
+                    <span className="font-medium">{projectStats.completed}</span>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Completion Rate</span>
+                    <span className="text-sm font-medium">
+                      {projectStats.total > 0 
+                        ? `${Math.round((projectStats.completed / projectStats.total) * 100)}%` 
+                        : '0%'}
+                    </span>
+                  </div>
+                  
+                  <Progress 
+                    value={projectStats.total > 0 ? (projectStats.completed / projectStats.total) * 100 : 0} 
+                    className="h-2" 
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-              {invoices.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">You don&apos;t have any invoices yet.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4">Invoice ID</th>
-                        <th className="text-left py-3 px-4">Project</th>
-                        <th className="text-left py-3 px-4">Amount</th>
-                        <th className="text-left py-3 px-4">Status</th>
-                        <th className="text-left py-3 px-4">Date</th>
-                        <th className="text-left py-3 px-4">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {invoices.map((invoice) => {
-                        const project = projects.find(p => p.id === invoice.project_id);
-                        return (
-                          <tr key={invoice.id} className="border-b hover:bg-muted/50">
-                            <td className="py-3 px-4 font-medium">#{invoice.id}</td>
-                            <td className="py-3 px-4">{project?.name || "Unknown Project"}</td>
-                            <td className="py-3 px-4">{formatCurrency(invoice.amount)}</td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                                  invoice.status
-                                )}`}
-                              >
-                                {invoice.status.replace("_", " ")}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">{formatDate(invoice.created_at)}</td>
-                            <td className="py-3 px-4">
-                              {invoice.status === "pending_payment" && (
-                                <Button size="sm">Pay Now</Button>
-                              )}
-                              <Button variant="outline" size="sm" className="ml-2">
-                                View
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+            {/* Projects and Invoices Tabs */}
+            <Tabs defaultValue="projects" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="projects">Projects</TabsTrigger>
+                <TabsTrigger value="invoices">Invoices</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="projects" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Your Projects</CardTitle>
+                        <CardDescription>
+                          View and manage all your website projects
+                        </CardDescription>
+                      </div>
+                      <Button asChild>
+                        <Link href="/onboarding">New Project</Link>
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {projects.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground mb-4">You don't have any projects yet.</p>
+                        <Button asChild>
+                          <Link href="/onboarding">Create Your First Project</Link>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-3 px-4">Project Name</th>
+                              <th className="text-left py-3 px-4">Description</th>
+                              <th className="text-left py-3 px-4">Status</th>
+                              <th className="text-left py-3 px-4">Created</th>
+                              <th className="text-left py-3 px-4">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {projects.map((project) => (
+                              <tr key={project.id} className="border-b hover:bg-muted/50">
+                                <td className="py-3 px-4 font-medium">{project.name}</td>
+                                <td className="py-3 px-4 text-muted-foreground max-w-xs truncate">
+                                  {project.description}
+                                </td>
+                                <td className="py-3 px-4">
+                                  <Badge variant="outline" className={getStatusColor(project.status)}>
+                                    {project.status.replace("_", " ")}
+                                  </Badge>
+                                </td>
+                                <td className="py-3 px-4">{formatDate(project.created_at)}</td>
+                                <td className="py-3 px-4">
+                                  <Button variant="outline" size="sm" asChild>
+                                    <Link href={`/projects/${project.id}`}>View</Link>
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="invoices" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Your Invoices</CardTitle>
+                    <CardDescription>
+                      View and manage all your invoices and payments
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {invoices.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground">You don't have any invoices yet.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-3 px-4">Invoice ID</th>
+                              <th className="text-left py-3 px-4">Project</th>
+                              <th className="text-left py-3 px-4">Amount</th>
+                              <th className="text-left py-3 px-4">Status</th>
+                              <th className="text-left py-3 px-4">Date</th>
+                              <th className="text-left py-3 px-4">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {invoices.map((invoice) => {
+                              const project = projects.find(p => p.id === invoice.project_id);
+                              return (
+                                <tr key={invoice.id} className="border-b hover:bg-muted/50">
+                                  <td className="py-3 px-4 font-medium">#{invoice.id}</td>
+                                  <td className="py-3 px-4">{project?.name || "Unknown Project"}</td>
+                                  <td className="py-3 px-4">{formatCurrency(invoice.amount)}</td>
+                                  <td className="py-3 px-4">
+                                    <Badge variant="outline" className={getStatusColor(invoice.status)}>
+                                      {invoice.status.replace("_", " ")}
+                                    </Badge>
+                                  </td>
+                                  <td className="py-3 px-4">{formatDate(invoice.created_at)}</td>
+                                  <td className="py-3 px-4">
+                                    {invoice.status === "pending_payment" && (
+                                      <Button size="sm">Pay Now</Button>
+                                    )}
+                                    <Button variant="outline" size="sm" className="ml-2">
+                                      View
+                                    </Button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         )}
       </section>
