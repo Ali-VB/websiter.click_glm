@@ -90,7 +90,11 @@
 
 ## Phase 3.9: Polish
 
-- [ ] **T058:** Write unit tests for critical utility functions.
-- [ ] **T059:** Ensure all pages are responsive and mobile-friendly.
+- [x] **T058:** Write unit tests for critical utility functions.
+- [x] **T059:** Ensure all pages are responsive and mobile-friendly.
+  - As part of this, apply the following enhancements to the onboarding page:
+  - Increase the `max-width` of the container for a better desktop layout.
+  - Display visual color palettes for the color theme selection.
+  - Convert the step progress indicator to a vertical sidebar (for desktop), keeping it horizontal for mobile.
 - [ ] **T060:** Add accessibility features (e.g., ARIA attributes).
 - [ ] **T061:** Write README.md with detailed setup and usage instructions.
