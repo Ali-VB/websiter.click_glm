@@ -96,11 +96,31 @@ const DESIGN_STYLES = [
 ];
 
 const COLOR_SCHEMES = [
-  { id: "warm", label: "Warm (Reds, Oranges, Yellows)" },
-  { id: "cool", label: "Cool (Blues, Greens, Purples)" },
-  { id: "neutral", label: "Neutral (Grays, Browns, Beiges)" },
-  { id: "vibrant", label: "Vibrant (Bright, Bold Colors)" },
-  { id: "minimal", label: "Minimal (Black, White, One Accent)" },
+  {
+    id: "warm",
+    label: "Warm (Reds, Oranges, Yellows)",
+    colors: ["#FF6B6B", "#FFA07A", "#FFD700", "#FF8C00", "#FF4500"]
+  },
+  {
+    id: "cool",
+    label: "Cool (Blues, Greens, Purples)",
+    colors: ["#4682B4", "#20B2AA", "#9370DB", "#6A5ACD", "#48D1CC"]
+  },
+  {
+    id: "neutral",
+    label: "Neutral (Grays, Browns, Beiges)",
+    colors: ["#808080", "#A9A9A9", "#D3D3D3", "#D2B48C", "#F5F5DC"]
+  },
+  {
+    id: "vibrant",
+    label: "Vibrant (Bright, Bold Colors)",
+    colors: ["#FF1493", "#00FF7F", "#FFD700", "#FF4500", "#9400D3"]
+  },
+  {
+    id: "minimal",
+    label: "Minimal (Black, White, One Accent)",
+    colors: ["#000000", "#FFFFFF", "#FFFFFF", "#FFFFFF", "#4169E1"]
+  },
 ];
 
 const LAYOUT_PREFERENCES = [
@@ -437,6 +457,58 @@ export default function OnboardingPage() {
     );
   };
 
+  const renderVerticalStepIndicator = () => {
+    const stepTitles = [
+      "Package",
+      "Features",
+      "Design",
+      "Domain",
+      "Support",
+      "Account"
+    ];
+    
+    return (
+      <div className="space-y-4">
+        <h3 className="font-semibold text-lg mb-4">Project Setup</h3>
+        {[1, 2, 3, 4, 5, 6].map((step) => (
+          <div key={step} className="flex items-center">
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium mr-3 ${
+                step === currentStep
+                  ? "bg-primary text-primary-foreground"
+                  : step < currentStep
+                  ? "bg-primary/20 text-primary"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {step}
+            </div>
+            <div>
+              <div
+                className={`font-medium ${
+                  step === currentStep
+                    ? "text-primary"
+                    : step < currentStep
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {stepTitles[step - 1]}
+              </div>
+              {step < 6 && (
+                <div
+                  className={`w-0.5 h-6 ml-3.5 mt-1 ${
+                    step < currentStep ? "bg-primary" : "bg-muted"
+                  }`}
+                />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
@@ -591,7 +663,18 @@ export default function OnboardingPage() {
                     }`}
                     onClick={() => handleInputChange("colorScheme", scheme.id)}
                   >
-                    {scheme.label}
+                    <div className="flex items-center justify-between">
+                      <span>{scheme.label}</span>
+                      <div className="flex space-x-1">
+                        {scheme.colors.map((color, index) => (
+                          <div
+                            key={index}
+                            className="w-6 h-6 rounded-full border border-gray-200"
+                            style={{ backgroundColor: color }}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -956,55 +1039,71 @@ export default function OnboardingPage() {
 
       {/* Onboarding Form */}
       <section className="container mx-auto px-4 py-8 flex justify-center">
-        <div className="w-full max-w-2xl bg-background p-8 rounded-lg border">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Create Your Project</h1>
-            <p className="text-muted-foreground">
-              Follow these steps to set up your website project
-            </p>
+        <div className="w-full max-w-4xl bg-background rounded-lg border">
+          <div className="p-8 border-b">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold mb-2">Create Your Project</h1>
+              <p className="text-muted-foreground">
+                Follow these steps to set up your website project
+              </p>
+            </div>
           </div>
 
-          {/* Real-time Cost Calculator */}
-          <div className="mb-6 p-4 bg-primary/5 rounded-md border border-primary/20">
-            <div className="flex justify-between items-center">
-              <span className="font-semibold">Estimated Total Cost:</span>
-              <span className="text-xl font-bold text-primary">
-                CAD ${totalCost.toLocaleString()}
-              </span>
+          <div className="flex flex-col md:flex-row">
+            {/* Vertical Step Indicator for Desktop */}
+            <div className="md:w-1/4 p-6 border-r hidden md:block">
+              {renderVerticalStepIndicator()}
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              All prices are in CAD and include one-time and annual costs
-            </p>
-          </div>
 
-          {error && (
-            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
-              {error}
+            {/* Main Content */}
+            <div className="md:w-3/4 p-6">
+              {/* Real-time Cost Calculator */}
+              <div className="mb-6 p-4 bg-primary/5 rounded-md border border-primary/20">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">Estimated Total Cost:</span>
+                  <span className="text-xl font-bold text-primary">
+                    CAD ${totalCost.toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  All prices are in CAD and include one-time and annual costs
+                </p>
+              </div>
+
+              {error && (
+                <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+                  {error}
+                </div>
+              )}
+
+              {/* Horizontal Step Indicator for Mobile */}
+              <div className="md:hidden mb-6">
+                {renderStepIndicator()}
+              </div>
+
+              {renderStepContent()}
+
+              <div className="mt-8 flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={currentStep === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  onClick={handleNext}
+                  disabled={isLoading}
+                  aria-busy={isLoading}
+                >
+                  {isLoading
+                    ? "Creating Project..."
+                    : currentStep === 6
+                    ? "Create Project"
+                    : "Next"}
+                </Button>
+              </div>
             </div>
-          )}
-
-          {renderStepIndicator()}
-          {renderStepContent()}
-
-          <div className="mt-8 flex justify-between">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 1}
-            >
-              Previous
-            </Button>
-            <Button
-              onClick={handleNext}
-              disabled={isLoading}
-              aria-busy={isLoading}
-            >
-              {isLoading
-                ? "Creating Project..."
-                : currentStep === 6
-                ? "Create Project"
-                : "Next"}
-            </Button>
           </div>
         </div>
       </section>
