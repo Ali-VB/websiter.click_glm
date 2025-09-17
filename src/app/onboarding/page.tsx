@@ -571,7 +571,7 @@ export default function OnboardingPage() {
               <label className="block text-sm font-medium mb-2">
                 Add-ons
               </label>
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {ADD_ONS.map((addOn) => (
                   <div
                     key={addOn.id}
@@ -652,28 +652,28 @@ export default function OnboardingPage() {
               <label className="block text-sm font-medium mb-2">
                 Color Scheme
               </label>
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {COLOR_SCHEMES.map((scheme) => (
                   <div
                     key={scheme.id}
                     className={`p-4 border rounded-md cursor-pointer transition-colors ${
                       formData.colorScheme === scheme.id
-                        ? "border-primary bg-primary/5"
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                         : "border-input hover:border-primary/50"
                     }`}
                     onClick={() => handleInputChange("colorScheme", scheme.id)}
                   >
-                    <div className="flex items-center justify-between">
-                      <span>{scheme.label}</span>
-                      <div className="flex space-x-1">
+                    <div className="flex flex-col items-center space-y-3">
+                      <div className="grid grid-cols-5 gap-1 w-full">
                         {scheme.colors.map((color, index) => (
                           <div
                             key={index}
-                            className="w-6 h-6 rounded-full border border-gray-200"
+                            className="h-10 rounded-md border border-gray-200"
                             style={{ backgroundColor: color }}
                           />
                         ))}
                       </div>
+                      <span className="text-sm font-medium text-center">{scheme.label}</span>
                     </div>
                   </div>
                 ))}
@@ -1039,7 +1039,7 @@ export default function OnboardingPage() {
 
       {/* Onboarding Form */}
       <section className="container mx-auto px-4 py-8 flex justify-center">
-        <div className="w-full max-w-4xl bg-background rounded-lg border">
+        <div className="w-full max-w-7xl bg-background rounded-lg border">
           <div className="p-8 border-b">
             <div className="text-center">
               <h1 className="text-3xl font-bold mb-2">Create Your Project</h1>
@@ -1093,8 +1093,9 @@ export default function OnboardingPage() {
                 </Button>
                 <Button
                   onClick={handleNext}
-                  disabled={isLoading}
+                  disabled={isLoading || !validateCurrentStep()}
                   aria-busy={isLoading}
+                  className={!validateCurrentStep() && !isLoading ? "opacity-50 cursor-not-allowed" : ""}
                 >
                   {isLoading
                     ? "Creating Project..."
