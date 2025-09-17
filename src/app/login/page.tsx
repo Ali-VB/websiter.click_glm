@@ -106,9 +106,11 @@ export default function LoginPage() {
           <div className="w-8 h-8 bg-primary rounded-full"></div>
           <span className="font-bold text-xl">websiter.click</span>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/">Back to Home</Link>
-        </Button>
+        <nav aria-label="Page navigation">
+          <Button variant="outline" asChild>
+            <Link href="/" aria-label="Return to home page">Back to Home</Link>
+          </Button>
+        </nav>
       </header>
 
       {/* Login Form */}
@@ -120,13 +122,21 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+            <div
+              className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive"
+              role="alert"
+              aria-live="assertive"
+            >
               {error}
             </div>
           )}
 
           {success && (
-            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-md text-green-700">
+            <div
+              className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-md text-green-700"
+              role="status"
+              aria-live="polite"
+            >
               {success}
             </div>
           )}
@@ -145,7 +155,14 @@ export default function LoginPage() {
                 placeholder="Enter your email"
                 required
                 aria-required="true"
+                aria-invalid={!!error && error.includes("email")}
+                aria-describedby={error && error.includes("email") ? "email-error" : undefined}
               />
+              {error && error.includes("email") && (
+                <p id="email-error" className="text-sm text-destructive mt-1">
+                  {error}
+                </p>
+              )}
             </div>
 
             <div>
@@ -161,7 +178,14 @@ export default function LoginPage() {
                 placeholder="Enter your password"
                 required
                 aria-required="true"
+                aria-invalid={!!error && error.includes("password")}
+                aria-describedby={error && error.includes("password") ? "password-error" : undefined}
               />
+              {error && error.includes("password") && (
+                <p id="password-error" className="text-sm text-destructive mt-1">
+                  {error}
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-between">
@@ -171,6 +195,7 @@ export default function LoginPage() {
                   name="remember-me"
                   type="checkbox"
                   className="h-4 w-4 text-primary focus:ring-primary border-input rounded"
+                  aria-describedby="remember-me-description"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-muted-foreground">
                   Remember me
@@ -189,6 +214,7 @@ export default function LoginPage() {
               className="w-full"
               disabled={isLoading}
               aria-busy={isLoading}
+              aria-label={isLoading ? "Signing in to your account" : "Sign in to your account"}
             >
               {isLoading ? "Signing In..." : "Sign In"}
             </Button>
@@ -201,6 +227,8 @@ export default function LoginPage() {
                 onClick={handleResendVerification}
                 disabled={isResending || !email}
                 className="w-full"
+                aria-label={isResending ? "Sending verification email" : "Resend verification email"}
+                aria-busy={isResending}
               >
                 {isResending ? "Sending..." : "Resend Verification Email"}
               </Button>

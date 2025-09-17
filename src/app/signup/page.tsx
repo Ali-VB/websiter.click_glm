@@ -79,9 +79,11 @@ export default function SignupPage() {
           <div className="w-8 h-8 bg-primary rounded-full"></div>
           <span className="font-bold text-xl">websiter.click</span>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/">Back to Home</Link>
-        </Button>
+        <nav aria-label="Page navigation">
+          <Button variant="outline" asChild>
+            <Link href="/" aria-label="Return to home page">Back to Home</Link>
+          </Button>
+        </nav>
       </header>
 
       {/* Signup Form */}
@@ -93,13 +95,21 @@ export default function SignupPage() {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+            <div
+              className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive"
+              role="alert"
+              aria-live="assertive"
+            >
               {error}
             </div>
           )}
 
           {success && (
-            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-md text-green-700">
+            <div
+              className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-md text-green-700"
+              role="status"
+              aria-live="polite"
+            >
               {success}
             </div>
           )}
@@ -118,7 +128,14 @@ export default function SignupPage() {
                 placeholder="Enter your full name"
                 required
                 aria-required="true"
+                aria-invalid={!!error && error.includes("name")}
+                aria-describedby={error && error.includes("name") ? "name-error" : undefined}
               />
+              {error && error.includes("name") && (
+                <p id="name-error" className="text-sm text-destructive mt-1">
+                  {error}
+                </p>
+              )}
             </div>
 
             <div>
@@ -134,7 +151,14 @@ export default function SignupPage() {
                 placeholder="Enter your email"
                 required
                 aria-required="true"
+                aria-invalid={!!error && error.includes("email")}
+                aria-describedby={error && error.includes("email") ? "email-error" : undefined}
               />
+              {error && error.includes("email") && (
+                <p id="email-error" className="text-sm text-destructive mt-1">
+                  {error}
+                </p>
+              )}
             </div>
 
             <div>
@@ -151,10 +175,17 @@ export default function SignupPage() {
                 required
                 aria-required="true"
                 minLength={8}
+                aria-invalid={!!error && (error.includes("password") || error.includes("match"))}
+                aria-describedby={error && (error.includes("password") || error.includes("match")) ? "password-error" : "password-requirements"}
               />
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p id="password-requirements" className="mt-1 text-sm text-muted-foreground">
                 Must be at least 8 characters long
               </p>
+              {error && (error.includes("password") || error.includes("match")) && (
+                <p id="password-error" className="text-sm text-destructive mt-1">
+                  {error}
+                </p>
+              )}
             </div>
 
             <div>
@@ -171,7 +202,14 @@ export default function SignupPage() {
                 required
                 aria-required="true"
                 minLength={8}
+                aria-invalid={!!error && error.includes("match")}
+                aria-describedby={error && error.includes("match") ? "confirm-password-error" : undefined}
               />
+              {error && error.includes("match") && (
+                <p id="confirm-password-error" className="text-sm text-destructive mt-1">
+                  {error}
+                </p>
+              )}
             </div>
 
             <Button
@@ -179,6 +217,7 @@ export default function SignupPage() {
               className="w-full"
               disabled={isLoading}
               aria-busy={isLoading}
+              aria-label={isLoading ? "Creating your account" : "Create your account"}
             >
               {isLoading ? "Creating Account..." : "Create Account"}
             </Button>

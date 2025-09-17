@@ -190,14 +190,14 @@ export default function DashboardPage() {
           <div className="w-8 h-8 bg-primary rounded-full"></div>
           <span className="font-bold text-xl">websiter.click</span>
         </div>
-        <div className="flex items-center space-x-4">
+        <nav className="flex items-center space-x-4" aria-label="User navigation">
           <Button variant="outline" asChild>
-            <Link href="/">Home</Link>
+            <Link href="/" aria-label="Return to home page">Home</Link>
           </Button>
-          <Button variant="outline" onClick={handleLogout}>
+          <Button variant="outline" onClick={handleLogout} aria-label="Log out of your account">
             Log Out
           </Button>
-        </div>
+        </nav>
       </header>
 
       {/* Dashboard Content */}
@@ -210,14 +210,19 @@ export default function DashboardPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+          <div
+            className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive"
+            role="alert"
+            aria-live="assertive"
+          >
             {error}
           </div>
         )}
 
         {isLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <div className="flex justify-center py-12" role="status" aria-live="polite">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" aria-label="Loading dashboard content"></div>
+            <span className="sr-only">Loading dashboard content</span>
           </div>
         ) : (
           <div className="space-y-8">
@@ -321,9 +326,13 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   
-                  <Progress 
-                    value={projectStats.total > 0 ? (projectStats.completed / projectStats.total) * 100 : 0} 
-                    className="h-2" 
+                  <Progress
+                    value={projectStats.total > 0 ? (projectStats.completed / projectStats.total) * 100 : 0}
+                    className="h-2"
+                    aria-label={`Project completion rate: ${projectStats.total > 0 ? Math.round((projectStats.completed / projectStats.total) * 100) : 0}%`}
+                    aria-valuenow={projectStats.total > 0 ? Math.round((projectStats.completed / projectStats.total) * 100) : 0}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
                   />
                 </div>
               </CardContent>
@@ -331,16 +340,16 @@ export default function DashboardPage() {
 
             {/* Projects and Invoices Tabs */}
             <Tabs defaultValue="projects" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="projects">Projects</TabsTrigger>
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                <TabsTrigger value="assets">Assets</TabsTrigger>
-                <TabsTrigger value="support">Support</TabsTrigger>
-                <TabsTrigger value="account">Account</TabsTrigger>
-                <TabsTrigger value="invoices">Invoices</TabsTrigger>
+              <TabsList aria-label="Dashboard sections" role="tablist">
+                <TabsTrigger value="projects" role="tab" aria-selected="true" aria-controls="projects-tabpanel" tabIndex={0}>Projects</TabsTrigger>
+                <TabsTrigger value="timeline" role="tab" aria-selected="false" aria-controls="timeline-tabpanel" tabIndex={-1}>Timeline</TabsTrigger>
+                <TabsTrigger value="assets" role="tab" aria-selected="false" aria-controls="assets-tabpanel" tabIndex={-1}>Assets</TabsTrigger>
+                <TabsTrigger value="support" role="tab" aria-selected="false" aria-controls="support-tabpanel" tabIndex={-1}>Support</TabsTrigger>
+                <TabsTrigger value="account" role="tab" aria-selected="false" aria-controls="account-tabpanel" tabIndex={-1}>Account</TabsTrigger>
+                <TabsTrigger value="invoices" role="tab" aria-selected="false" aria-controls="invoices-tabpanel" tabIndex={-1}>Invoices</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="projects" className="space-y-4">
+              <TabsContent value="projects" className="space-y-4" role="tabpanel" id="projects-tabpanel" aria-labelledby="projects-tab">
                 <Card>
                   <CardHeader>
                     <div className="flex justify-between items-center">
@@ -351,7 +360,7 @@ export default function DashboardPage() {
                         </CardDescription>
                       </div>
                       <Button asChild>
-                        <Link href="/onboarding">New Project</Link>
+                        <Link href="/onboarding" aria-label="Create a new project">New Project</Link>
                       </Button>
                     </div>
                   </CardHeader>
@@ -360,19 +369,19 @@ export default function DashboardPage() {
                       <div className="text-center py-8">
                         <p className="text-muted-foreground mb-4">You don't have any projects yet.</p>
                         <Button asChild>
-                          <Link href="/onboarding">Create Your First Project</Link>
+                          <Link href="/onboarding" aria-label="Create your first project">Create Your First Project</Link>
                         </Button>
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full" aria-label="Projects table">
                           <thead>
                             <tr className="border-b">
-                              <th className="text-left py-3 px-4">Project Name</th>
-                              <th className="text-left py-3 px-4">Description</th>
-                              <th className="text-left py-3 px-4">Status</th>
-                              <th className="text-left py-3 px-4">Created</th>
-                              <th className="text-left py-3 px-4">Actions</th>
+                              <th className="text-left py-3 px-4" scope="col">Project Name</th>
+                              <th className="text-left py-3 px-4" scope="col">Description</th>
+                              <th className="text-left py-3 px-4" scope="col">Status</th>
+                              <th className="text-left py-3 px-4" scope="col">Created</th>
+                              <th className="text-left py-3 px-4" scope="col">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -390,7 +399,7 @@ export default function DashboardPage() {
                                 <td className="py-3 px-4">{formatDate(project.created_at)}</td>
                                 <td className="py-3 px-4">
                                   <Button variant="outline" size="sm" asChild>
-                                    <Link href={`/projects/${project.id}`}>View</Link>
+                                    <Link href={`/projects/${project.id}`} aria-label={`View details for project ${project.name}`}>View</Link>
                                   </Button>
                                 </td>
                               </tr>
@@ -403,7 +412,7 @@ export default function DashboardPage() {
                 </Card>
               </TabsContent>
               
-              <TabsContent value="timeline" className="space-y-4">
+              <TabsContent value="timeline" className="space-y-4" role="tabpanel" id="timeline-tabpanel" aria-labelledby="timeline-tab">
                 <Card>
                   <CardHeader>
                     <CardTitle>Project Timeline</CardTitle>
@@ -507,7 +516,7 @@ export default function DashboardPage() {
                               
                               <div className="mt-4">
                                 <Button variant="outline" size="sm" asChild>
-                                  <Link href={`/projects/${project.id}`}>View Details</Link>
+                                  <Link href={`/projects/${project.id}`} aria-label={`View details for project ${project.name}`}>View Details</Link>
                                 </Button>
                               </div>
                             </div>
@@ -519,7 +528,7 @@ export default function DashboardPage() {
                 </Card>
               </TabsContent>
               
-              <TabsContent value="assets" className="space-y-4">
+              <TabsContent value="assets" className="space-y-4" role="tabpanel" id="assets-tabpanel" aria-labelledby="assets-tab">
                 <Card>
                   <CardHeader>
                     <CardTitle>Asset Upload</CardTitle>
@@ -532,7 +541,7 @@ export default function DashboardPage() {
                       <div className="text-center py-8">
                         <p className="text-muted-foreground mb-4">You need to create a project before uploading assets.</p>
                         <Button asChild>
-                          <Link href="/onboarding">Create Your First Project</Link>
+                          <Link href="/onboarding" aria-label="Create your first project">Create Your First Project</Link>
                         </Button>
                       </div>
                     ) : (
@@ -542,7 +551,7 @@ export default function DashboardPage() {
                 </Card>
               </TabsContent>
               
-              <TabsContent value="support" className="space-y-4">
+              <TabsContent value="support" className="space-y-4" role="tabpanel" id="support-tabpanel" aria-labelledby="support-tab">
                 <Card>
                   <CardHeader>
                     <div className="flex justify-between items-center">
@@ -552,7 +561,7 @@ export default function DashboardPage() {
                           Create and track your support requests
                         </CardDescription>
                       </div>
-                      <Button>New Ticket</Button>
+                      <Button aria-label="Create a new support ticket">New Ticket</Button>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -622,7 +631,7 @@ export default function DashboardPage() {
                         {supportTickets.length === 0 ? (
                           <div className="text-center py-8">
                             <p className="text-muted-foreground">You don't have any support tickets yet.</p>
-                            <Button className="mt-4">Create Your First Ticket</Button>
+                            <Button className="mt-4" aria-label="Create your first support ticket">Create Your First Ticket</Button>
                           </div>
                         ) : (
                           supportTickets.slice(0, 3).map((ticket) => (
@@ -665,7 +674,7 @@ export default function DashboardPage() {
                                       )}
                                     </div>
                                   </div>
-                                  <Button variant="outline" size="sm">View Details</Button>
+                                  <Button variant="outline" size="sm" aria-label={`View details for ticket ${ticket.subject}`}>View Details</Button>
                                 </div>
                               </CardContent>
                             </Card>
@@ -675,14 +684,14 @@ export default function DashboardPage() {
                       
                       {/* View All Tickets Button */}
                       <div className="flex justify-center">
-                        <Button variant="outline">View All Tickets</Button>
+                        <Button variant="outline" aria-label="View all support tickets">View All Tickets</Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
               
-              <TabsContent value="account" className="space-y-4">
+              <TabsContent value="account" className="space-y-4" role="tabpanel" id="account-tabpanel" aria-labelledby="account-tab">
                 <Card>
                   <CardHeader>
                     <CardTitle>Account Settings</CardTitle>
@@ -697,8 +706,14 @@ export default function DashboardPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="email">Email Address</Label>
-                          <Input id="email" type="email" defaultValue="client@example.com" disabled />
-                          <p className="text-xs text-muted-foreground">Contact support to change your email</p>
+                          <Input
+                            id="email"
+                            type="email"
+                            defaultValue="client@example.com"
+                            disabled
+                            aria-describedby="email-help"
+                          />
+                          <p id="email-help" className="text-xs text-muted-foreground">Contact support to change your email</p>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="name">Full Name</Label>
@@ -715,20 +730,35 @@ export default function DashboardPage() {
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="current-password">Current Password</Label>
-                          <Input id="current-password" type="password" />
+                          <Input
+                            id="current-password"
+                            type="password"
+                            aria-describedby="current-password-help"
+                          />
+                          <p id="current-password-help" className="text-xs text-muted-foreground">Enter your current password to change it</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="new-password">New Password</Label>
-                            <Input id="new-password" type="password" />
+                            <Input
+                              id="new-password"
+                              type="password"
+                              aria-describedby="new-password-help"
+                            />
+                            <p id="new-password-help" className="text-xs text-muted-foreground">Must be at least 8 characters long</p>
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="confirm-password">Confirm New Password</Label>
-                            <Input id="confirm-password" type="password" />
+                            <Input
+                              id="confirm-password"
+                              type="password"
+                              aria-describedby="confirm-password-help"
+                            />
+                            <p id="confirm-password-help" className="text-xs text-muted-foreground">Re-enter your new password</p>
                           </div>
                         </div>
                         <div className="flex justify-end">
-                          <Button>Update Password</Button>
+                          <Button aria-label="Update your password">Update Password</Button>
                         </div>
                       </div>
                     </div>
@@ -745,11 +775,18 @@ export default function DashboardPage() {
                             <p className="text-sm text-muted-foreground">Receive updates about your projects via email</p>
                           </div>
                           <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                            <input type="checkbox" id="email-toggle" className="sr-only" defaultChecked />
+                            <input
+                              type="checkbox"
+                              id="email-toggle"
+                              className="sr-only"
+                              defaultChecked
+                              aria-describedby="email-notifications-description"
+                            />
                             <div className="block bg-gray-300 w-10 h-6 rounded-full"></div>
                             <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
                           </div>
                         </div>
+                        <p id="email-notifications-description" className="sr-only">Toggle to enable or disable email notifications</p>
                         
                         <div className="flex items-center justify-between">
                           <div>
@@ -757,11 +794,18 @@ export default function DashboardPage() {
                             <p className="text-sm text-muted-foreground">Get notified when your project status changes</p>
                           </div>
                           <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                            <input type="checkbox" id="project-toggle" className="sr-only" defaultChecked />
+                            <input
+                              type="checkbox"
+                              id="project-toggle"
+                              className="sr-only"
+                              defaultChecked
+                              aria-describedby="project-updates-description"
+                            />
                             <div className="block bg-gray-300 w-10 h-6 rounded-full"></div>
                             <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
                           </div>
                         </div>
+                        <p id="project-updates-description" className="sr-only">Toggle to enable or disable project status updates</p>
                         
                         <div className="flex items-center justify-between">
                           <div>
@@ -769,11 +813,18 @@ export default function DashboardPage() {
                             <p className="text-sm text-muted-foreground">Receive alerts for new invoices and payment reminders</p>
                           </div>
                           <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                            <input type="checkbox" id="invoice-toggle" className="sr-only" defaultChecked />
+                            <input
+                              type="checkbox"
+                              id="invoice-toggle"
+                              className="sr-only"
+                              defaultChecked
+                              aria-describedby="invoice-notifications-description"
+                            />
                             <div className="block bg-gray-300 w-10 h-6 rounded-full"></div>
                             <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
                           </div>
                         </div>
+                        <p id="invoice-notifications-description" className="sr-only">Toggle to enable or disable invoice notifications</p>
                         
                         <div className="flex items-center justify-between">
                           <div>
@@ -781,11 +832,18 @@ export default function DashboardPage() {
                             <p className="text-sm text-muted-foreground">Get notified when your support tickets are updated</p>
                           </div>
                           <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                            <input type="checkbox" id="support-toggle" className="sr-only" defaultChecked />
+                            <input
+                              type="checkbox"
+                              id="support-toggle"
+                              className="sr-only"
+                              defaultChecked
+                              aria-describedby="support-updates-description"
+                            />
                             <div className="block bg-gray-300 w-10 h-6 rounded-full"></div>
                             <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
                           </div>
                         </div>
+                        <p id="support-updates-description" className="sr-only">Toggle to enable or disable support ticket updates</p>
                         
                         <div className="flex items-center justify-between">
                           <div>
@@ -793,11 +851,17 @@ export default function DashboardPage() {
                             <p className="text-sm text-muted-foreground">Receive news, updates, and promotional offers</p>
                           </div>
                           <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                            <input type="checkbox" id="marketing-toggle" className="sr-only" />
+                            <input
+                              type="checkbox"
+                              id="marketing-toggle"
+                              className="sr-only"
+                              aria-describedby="marketing-communications-description"
+                            />
                             <div className="block bg-gray-300 w-10 h-6 rounded-full"></div>
                             <div className="dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition"></div>
                           </div>
                         </div>
+                        <p id="marketing-communications-description" className="sr-only">Toggle to enable or disable marketing communications</p>
                       </div>
                       <div className="flex justify-end">
                         <Button>Save Preferences</Button>
@@ -847,7 +911,7 @@ export default function DashboardPage() {
                 </Card>
               </TabsContent>
               
-              <TabsContent value="invoices" className="space-y-4">
+              <TabsContent value="invoices" className="space-y-4" role="tabpanel" id="invoices-tabpanel" aria-labelledby="invoices-tab">
                 <Card>
                   <CardHeader>
                     <CardTitle>Your Invoices</CardTitle>
@@ -917,13 +981,19 @@ export default function DashboardPage() {
             
             {/* Invoice Detail Modal */}
             {selectedInvoice && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div
+                className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="invoice-modal-title"
+                aria-describedby="invoice-modal-description"
+              >
                 <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
-                        <CardTitle>Invoice #{selectedInvoice.id}</CardTitle>
-                        <CardDescription>
+                        <CardTitle id="invoice-modal-title">Invoice #{selectedInvoice.id}</CardTitle>
+                        <CardDescription id="invoice-modal-description">
                           Detailed invoice information
                         </CardDescription>
                       </div>
@@ -931,6 +1001,7 @@ export default function DashboardPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => setSelectedInvoice(null)}
+                        aria-label="Close invoice details"
                       >
                         ✕
                       </Button>
@@ -1029,14 +1100,14 @@ export default function DashboardPage() {
                     
                     {/* Actions */}
                     <div className="flex justify-between pt-4 border-t border-input">
-                      <Button variant="outline" onClick={() => setSelectedInvoice(null)}>
+                      <Button variant="outline" onClick={() => setSelectedInvoice(null)} aria-label="Close invoice details">
                         Close
                       </Button>
                       <div className="space-x-2">
                         {selectedInvoice.status === "pending_payment" && (
-                          <Button>Pay Now</Button>
+                          <Button aria-label={`Pay invoice ${selectedInvoice.id}`}>Pay Now</Button>
                         )}
-                        <Button variant="outline">Download PDF</Button>
+                        <Button variant="outline" aria-label={`Download PDF for invoice ${selectedInvoice.id}`}>Download PDF</Button>
                       </div>
                     </div>
                   </CardContent>

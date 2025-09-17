@@ -10,8 +10,8 @@ export default function Home() {
           <div className="w-8 h-8 bg-primary rounded-full"></div>
           <span className="font-bold text-xl">websiter.click</span>
         </div>
-        <nav className="hidden md:flex space-x-6">
-          <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
+        <nav className="hidden md:flex space-x-6" aria-label="Main navigation">
+          <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors" aria-current="page">
             Features
           </Link>
           <Link href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -24,12 +24,12 @@ export default function Home() {
             Contact
           </Link>
         </nav>
-        <div className="flex space-x-4">
+        <div className="flex space-x-4" role="group" aria-label="Account actions">
           <Button variant="outline" asChild>
-            <Link href="/login">Log In</Link>
+            <Link href="/login" aria-label="Log in to your account">Log In</Link>
           </Button>
           <Button asChild>
-            <Link href="/onboarding">Sign Up</Link>
+            <Link href="/onboarding" aria-label="Sign up for a new account">Sign Up</Link>
           </Button>
         </div>
       </header>

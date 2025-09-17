@@ -523,7 +523,7 @@ export default function OnboardingPage() {
               <label className="block text-sm font-medium mb-2">
                 Base Package <span className="text-destructive">*</span>
               </label>
-              <div className="space-y-4">
+              <div className="space-y-4" role="radiogroup" aria-label="Base package selection">
                 {PACKAGES.map((pkg) => (
                   <div
                     key={pkg.id}
@@ -533,6 +533,15 @@ export default function OnboardingPage() {
                         : "border-input hover:border-primary/50"
                     }`}
                     onClick={() => handleInputChange("selectedPackage", pkg.id)}
+                    role="radio"
+                    aria-checked={formData.selectedPackage === pkg.id}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleInputChange("selectedPackage", pkg.id);
+                      }
+                    }}
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -581,6 +590,15 @@ export default function OnboardingPage() {
                         : "border-input hover:border-primary/50"
                     }`}
                     onClick={() => handleAddOnToggle(addOn.id)}
+                    role="checkbox"
+                    aria-checked={formData.addOns.includes(addOn.id)}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleAddOnToggle(addOn.id);
+                      }
+                    }}
                   >
                     <div className="flex justify-between items-center">
                       <div>
@@ -628,6 +646,15 @@ export default function OnboardingPage() {
                         : "border-input hover:border-primary/50"
                     }`}
                     onClick={() => handleInputChange("designStyle", style.id)}
+                    role="radio"
+                    aria-checked={formData.designStyle === style.id}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleInputChange("designStyle", style.id);
+                      }
+                    }}
                   >
                     {style.label}
                   </div>
@@ -645,14 +672,22 @@ export default function OnboardingPage() {
                 onChange={(e) => handleInputChange("referenceWebsites", e.target.value)}
                 className="w-full px-4 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent min-h-[100px]"
                 placeholder="Paste links to websites you like..."
+                aria-describedby="referenceWebsites-description"
               />
+              <p id="referenceWebsites-description" className="text-sm text-muted-foreground mt-1">
+                Enter URLs of websites that inspire you, separated by commas
+              </p>
             </div>
             
             <div>
               <label className="block text-sm font-medium mb-2">
                 Color Scheme
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                role="radiogroup"
+                aria-label="Color scheme selection"
+              >
                 {COLOR_SCHEMES.map((scheme) => (
                   <div
                     key={scheme.id}
@@ -662,18 +697,32 @@ export default function OnboardingPage() {
                         : "border-input hover:border-primary/50"
                     }`}
                     onClick={() => handleInputChange("colorScheme", scheme.id)}
+                    role="radio"
+                    aria-checked={formData.colorScheme === scheme.id}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleInputChange("colorScheme", scheme.id);
+                      }
+                    }}
+                    aria-describedby={`${scheme.id}-description`}
                   >
                     <div className="flex flex-col items-center space-y-3">
-                      <div className="grid grid-cols-5 gap-1 w-full">
+                      <div className="grid grid-cols-5 gap-1 w-full" aria-hidden="true">
                         {scheme.colors.map((color, index) => (
                           <div
                             key={index}
                             className="h-10 rounded-md border border-gray-200"
                             style={{ backgroundColor: color }}
+                            aria-label={`${scheme.label} color ${index + 1}`}
                           />
                         ))}
                       </div>
                       <span className="text-sm font-medium text-center">{scheme.label}</span>
+                      <div id={`${scheme.id}-description`} className="sr-only">
+                        {scheme.label} color scheme with {scheme.colors.length} colors
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -694,6 +743,15 @@ export default function OnboardingPage() {
                         : "border-input hover:border-primary/50"
                     }`}
                     onClick={() => handleInputChange("layoutPreferences", layout.id)}
+                    role="radio"
+                    aria-checked={formData.layoutPreferences === layout.id}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleInputChange("layoutPreferences", layout.id);
+                      }
+                    }}
                   >
                     {layout.label}
                   </div>
@@ -734,6 +792,15 @@ export default function OnboardingPage() {
                         : "border-input hover:border-primary/50"
                     }`}
                     onClick={() => handleInputChange("domainOption", option.id)}
+                    role="radio"
+                    aria-checked={formData.domainOption === option.id}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleInputChange("domainOption", option.id);
+                      }
+                    }}
                   >
                     <div className="flex justify-between items-center">
                       <div>
@@ -762,6 +829,15 @@ export default function OnboardingPage() {
                         : "border-input hover:border-primary/50"
                     }`}
                     onClick={() => handleInputChange("hostingOption", option.id)}
+                    role="radio"
+                    aria-checked={formData.hostingOption === option.id}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleInputChange("hostingOption", option.id);
+                      }
+                    }}
                   >
                     <div className="flex justify-between items-center">
                       <div>
@@ -809,6 +885,15 @@ export default function OnboardingPage() {
                         : "border-input hover:border-primary/50"
                     }`}
                     onClick={() => handleInputChange("maintenancePlan", plan.id)}
+                    role="radio"
+                    aria-checked={formData.maintenancePlan === plan.id}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleInputChange("maintenancePlan", plan.id);
+                      }
+                    }}
                   >
                     <div className="flex justify-between items-start">
                       <div>
@@ -864,7 +949,14 @@ export default function OnboardingPage() {
                     placeholder="your@email.com"
                     required
                     aria-required="true"
+                    aria-invalid={!!error && error.includes("email")}
+                    aria-describedby={error && error.includes("email") ? "email-error" : undefined}
                   />
+                  {error && error.includes("email") && (
+                    <p id="email-error" className="text-sm text-destructive mt-1">
+                      {error}
+                    </p>
+                  )}
                 </div>
                 
                 <div>
@@ -880,10 +972,17 @@ export default function OnboardingPage() {
                     placeholder="Create a password"
                     required
                     aria-required="true"
+                    aria-invalid={!!error && (error.includes("password") || error.includes("match"))}
+                    aria-describedby={error && (error.includes("password") || error.includes("match")) ? "password-error" : "password-requirements"}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p id="password-requirements" className="text-xs text-muted-foreground mt-1">
                     Must be at least 8 characters long
                   </p>
+                  {error && (error.includes("password") || error.includes("match")) && (
+                    <p id="password-error" className="text-sm text-destructive mt-1">
+                      {error}
+                    </p>
+                  )}
                 </div>
                 
                 <div>
@@ -899,7 +998,14 @@ export default function OnboardingPage() {
                     placeholder="Confirm your password"
                     required
                     aria-required="true"
+                    aria-invalid={!!error && error.includes("match")}
+                    aria-describedby={error && error.includes("match") ? "confirm-password-error" : undefined}
                   />
+                  {error && error.includes("match") && (
+                    <p id="confirm-password-error" className="text-sm text-destructive mt-1">
+                      {error}
+                    </p>
+                  )}
                 </div>
                 
                 <div className="p-3 bg-blue-50 rounded-md border border-blue-100">
@@ -1032,9 +1138,11 @@ export default function OnboardingPage() {
           <div className="w-8 h-8 bg-primary rounded-full"></div>
           <span className="font-bold text-xl">websiter.click</span>
         </div>
-        <Button variant="outline" asChild>
-          <Link href="/">Back to Home</Link>
-        </Button>
+        <nav aria-label="Page navigation">
+          <Button variant="outline" asChild>
+            <Link href="/" aria-label="Return to home page">Back to Home</Link>
+          </Button>
+        </nav>
       </header>
 
       {/* Onboarding Form */}
@@ -1071,7 +1179,11 @@ export default function OnboardingPage() {
               </div>
 
               {error && (
-                <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+                <div
+                  className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive"
+                  role="alert"
+                  aria-live="assertive"
+                >
                   {error}
                 </div>
               )}
