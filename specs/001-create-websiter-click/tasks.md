@@ -72,7 +72,7 @@
 
 - [x] **T052:** Refactor the Onboarding page (`/src/app/onboarding/page.tsx`) to allow guest access for project configuration (steps 1-5).
 - [x] **T053:** Redesign the final step (Step 6) to display the project summary next to a functional sign-up form.
-- [ ] **T054:** Modify the backend to handle a "Sign Up & Create Project" action. This endpoint must:
+- [x] **T054:** Modify the backend to handle a "Sign Up & Create Project" action. This endpoint must:
     - 1. Check if the user already has a project with an `ongoing` status in the database. If so, return an error.
     - 2. Create the user account via Supabase Auth.
     - 3. Save the project details with an initial status of `ongoing`.

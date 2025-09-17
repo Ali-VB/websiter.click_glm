@@ -4,15 +4,18 @@ import { supabase } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password } = body;
+    const { name, email, password, projectData: incomingProjectData } = body;
 
     // Validate required fields
-    if (!name || !email || !password) {
+    if (!email || !password) {
       return NextResponse.json(
-        { success: false, message: 'Name, email, and password are required' },
+        { success: false, message: 'Email and password are required' },
         { status: 400 }
       );
     }
+    
+    // Use email as name if not provided (for guest onboarding)
+    const userName = name || email.split('@')[0];
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest) {
       options: {
         emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/login`,
         data: {
-          name,
+          name: userName,
         }
       }
     });
@@ -70,7 +73,7 @@ export async function POST(request: NextRequest) {
       .insert([
         {
           id: authData.user?.id,
-          name,
+          name: userName,
           email,
           email_verified: false, // Initially set to false until email is verified
           role: 'client', // Default role for new users
@@ -85,6 +88,41 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    
+    // Create project if project data is provided
+    let createdProject = null;
+    if (incomingProjectData && authData.user?.id) {
+      const { data: newProject, error: projectError } = await supabase
+        .from('projects')
+        .insert([
+          {
+            client_id: authData.user.id,
+            status: 'pending',
+            website_type: incomingProjectData.selectedPackage,
+            design_preferences: {
+              designStyle: incomingProjectData.designStyle,
+              referenceWebsites: incomingProjectData.referenceWebsites,
+              colorScheme: incomingProjectData.colorScheme,
+              layoutPreferences: incomingProjectData.layoutPreferences
+            },
+            add_ons: incomingProjectData.addOns || [],
+            domain_info: {
+              domainOption: incomingProjectData.domainOption,
+              hostingOption: incomingProjectData.hostingOption
+            },
+            maintenance_plan: incomingProjectData.maintenancePlan
+          },
+        ])
+        .select()
+        .single();
+
+      if (projectError) {
+        console.error('Project creation error:', projectError);
+        // Don't fail the signup if project creation fails, just log the error
+      } else {
+        createdProject = newProject;
+      }
+    }
 
     // Check if email confirmation is required
     if (authData.user && !authData.user.email_confirmed_at) {
@@ -98,6 +136,11 @@ export async function POST(request: NextRequest) {
           emailVerified: false,
           role: userData.role,
         },
+        project: createdProject ? {
+          id: createdProject.id,
+          status: createdProject.status,
+          websiteType: createdProject.website_type,
+        } : null,
         requiresEmailVerification: true,
       }, { status: 201 });
     }
@@ -112,6 +155,11 @@ export async function POST(request: NextRequest) {
         emailVerified: true,
         role: userData.role,
       },
+      project: createdProject ? {
+        id: createdProject.id,
+        status: createdProject.status,
+        websiteType: createdProject.website_type,
+      } : null,
       requiresEmailVerification: false,
     }, { status: 201 });
   } catch (error) {
