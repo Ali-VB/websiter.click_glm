@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +14,18 @@ export default function LoginPage() {
   const [success, setSuccess] = useState("");
   const [requiresVerification, setRequiresVerification] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Check for message in URL query parameters on component mount
+  useEffect(() => {
+    const message = searchParams.get('message');
+    if (message) {
+      setSuccess(message);
+      if (message.includes('email') && message.includes('verify')) {
+        setRequiresVerification(true);
+      }
+    }
+  }, [searchParams]);
 
   const handleResendVerification = async () => {
     if (!email) {
