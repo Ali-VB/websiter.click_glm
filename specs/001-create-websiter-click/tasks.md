@@ -4,6 +4,7 @@
 **Prerequisites**: plan.md, research.md, data-model.md, contracts/
 
 ## Phase 3.1: Setup
+
 - [x] T001 [P] Install and configure shadcn/ui.
 - [x] T002 [P] Install and configure Supabase client (`@supabase/supabase-js`).
 - [x] T003 [P] Install and configure Stripe client (`stripe`).
@@ -11,6 +12,7 @@
 - [x] T005 Create Supabase tables for `clients`, `projects`, `invoices`, and `notifications` based on `data-model.md`.
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
+
 - [x] T006 [P] Contract test for `POST /api/auth/signup`.
 - [x] T007 [P] Contract test for `POST /api/auth/login`.
 - [x] T008 [P] Contract test for `POST /api/onboarding`.
@@ -23,6 +25,7 @@
 - [x] T015 [P] Integration test for the admin invoice approval flow.
 
 ## Phase 3.3: Core API Implementation
+
 - [x] T016 Implement `POST /api/auth/signup` API route.
 - [x] T017 Implement `POST /api/auth/login` API route.
 - [x] T018 Implement `POST /api/onboarding` API route.
@@ -33,6 +36,7 @@
 - [x] T023 Implement `POST /api/stripe/webhook` API route.
 
 ## Phase 3.4: UI - Onboarding Wizard
+
 - [x] T024: Build UI for Step 1: Base Package Selection.
 - [x] T025: Build UI for Step 2: Add-on Selection.
 - [x] T026: Build UI for Step 3: Website Inspiration & Design.
@@ -43,6 +47,7 @@
 - [x] T031: Implement real-time cost calculator for the wizard.
 
 ## Phase 3.5: UI - Client Dashboard
+
 - [x] T032: Build main dashboard layout and overview component.
 - [x] T033: Build project status tracking view with timeline.
 - [x] T034: Build asset upload interface.
@@ -51,6 +56,7 @@
 - [x] T037: Build account management page (password, notification preferences).
 
 ## Phase 3.6: UI - Admin Dashboard
+
 - [x] T038: Build main admin layout and navigation.
 - [x] T039: Build Project Management view (list with filters, detail view).
 - [x] T040: Build Client Management view (list, details, internal notes).
@@ -60,6 +66,7 @@
 - [x] T044: Build System Administration view (stats, config, debug tools).
 
 ## Phase 3.7: Integration
+
 - [x] T045: Connect Auth pages (Signup/Login) to Supabase Auth & implement email verification.
 - [x] T046: Connect Onboarding Wizard state to the backend API.
 - [x] T047: Connect Asset Upload interface to Supabase Storage.
@@ -73,13 +80,13 @@
 - [x] **T052:** Refactor the Onboarding page (`/src/app/onboarding/page.tsx`) to allow guest access for project configuration (steps 1-5).
 - [x] **T053:** Redesign the final step (Step 6) to display the project summary next to a functional sign-up form.
 - [x] **T054:** Modify the backend to handle a "Sign Up & Create Project" action. This endpoint must:
-    - 1. Check if the user already has a project with an `ongoing` status in the database. If so, return an error.
-    - 2. Create the user account via Supabase Auth.
-    - 3. Save the project details with an initial status of `ongoing`.
-    - 4. Associate the new project with the new user.
+  - 1. Check if the user already has a project with an `ongoing` status in the database. If so, return an error.
+  - 2. Create the user account via Supabase Auth.
+  - 3. Save the project details with an initial status of `ongoing`.
+  - 4. Associate the new project with the new user.
 - [x] **T055:** Implement logic to prevent a logged-in user with an `ongoing` project from accessing the onboarding page, redirecting them to their dashboard instead.
 - [x] **T056:** Update the frontend to display a "Please check your email..." message after a successful submission.
-- [ ] **T057:** Rewrite the integration test for the client onboarding flow to verify the new guest-first experience and the "one project at a time" rule.
+- [x] **T057:** Rewrite the integration test for the client onboarding flow to verify the new guest-first experience and the "one project at a time" rule.
 
 ## Phase 3.9: Polish
 
