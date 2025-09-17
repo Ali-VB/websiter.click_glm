@@ -1,4 +1,6 @@
-"use client";
+'use client';
+
+import { supabase } from '@/lib/supabase';
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -61,25 +63,17 @@ export default function DashboardPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (token: string) => {
+    // This function is now only called when a session is guaranteed to exist.
     setIsLoading(true);
     setError("");
 
     try {
-      // Get the auth token from localStorage
-      const token = localStorage.getItem("supabase.auth.token");
-      
-      if (!token) {
-        setError("You must be logged in to view the dashboard");
-        router.push("/login");
-        return;
-      }
-
       // Fetch projects
       const projectsResponse = await fetch("/api/projects", {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${JSON.parse(token).access_token}`,
+          "Authorization": `Bearer ${token}`,
         },
       });
 
@@ -92,7 +86,7 @@ export default function DashboardPage() {
       const invoicesResponse = await fetch("/api/invoices", {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${JSON.parse(token).access_token}`,
+          "Authorization": `Bearer ${token}`,
         },
       });
 
@@ -105,7 +99,7 @@ export default function DashboardPage() {
       const ticketsResponse = await fetch("/api/support", {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${JSON.parse(token).access_token}`,
+          "Authorization": `Bearer ${token}`,
         },
       });
 
@@ -118,12 +112,22 @@ export default function DashboardPage() {
       console.error("Dashboard error:", err);
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        router.push('/login');
+      } else if (session) {
+        fetchDashboardData(session.access_token);
       }
-    }, [router]);
-  
-    useEffect(() => {
-      fetchDashboardData();
-    }, [fetchDashboardData]);
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [router, fetchDashboardData]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -177,8 +181,8 @@ export default function DashboardPage() {
     totalAmount: invoices.reduce((sum, invoice) => sum + invoice.amount, 0),
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("supabase.auth.token");
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     router.push("/");
   };
 

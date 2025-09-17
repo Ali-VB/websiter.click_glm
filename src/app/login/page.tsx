@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -79,6 +80,13 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (data.success) {
+        // Set the session in Supabase client
+        if (data.session) {
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+        }
         // Redirect to dashboard after successful login
         router.push("/dashboard");
       } else {
