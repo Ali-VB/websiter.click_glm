@@ -66,10 +66,24 @@
 - [x] T048: Connect the full Support Ticket system to the database.
 - [x] T049: Connect the public Contact Form to the `contact_submissions` table.
 - [x] T050: Update Invoice & Payment APIs to handle tax calculations.
-- [ ] T051: Implement Role-Based Access Control for all admin routes.
+- [x] T051: Implement Role-Based Access Control for all admin routes.
 
-## Phase 3.8: Polish
-- [ ] T052: Write unit tests for critical utility functions.
-- [ ] T053: Ensure all pages are responsive and mobile-friendly.
-- [ ] T054: Add accessibility features (e.g., ARIA attributes).
-- [ ] T055: Write README.md with detailed setup and usage instructions.
+## Phase 3.8: Onboarding & Project Exclusivity Refactor
+
+- [x] **T052:** Refactor the Onboarding page (`/src/app/onboarding/page.tsx`) to allow guest access for project configuration (steps 1-5).
+- [x] **T053:** Redesign the final step (Step 6) to display the project summary next to a functional sign-up form.
+- [ ] **T054:** Modify the backend to handle a "Sign Up & Create Project" action. This endpoint must:
+    - 1. Check if the user already has a project with an `ongoing` status in the database. If so, return an error.
+    - 2. Create the user account via Supabase Auth.
+    - 3. Save the project details with an initial status of `ongoing`.
+    - 4. Associate the new project with the new user.
+- [ ] **T055:** Implement logic to prevent a logged-in user with an `ongoing` project from accessing the onboarding page, redirecting them to their dashboard instead.
+- [ ] **T056:** Update the frontend to display a "Please check your email..." message after a successful submission.
+- [ ] **T057:** Rewrite the integration test for the client onboarding flow to verify the new guest-first experience and the "one project at a time" rule.
+
+## Phase 3.9: Polish
+
+- [ ] **T058:** Write unit tests for critical utility functions.
+- [ ] **T059:** Ensure all pages are responsive and mobile-friendly.
+- [ ] **T060:** Add accessibility features (e.g., ARIA attributes).
+- [ ] **T061:** Write README.md with detailed setup and usage instructions.

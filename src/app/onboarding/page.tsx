@@ -147,6 +147,19 @@ export default function OnboardingPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   
+  // Load saved data from sessionStorage on component mount
+  useEffect(() => {
+    const savedData = sessionStorage.getItem('onboardingData');
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        setFormData(prev => ({ ...prev, ...parsedData }));
+      } catch (err) {
+        console.error('Error loading saved onboarding data:', err);
+      }
+    }
+  }, []);
+  
   const [formData, setFormData] = useState<OnboardingData>({
     selectedPackage: "",
     addOns: [],
@@ -253,6 +266,7 @@ export default function OnboardingPage() {
       case 5:
         return formData.maintenancePlan !== "";
       case 6:
+        // Only validate email and password at step 6
         return formData.email.trim() !== "" &&
                formData.password.trim() !== "" &&
                formData.confirmPassword.trim() !== "" &&
@@ -288,31 +302,85 @@ export default function OnboardingPage() {
     setError("");
 
     try {
-      // Get the auth token from localStorage
-      const token = localStorage.getItem("supabase.auth.token");
-      
-      if (!token) {
-        setError("You must be logged in to create a project");
-        router.push("/login");
+      // For steps 1-5, allow guest access and save data temporarily
+      if (currentStep < 6) {
+        // Save data to sessionStorage for guest users
+        sessionStorage.setItem('onboardingData', JSON.stringify(formData));
+        
+        // Move to next step
+        setCurrentStep(currentStep + 1);
         return;
       }
+      
+      // For step 6, check if user is authenticated or needs to sign up
+      const token = localStorage.getItem("supabase.auth.token");
+      const isAuthenticated = !!token;
+      
+      if (!isAuthenticated) {
+        // User is a guest and needs to create an account
+        // Call signup API with form data
+        const response = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            // Include project data
+            projectData: {
+              selectedPackage: formData.selectedPackage,
+              addOns: formData.addOns,
+              designStyle: formData.designStyle,
+              referenceWebsites: formData.referenceWebsites,
+              colorScheme: formData.colorScheme,
+              layoutPreferences: formData.layoutPreferences,
+              domainOption: formData.domainOption,
+              hostingOption: formData.hostingOption,
+              maintenancePlan: formData.maintenancePlan,
+            }
+          }),
+        });
 
-      const response = await fetch("/api/onboarding", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${JSON.parse(token).access_token}`,
-        },
-        body: JSON.stringify(formData),
-      });
+        const data = await response.json();
 
-      const data = await response.json();
-
-      if (data.success) {
-        // Redirect to dashboard after successful onboarding
-        router.push("/dashboard");
+        if (data.success) {
+          // Clear temporary data
+          sessionStorage.removeItem('onboardingData');
+          
+          // Show email verification message
+          // This will be implemented in T056
+          if (data.requiresEmailVerification) {
+            router.push("/login?message=Please check your email to verify your account");
+          } else {
+            // If email verification is not required, redirect to dashboard
+            router.push("/dashboard");
+          }
+        } else {
+          setError(data.message || "An error occurred during account creation");
+        }
       } else {
-        setError(data.message || "An error occurred during project creation");
+        // User is already authenticated, create project with existing account
+        const response = await fetch("/api/onboarding", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${JSON.parse(token).access_token}`,
+          },
+          body: JSON.stringify(formData),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Clear temporary data
+          sessionStorage.removeItem('onboardingData');
+          
+          // Redirect to dashboard after successful onboarding
+          router.push("/dashboard");
+        } else {
+          setError(data.message || "An error occurred during project creation");
+        }
       }
     } catch (err) {
       setError("An error occurred during project creation");
@@ -405,6 +473,15 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                 ))}
+                
+                <div className="pt-2 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-sm">Estimated Total Cost:</span>
+                    <span className="text-lg font-bold text-primary">
+                      CAD ${totalCost.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -443,6 +520,15 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                 ))}
+                
+                <div className="pt-2 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-sm">Estimated Total Cost:</span>
+                    <span className="text-lg font-bold text-primary">
+                      CAD ${totalCost.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -529,6 +615,15 @@ export default function OnboardingPage() {
                     {layout.label}
                   </div>
                 ))}
+                
+                <div className="pt-2 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-sm">Estimated Total Cost:</span>
+                    <span className="text-lg font-bold text-primary">
+                      CAD ${totalCost.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -595,6 +690,15 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                 ))}
+                
+                <div className="pt-2 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-sm">Estimated Total Cost:</span>
+                    <span className="text-lg font-bold text-primary">
+                      CAD ${totalCost.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -637,6 +741,15 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                 ))}
+                
+                <div className="pt-2 border-t">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-sm">Estimated Total Cost:</span>
+                    <span className="text-lg font-bold text-primary">
+                      CAD ${totalCost.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -645,102 +758,176 @@ export default function OnboardingPage() {
       case 6:
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Account Creation</h2>
+            <h2 className="text-2xl font-bold">Create Your Account</h2>
             <p className="text-muted-foreground">
-              Create your account to access your dashboard and track your project.
+              Create your account to finalize your project and access your dashboard.
             </p>
             
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-2">
-                Email <span className="text-destructive">*</span>
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                className="w-full px-4 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="your@email.com"
-                required
-                aria-required="true"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-2">
-                Password <span className="text-destructive">*</span>
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => handleInputChange("password", e.target.value)}
-                className="w-full px-4 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="Create a password"
-                required
-                aria-required="true"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
-                Confirm Password <span className="text-destructive">*</span>
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
-                className="w-full px-4 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                placeholder="Confirm your password"
-                required
-                aria-required="true"
-              />
-            </div>
-            
-            <div className="p-4 bg-muted rounded-md">
-              <h3 className="font-semibold mb-2">Project Summary</h3>
-              <p>You&apos;ll receive a confirmation email after creating your account.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left Column: Sign-up Form */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Account Information</h3>
+                
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium mb-2">
+                    Email <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    className="w-full px-4 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="your@email.com"
+                    required
+                    aria-required="true"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium mb-2">
+                    Password <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    className="w-full px-4 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Create a password"
+                    required
+                    aria-required="true"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Must be at least 8 characters long
+                  </p>
+                </div>
+                
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
+                    Confirm Password <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                    className="w-full px-4 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Confirm your password"
+                    required
+                    aria-required="true"
+                  />
+                </div>
+                
+                <div className="p-3 bg-blue-50 rounded-md border border-blue-100">
+                  <p className="text-sm text-blue-800">
+                    After creating your account, you&apos;ll receive a confirmation email to verify your address.
+                  </p>
+                </div>
+              </div>
               
-              <div className="mt-4 space-y-2">
-                <h4 className="font-medium">Selected Package:</h4>
-                {formData.selectedPackage && (
-                  <p>{PACKAGES.find(pkg => pkg.id === formData.selectedPackage)?.label}</p>
-                )}
+              {/* Right Column: Project Summary */}
+              <div className="bg-muted rounded-lg p-5">
+                <h3 className="text-lg font-semibold mb-4">Project Summary</h3>
                 
-                {formData.addOns.length > 0 && (
-                  <>
-                    <h4 className="font-medium mt-2">Add-ons:</h4>
-                    <ul className="list-disc pl-5">
-                      {formData.addOns.map(addOnId => (
-                        <li key={addOnId}>
-                          {ADD_ONS.find(addOn => addOn.id === addOnId)?.label}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-                
-                {formData.domainOption && (
-                  <>
-                    <h4 className="font-medium mt-2">Domain:</h4>
-                    <p>{DOMAIN_OPTIONS.find(option => option.id === formData.domainOption)?.label}</p>
-                  </>
-                )}
-                
-                {formData.hostingOption && (
-                  <>
-                    <h4 className="font-medium mt-2">Hosting:</h4>
-                    <p>{HOSTING_OPTIONS.find(option => option.id === formData.hostingOption)?.label}</p>
-                  </>
-                )}
-                
-                {formData.maintenancePlan && (
-                  <>
-                    <h4 className="font-medium mt-2">Maintenance Plan:</h4>
-                    <p>{MAINTENANCE_PLANS.find(plan => plan.id === formData.maintenancePlan)?.label}</p>
-                  </>
-                )}
+                <div className="space-y-4">
+                  {/* Selected Package */}
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-1">Selected Package</h4>
+                    {formData.selectedPackage ? (
+                      <div className="flex justify-between items-center">
+                        <p className="font-medium">
+                          {PACKAGES.find(pkg => pkg.id === formData.selectedPackage)?.label}
+                        </p>
+                        <p className="font-semibold">
+                          CAD ${PACKAGES.find(pkg => pkg.id === formData.selectedPackage)?.price.toLocaleString()}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">No package selected</p>
+                    )}
+                  </div>
+                  
+                  {/* Add-ons */}
+                  {formData.addOns.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-sm text-muted-foreground mb-1">Add-ons</h4>
+                      <div className="space-y-2">
+                        {formData.addOns.map(addOnId => {
+                          const addOn = ADD_ONS.find(addOn => addOn.id === addOnId);
+                          return addOn ? (
+                            <div key={addOnId} className="flex justify-between items-center">
+                              <p className="text-sm">{addOn.label}</p>
+                              <p className="font-semibold text-sm">
+                                CAD ${addOn.price.toLocaleString()}
+                              </p>
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Domain */}
+                  {formData.domainOption && (
+                    <div>
+                      <h4 className="font-medium text-sm text-muted-foreground mb-1">Domain</h4>
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm">
+                          {DOMAIN_OPTIONS.find(option => option.id === formData.domainOption)?.label}
+                        </p>
+                        <p className="font-semibold text-sm">
+                          {DOMAIN_OPTIONS.find(option => option.id === formData.domainOption)?.price ?? 0 > 0 
+                            ? `CAD ${(DOMAIN_OPTIONS.find(option => option.id === formData.domainOption)?.price ?? 0).toLocaleString()}` 
+                            : 'No charge'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Hosting */}
+                  {formData.hostingOption && (
+                    <div>
+                      <h4 className="font-medium text-sm text-muted-foreground mb-1">Hosting</h4>
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm">
+                          {HOSTING_OPTIONS.find(option => option.id === formData.hostingOption)?.label}
+                        </p>
+                        <p className="font-semibold text-sm">
+                          CAD ${((HOSTING_OPTIONS.find(option => option.id === formData.hostingOption)?.price ?? 0) * 12).toLocaleString()}/year
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Maintenance Plan */}
+                  {formData.maintenancePlan && (
+                    <div>
+                      <h4 className="font-medium text-sm text-muted-foreground mb-1">Maintenance Plan</h4>
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm">
+                          {MAINTENANCE_PLANS.find(plan => plan.id === formData.maintenancePlan)?.label}
+                        </p>
+                        <p className="font-semibold text-sm">
+                          CAD ${MAINTENANCE_PLANS.find(plan => plan.id === formData.maintenancePlan)?.price.toLocaleString()}/month
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Total Cost */}
+                  <div className="pt-3 mt-3 border-t border-border">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">Total Cost</span>
+                      <span className="text-xl font-bold text-primary">
+                        CAD ${totalCost.toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Includes one-time and annual costs
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
