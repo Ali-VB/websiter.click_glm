@@ -96,5 +96,5 @@
   - Increase the `max-width` of the container for a better desktop layout.
   - Display visual color palettes for the color theme selection.
   - Convert the step progress indicator to a vertical sidebar (for desktop), keeping it horizontal for mobile.
-- [ ] **T060:** Add accessibility features (e.g., ARIA attributes).
-- [ ] **T061:** Write README.md with detailed setup and usage instructions.
+- [x] **T060:** Add accessibility features (e.g., ARIA attributes).
+- [x] **T061:** Write README.md with detailed setup and usage instructions.
