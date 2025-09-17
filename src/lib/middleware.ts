@@ -109,3 +109,44 @@ export const adminAuth = createAuthMiddleware('admin');
 
 // Specialized middleware for authenticated routes (any role)
 export const userAuth = createAuthMiddleware();
+
+/**
+ * Checks if a user has an ongoing project
+ * @param userId The ID of the user to check
+ * @returns Promise<boolean> True if the user has an ongoing project, false otherwise
+ */
+export async function hasOngoingProject(userId: string): Promise<boolean> {
+  const supabase = createServerClient();
+  
+  const { data: ongoingProject } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('client_id', userId)
+    .eq('status', 'ongoing')
+    .single();
+  
+  return !!ongoingProject;
+}
+
+/**
+ * Middleware to prevent users with ongoing projects from accessing onboarding
+ * Redirects authenticated users with ongoing projects to the dashboard
+ * Allows guest users and authenticated users without ongoing projects to proceed
+ */
+export async function onboardingAccessControl(request: NextRequest) {
+  // First check if the user is authenticated
+  const authResult = await requireAuth(request);
+  
+  if (authResult.success) {
+    // User is authenticated, check if they have an ongoing project
+    const hasOngoing = await hasOngoingProject(authResult.user.id);
+    
+    if (hasOngoing) {
+      // User has an ongoing project, redirect to dashboard
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+  }
+  
+  // User is either not authenticated or doesn't have an ongoing project, allow access
+  return NextResponse.next();
+}

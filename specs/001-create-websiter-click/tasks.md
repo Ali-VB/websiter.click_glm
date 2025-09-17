@@ -77,7 +77,7 @@
     - 2. Create the user account via Supabase Auth.
     - 3. Save the project details with an initial status of `ongoing`.
     - 4. Associate the new project with the new user.
-- [ ] **T055:** Implement logic to prevent a logged-in user with an `ongoing` project from accessing the onboarding page, redirecting them to their dashboard instead.
+- [x] **T055:** Implement logic to prevent a logged-in user with an `ongoing` project from accessing the onboarding page, redirecting them to their dashboard instead.
 - [ ] **T056:** Update the frontend to display a "Please check your email..." message after a successful submission.
 - [ ] **T057:** Rewrite the integration test for the client onboarding flow to verify the new guest-first experience and the "one project at a time" rule.
 

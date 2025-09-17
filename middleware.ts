@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { adminAuth } from '@/lib/middleware';
+import { adminAuth, onboardingAccessControl } from '@/lib/middleware';
 
 // This middleware protects all admin routes and API routes
 export async function middleware(request: NextRequest) {
@@ -12,6 +12,11 @@ export async function middleware(request: NextRequest) {
   // Check if the path is an admin API route
   if (request.nextUrl.pathname.startsWith('/api/admin')) {
     return adminAuth(request);
+  }
+  
+  // Check if the path is the onboarding route
+  if (request.nextUrl.pathname.startsWith('/onboarding')) {
+    return onboardingAccessControl(request);
   }
   
   return NextResponse.next();
