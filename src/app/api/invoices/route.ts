@@ -85,6 +85,9 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Invoices fetch error:', error);
+      console.error('DEBUG: Query attempted to access projects.name column but it may not exist in the database schema');
+      console.error('DEBUG: Current projects table schema should include: id, client_id, status, website_type, design_preferences, add_ons, domain_info, maintenance_plan, created_at');
+      console.error('DEBUG: The API is trying to select projects(name) but this column is missing from the schema');
       return NextResponse.json(
         { success: false, message: 'An error occurred while retrieving invoices' },
         { status: 500 }

@@ -48,6 +48,9 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error("Error fetching support tickets:", error);
+      console.error("DEBUG: The API is trying to access author:clients(id, name, email) but there's no foreign key relationship");
+      console.error("DEBUG: support_ticket_replies.author_id should reference clients.id but the foreign key constraint is missing");
+      console.error("DEBUG: Current support_ticket_replies schema has author_id without a foreign key to clients table");
       return NextResponse.json({ error: "Failed to fetch support tickets" }, { status: 500 });
     }
 
