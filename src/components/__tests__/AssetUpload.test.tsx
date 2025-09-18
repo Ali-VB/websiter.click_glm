@@ -3,9 +3,6 @@ import userEvent from '@testing-library/user-event';
 import AssetUpload from '../AssetUpload';
 import '@testing-library/jest-dom';
 
-// Mock the fetch function
-global.fetch = jest.fn();
-
 // Mock localStorage
 const localStorageMock = {
   getItem: jest.fn(),
@@ -15,7 +12,15 @@ const localStorageMock = {
   length: 0,
   key: jest.fn(),
 };
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+});
 global.localStorage = localStorageMock as unknown as Storage;
+
+// Mock the AssetStorage utility
+jest.mock('@/lib/storage');
+import { AssetStorage } from '@/lib/storage';
 
 describe('AssetUpload Component', () => {
   const mockProjects = [
@@ -42,14 +47,53 @@ describe('AssetUpload Component', () => {
     },
   ];
 
+  let fetchSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Setup default localStorage mock
-    localStorageMock.getItem.mockReturnValue(JSON.stringify({
-      access_token: 'test-token',
-      refresh_token: 'test-refresh-token',
-    }));
+    localStorageMock.getItem.mockImplementation((key) => {
+      if (key === "supabase.auth.token") {
+        return JSON.stringify({
+          access_token: 'test-token',
+          refresh_token: 'test-refresh-token',
+        });
+      }
+      return null;
+    });
+
+    // Spy on global.fetch and provide a default mock implementation
+    fetchSpy = jest.spyOn(global, 'fetch').mockImplementation((url, options) => {
+      // Default successful response for any fetch call not specifically mocked in a test
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}), // Return empty object by default
+      } as Response);
+    });
+    
+    // Setup default AssetStorage mocks
+    (AssetStorage.uploadAsset as jest.Mock).mockResolvedValue({
+      success: true,
+      asset: {
+        id: 'test-asset-id',
+        project_id: 'project-1',
+        file_name: 'test.jpg',
+        file_url: 'https://example.com/test.jpg',
+        asset_type: 'images',
+        uploaded_by: 'user-id',
+        description: null,
+        created_at: '2023-01-01T00:00:00Z',
+      }
+    });
+    (AssetStorage.getProjectAssets as jest.Mock).mockResolvedValue({
+      success: true,
+      assets: mockAssets,
+    });
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore(); // Restore original fetch after each test
   });
 
   it('renders the component with project selection', () => {
@@ -74,7 +118,7 @@ describe('AssetUpload Component', () => {
   it('renders file upload area', () => {
     render(<AssetUpload projects={mockProjects} />);
 
-    expect(screen.getByText('Upload Files')).toBeInTheDocument();
+    expect(screen.getByLabelText('Upload Files')).toBeInTheDocument();
     expect(screen.getByText('Drag & drop files here')).toBeInTheDocument();
     expect(screen.getByText('or click to browse')).toBeInTheDocument();
     expect(screen.getByText('Supported formats: JPG, PNG, PDF, DOC, DOCX (Max 10MB)')).toBeInTheDocument();
@@ -90,7 +134,7 @@ describe('AssetUpload Component', () => {
   it('disables upload button when required fields are missing', () => {
     render(<AssetUpload projects={mockProjects} />);
 
-    const uploadButton = screen.getByText('Upload Files');
+    const uploadButton = screen.getByRole('button', { name: 'Upload Files' });
     expect(uploadButton).toBeDisabled();
   });
 
@@ -101,16 +145,18 @@ describe('AssetUpload Component', () => {
     const projectSelect = screen.getByLabelText('Select Project');
     await userEvent.selectOptions(projectSelect, 'project-1');
 
-    // Select asset type
-    const imagesOption = screen.getByText('Images');
-    await userEvent.click(imagesOption);
+    // Select asset type - click on the div containing the Images text
+    const imagesOption = screen.getByText('Images').closest('div');
+    if (imagesOption) {
+      await userEvent.click(imagesOption);
+    }
 
     // Add a file
-    const fileInput = screen.getByLabelText('Upload Files');
+    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
     const file = new File(['test content'], 'test.jpg', { type: 'image/jpeg' });
     await userEvent.upload(fileInput, file);
 
-    const uploadButton = screen.getByText('Upload Files');
+    const uploadButton = screen.getByRole('button', { name: 'Upload Files' });
     expect(uploadButton).not.toBeDisabled();
   });
 
@@ -124,14 +170,22 @@ describe('AssetUpload Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText('test.jpg')).toBeInTheDocument();
-      expect(screen.getByText('13 bytes')).toBeInTheDocument(); // Size of the test file
+      expect(screen.getByText('12 bytes')).toBeInTheDocument(); // Size of the test file
     });
   });
 
   it('fetches assets when project is selected', async () => {
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ assets: mockAssets }),
+    fetchSpy.mockImplementation((url, options) => {
+      if (url === '/api/assets?projectId=project-1' && options?.method === 'GET') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ assets: mockAssets }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
     });
 
     render(<AssetUpload projects={mockProjects} />);
@@ -141,7 +195,7 @@ describe('AssetUpload Component', () => {
     await userEvent.selectOptions(projectSelect, 'project-1');
 
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith(
+      expect(fetchSpy).toHaveBeenCalledWith(
         '/api/assets?projectId=project-1',
         expect.objectContaining({
           method: 'GET',
@@ -150,13 +204,24 @@ describe('AssetUpload Component', () => {
           }),
         })
       );
+      expect(screen.getByText('Uploaded Assets')).toBeInTheDocument();
+      expect(screen.getByText('test-image.jpg')).toBeInTheDocument();
+      expect(screen.getByText('test-document.pdf')).toBeInTheDocument();
     });
   });
 
   it('displays uploaded assets', async () => {
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ assets: mockAssets }),
+    fetchSpy.mockImplementation((url, options) => {
+      if (url === '/api/assets?projectId=project-1' && options?.method === 'GET') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ assets: mockAssets }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
     });
 
     render(<AssetUpload projects={mockProjects} />);
@@ -173,15 +238,24 @@ describe('AssetUpload Component', () => {
   });
 
   it('uploads files when upload button is clicked', async () => {
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ assets: [] }),
-    });
-
-    // Mock successful upload response
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: 'File uploaded successfully' }),
+    // Mock fetch for getting assets and upload
+    fetchSpy.mockImplementation((url, options) => {
+      if (url === '/api/assets?projectId=project-1' && options?.method === 'GET') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ assets: [] }),
+        } as Response);
+      }
+      if (url === '/api/assets' && options?.method === 'POST') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: 'File uploaded successfully' }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
     });
 
     render(<AssetUpload projects={mockProjects} />);
@@ -190,9 +264,11 @@ describe('AssetUpload Component', () => {
     const projectSelect = screen.getByLabelText('Select Project');
     await userEvent.selectOptions(projectSelect, 'project-1');
 
-    // Select asset type
-    const imagesOption = screen.getByText('Images');
-    await userEvent.click(imagesOption);
+    // Select asset type - click on the div containing the Images text
+    const imagesOption = screen.getByText('Images').closest('div');
+    if (imagesOption) {
+      await userEvent.click(imagesOption);
+    }
 
     // Add a file
     const fileInput = screen.getByLabelText('Upload Files');
@@ -200,11 +276,11 @@ describe('AssetUpload Component', () => {
     await userEvent.upload(fileInput, file);
 
     // Click upload button
-    const uploadButton = screen.getByText('Upload Files');
+    const uploadButton = screen.getByRole('button', { name: 'Upload Files' });
     await userEvent.click(uploadButton);
 
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith(
+      expect(fetchSpy).toHaveBeenCalledWith(
         '/api/assets',
         expect.objectContaining({
           method: 'POST',
@@ -217,15 +293,24 @@ describe('AssetUpload Component', () => {
   });
 
   it('displays success message when upload is successful', async () => {
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ assets: [] }),
-    });
-
-    // Mock successful upload response
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: 'File uploaded successfully' }),
+    // Mock fetch for getting assets and upload
+    fetchSpy.mockImplementation((url, options) => {
+      if (url === '/api/assets?projectId=project-1' && options?.method === 'GET') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ assets: [] }),
+        } as Response);
+      }
+      if (url === '/api/assets' && options?.method === 'POST') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: 'File uploaded successfully' }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
     });
 
     render(<AssetUpload projects={mockProjects} />);
@@ -234,9 +319,11 @@ describe('AssetUpload Component', () => {
     const projectSelect = screen.getByLabelText('Select Project');
     await userEvent.selectOptions(projectSelect, 'project-1');
 
-    // Select asset type
-    const imagesOption = screen.getByText('Images');
-    await userEvent.click(imagesOption);
+    // Select asset type - click on the div containing the Images text
+    const imagesOption = screen.getByText('Images').closest('div');
+    if (imagesOption) {
+      await userEvent.click(imagesOption);
+    }
 
     // Add a file
     const fileInput = screen.getByLabelText('Upload Files');
@@ -244,7 +331,7 @@ describe('AssetUpload Component', () => {
     await userEvent.upload(fileInput, file);
 
     // Click upload button
-    const uploadButton = screen.getByText('Upload Files');
+    const uploadButton = screen.getByRole('button', { name: 'Upload Files' });
     await userEvent.click(uploadButton);
 
     await waitFor(() => {
@@ -253,15 +340,24 @@ describe('AssetUpload Component', () => {
   });
 
   it('displays error message when upload fails', async () => {
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ assets: [] }),
-    });
-
-    // Mock failed upload response
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({ error: 'Upload failed' }),
+    // Mock fetch for getting assets and upload
+    fetchSpy.mockImplementation((url, options) => {
+      if (url === '/api/assets?projectId=project-1' && options?.method === 'GET') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ assets: [] }),
+        } as Response);
+      }
+      if (url === '/api/assets' && options?.method === 'POST') {
+        return Promise.resolve({
+          ok: false,
+          json: async () => ({ error: 'Upload failed' }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
     });
 
     render(<AssetUpload projects={mockProjects} />);
@@ -270,9 +366,11 @@ describe('AssetUpload Component', () => {
     const projectSelect = screen.getByLabelText('Select Project');
     await userEvent.selectOptions(projectSelect, 'project-1');
 
-    // Select asset type
-    const imagesOption = screen.getByText('Images');
-    await userEvent.click(imagesOption);
+    // Select asset type - click on the div containing the Images text
+    const imagesOption = screen.getByText('Images').closest('div');
+    if (imagesOption) {
+      await userEvent.click(imagesOption);
+    }
 
     // Add a file
     const fileInput = screen.getByLabelText('Upload Files');
@@ -280,7 +378,7 @@ describe('AssetUpload Component', () => {
     await userEvent.upload(fileInput, file);
 
     // Click upload button
-    const uploadButton = screen.getByText('Upload Files');
+    const uploadButton = screen.getByRole('button', { name: 'Upload Files' });
     await userEvent.click(uploadButton);
 
     await waitFor(() => {
@@ -289,15 +387,24 @@ describe('AssetUpload Component', () => {
   });
 
   it('resets form after successful upload', async () => {
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ assets: [] }),
-    });
-
-    // Mock successful upload response
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: 'File uploaded successfully' }),
+    // Mock fetch for getting assets and upload
+    fetchSpy.mockImplementation((url, options) => {
+      if (url === '/api/assets?projectId=project-1' && options?.method === 'GET') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ assets: [] }),
+        } as Response);
+      }
+      if (url === '/api/assets' && options?.method === 'POST') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: 'File uploaded successfully' }),
+        } as Response);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({}),
+      } as Response);
     });
 
     render(<AssetUpload projects={mockProjects} />);
@@ -306,9 +413,11 @@ describe('AssetUpload Component', () => {
     const projectSelect = screen.getByLabelText('Select Project');
     await userEvent.selectOptions(projectSelect, 'project-1');
 
-    // Select asset type
-    const imagesOption = screen.getByText('Images');
-    await userEvent.click(imagesOption);
+    // Select asset type - click on the div containing the Images text
+    const imagesOption = screen.getByText('Images').closest('div');
+    if (imagesOption) {
+      await userEvent.click(imagesOption);
+    }
 
     // Add a file
     const fileInput = screen.getByLabelText('Upload Files');
@@ -320,7 +429,7 @@ describe('AssetUpload Component', () => {
     await userEvent.type(descriptionTextarea, 'Test description');
 
     // Click upload button
-    const uploadButton = screen.getByText('Upload Files');
+    const uploadButton = screen.getByRole('button', { name: 'Upload Files' });
     await userEvent.click(uploadButton);
 
     await waitFor(() => {
@@ -340,17 +449,22 @@ describe('AssetUpload Component', () => {
       // Create a file to drop
       const file = new File(['test content'], 'test.jpg', { type: 'image/jpeg' });
       
-      // Create a drag event with the file
+      // Create a mock dataTransfer object
+      const dataTransfer = {
+        files: [file],
+      };
+
+      // Create a drag event with the file using a more realistic approach
       const dragEvent = new Event('drop', { bubbles: true });
       Object.defineProperty(dragEvent, 'dataTransfer', {
-        value: {
-          files: [file],
-        },
+        value: dataTransfer,
+        enumerable: true,
+        writable: false,
       });
 
       // Dispatch the drag events
       fireEvent.dragOver(dropArea);
-      fireEvent.drop(dropArea, dragEvent);
+      fireEvent(dropArea, dragEvent);
 
       await waitFor(() => {
         expect(screen.getByText('test.jpg')).toBeInTheDocument();
