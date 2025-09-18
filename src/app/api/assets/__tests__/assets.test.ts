@@ -73,13 +73,18 @@ describe('Assets API', () => {
       formData.append('file', new File(['content'], 'test.txt', { type: 'text/plain' }));
       // Missing projectId and assetType
 
-      const request = new NextRequest('http://localhost:3000/api/assets', {
+      // Create a mock request with formData method
+      const request = {
+        url: 'http://localhost:3000/api/assets',
         method: 'POST',
         headers: {
-          Authorization: 'Bearer valid-token',
+          get: (name: string) => {
+            if (name === 'authorization') return 'Bearer valid-token';
+            return null;
+          },
         },
-        body: formData,
-      });
+        formData: () => Promise.resolve(formData),
+      } as unknown as NextRequest;
 
       const response = await POST(request);
       const data = await response.json();
@@ -101,13 +106,18 @@ describe('Assets API', () => {
       formData.append('projectId', 'project-id');
       formData.append('assetType', 'documents');
 
-      const request = new NextRequest('http://localhost:3000/api/assets', {
+      // Create a mock request with formData method
+      const request = {
+        url: 'http://localhost:3000/api/assets',
         method: 'POST',
         headers: {
-          Authorization: 'Bearer valid-token',
+          get: (name: string) => {
+            if (name === 'authorization') return 'Bearer valid-token';
+            return null;
+          },
         },
-        body: formData,
-      });
+        formData: () => Promise.resolve(formData),
+      } as unknown as NextRequest;
 
       const response = await POST(request);
       const data = await response.json();
@@ -128,13 +138,18 @@ describe('Assets API', () => {
       formData.append('projectId', 'project-id');
       formData.append('assetType', 'documents');
 
-      const request = new NextRequest('http://localhost:3000/api/assets', {
+      // Create a mock request with formData method
+      const request = {
+        url: 'http://localhost:3000/api/assets',
         method: 'POST',
         headers: {
-          Authorization: 'Bearer valid-token',
+          get: (name: string) => {
+            if (name === 'authorization') return 'Bearer valid-token';
+            return null;
+          },
         },
-        body: formData,
-      });
+        formData: () => Promise.resolve(formData),
+      } as unknown as NextRequest;
 
       const response = await POST(request);
       const data = await response.json();
@@ -163,7 +178,7 @@ describe('Assets API', () => {
             data: {
               id: 'asset-id',
               project_id: 'project-id',
-              file_name: 'test.txt',
+              file_name: 'test.jpg',
               file_url: 'https://example.com/file-url',
               asset_type: 'documents',
               uploaded_by: 'user-id',
@@ -184,19 +199,24 @@ describe('Assets API', () => {
         insert: mockInsert,
       });
 
-      const validFile = new File(['content'], 'test.txt', { type: 'text/plain' });
+      const validFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
       const formData = new FormData();
       formData.append('file', validFile);
       formData.append('projectId', 'project-id');
       formData.append('assetType', 'documents');
 
-      const request = new NextRequest('http://localhost:3000/api/assets', {
+      // Create a mock request with formData method
+      const request = {
+        url: 'http://localhost:3000/api/assets',
         method: 'POST',
         headers: {
-          Authorization: 'Bearer valid-token',
+          get: (name: string) => {
+            if (name === 'authorization') return 'Bearer valid-token';
+            return null;
+          },
         },
-        body: formData,
-      });
+        formData: () => Promise.resolve(formData),
+      } as unknown as NextRequest;
 
       const response = await POST(request);
       const data = await response.json();
@@ -206,7 +226,7 @@ describe('Assets API', () => {
       expect(data.asset).toEqual({
         id: 'asset-id',
         project_id: 'project-id',
-        file_name: 'test.txt',
+        file_name: 'test.jpg',
         file_url: 'https://example.com/file-url',
         asset_type: 'documents',
         uploaded_by: 'user-id',
@@ -214,13 +234,18 @@ describe('Assets API', () => {
         created_at: '2023-01-01T00:00:00Z',
       });
 
-      expect(mockUpload).toHaveBeenCalledWith('project-id/test.txt', validFile, {
-        cacheControl: '3600',
-        upsert: false,
-      });
+      // The file name is generated dynamically, so we check that it starts with the project ID
+      expect(mockUpload).toHaveBeenCalledWith(
+        expect.stringMatching(/^project-id\/\d+-[a-z0-9]+\.jpg$/),
+        validFile,
+        {
+          cacheControl: '3600',
+          upsert: false,
+        }
+      );
       expect(mockInsert).toHaveBeenCalledWith({
         project_id: 'project-id',
-        file_name: 'test.txt',
+        file_name: 'test.jpg',
         file_url: 'https://example.com/file-url',
         asset_type: 'documents',
         uploaded_by: 'user-id',

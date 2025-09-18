@@ -1,32 +1,19 @@
 import { POST } from '../login/route';
-import { createServerClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { NextRequest } from 'next/server';
 
 // Mock the Supabase client
-jest.mock('@/lib/supabase', () => ({
-  createServerClient: jest.fn(),
-}));
+jest.mock('@/lib/supabase');
 
-const mockCreateServerClient = createServerClient as jest.MockedFunction<typeof createServerClient>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockSupabase = supabase as any;
 
 describe('POST /api/auth/login with role', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockSupabase: any;
   let mockRequest: NextRequest;
 
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
-
-    // Create a mock Supabase client
-    mockSupabase = {
-      auth: {
-        signInWithPassword: jest.fn(),
-      },
-      from: jest.fn(),
-    };
-
-    mockCreateServerClient.mockReturnValue(mockSupabase);
 
     // Create a mock request
     mockRequest = {

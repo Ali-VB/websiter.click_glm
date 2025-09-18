@@ -91,7 +91,7 @@ describe('Auth Helpers', () => {
   });
 
   describe('requireAdminUser', () => {
-    it('should return unauthorized response when user is not authenticated', () => {
+    it('should return unauthorized response when user is not authenticated', async () => {
       // Arrange
       const request = createMockRequest();
 
@@ -99,15 +99,12 @@ describe('Auth Helpers', () => {
       const response = requireAdminUser(request);
 
       // Assert
-      expect(response).toEqual(
-        NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      );
+      expect(response).not.toBeNull();
+      expect(response?.status).toBe(401);
+      expect(await response?.json()).toEqual({ error: 'Unauthorized' });
     });
 
-    it('should return insufficient permissions response when user is not admin', () => {
+    it('should return insufficient permissions response when user is not admin', async () => {
       // Arrange
       const request = createMockRequest({
         'x-user-id': 'user-id',
@@ -119,12 +116,9 @@ describe('Auth Helpers', () => {
       const response = requireAdminUser(request);
 
       // Assert
-      expect(response).toEqual(
-        NextResponse.json(
-          { error: 'Insufficient permissions' },
-          { status: 403 }
-        )
-      );
+      expect(response).not.toBeNull();
+      expect(response?.status).toBe(403);
+      expect(await response?.json()).toEqual({ error: 'Insufficient permissions' });
     });
 
     it('should return null when user is admin', () => {
@@ -144,7 +138,7 @@ describe('Auth Helpers', () => {
   });
 
   describe('requireAuthenticatedUser', () => {
-    it('should return unauthorized response when user is not authenticated', () => {
+    it('should return unauthorized response when user is not authenticated', async () => {
       // Arrange
       const request = createMockRequest();
 
@@ -152,12 +146,9 @@ describe('Auth Helpers', () => {
       const response = requireAuthenticatedUser(request);
 
       // Assert
-      expect(response).toEqual(
-        NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      );
+      expect(response).not.toBeNull();
+      expect(response?.status).toBe(401);
+      expect(await response?.json()).toEqual({ error: 'Unauthorized' });
     });
 
     it('should return null when user is authenticated', () => {
@@ -308,12 +299,9 @@ describe('Auth Helpers', () => {
       const response = await requireAdminFromToken(request);
 
       // Assert
-      expect(response).toEqual(
-        NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
-      );
+      expect(response).not.toBeNull();
+      expect(response?.status).toBe(401);
+      expect(await response?.json()).toEqual({ error: 'Unauthorized' });
     });
 
     it('should return insufficient permissions response when user is not admin', async () => {
@@ -349,12 +337,9 @@ describe('Auth Helpers', () => {
       const response = await requireAdminFromToken(request);
 
       // Assert
-      expect(response).toEqual(
-        NextResponse.json(
-          { error: 'Insufficient permissions' },
-          { status: 403 }
-        )
-      );
+      expect(response).not.toBeNull();
+      expect(response?.status).toBe(403);
+      expect(await response?.json()).toEqual({ error: 'Insufficient permissions' });
     });
 
     it('should return null when user is admin', async () => {

@@ -64,6 +64,7 @@ describe('POST /api/auth/signup', () => {
               name: 'Test User',
               email: 'test@example.com',
               email_verified: false,
+              role: 'client',
             },
           }),
         }),
@@ -82,7 +83,9 @@ describe('POST /api/auth/signup', () => {
         email: 'test@example.com',
         name: 'Test User',
         emailVerified: false,
+        role: 'client',
       },
+      project: null,
       requiresEmailVerification: true,
     });
   });
@@ -102,7 +105,7 @@ describe('POST /api/auth/signup', () => {
     expect(res.status).toBe(400);
     expect(data).toEqual({
       success: false,
-      message: 'Name, email, and password are required',
+      message: 'Email and password are required',
     });
   });
 

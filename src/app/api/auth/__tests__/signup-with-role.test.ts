@@ -1,32 +1,19 @@
 import { POST } from '../signup/route';
-import { createServerClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { NextRequest } from 'next/server';
 
 // Mock the Supabase client
-jest.mock('@/lib/supabase', () => ({
-  createServerClient: jest.fn(),
-}));
+jest.mock('@/lib/supabase');
 
-const mockCreateServerClient = createServerClient as jest.MockedFunction<typeof createServerClient>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockSupabase = supabase as any;
 
 describe('POST /api/auth/signup with role', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mockSupabase: any;
   let mockRequest: NextRequest;
 
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
-
-    // Create a mock Supabase client
-    mockSupabase = {
-      auth: {
-        signUp: jest.fn(),
-      },
-      from: jest.fn(),
-    };
-
-    mockCreateServerClient.mockReturnValue(mockSupabase);
 
     // Create a mock request
     mockRequest = {
@@ -58,21 +45,47 @@ describe('POST /api/auth/signup with role', () => {
       role: 'client',
     };
 
-    mockSupabase.auth.signUp.mockResolvedValue({
-      data: {
-        user: mockAuthUser,
-      },
-      error: null,
-    });
-
-    mockSupabase.from.mockReturnValue({
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({
-        data: mockClient,
+    // Set up the mock implementation for this test
+    mockSupabase.auth = {
+      signUp: jest.fn().mockResolvedValue({
+        data: {
+          user: mockAuthUser,
+        },
         error: null,
       }),
+    };
+    
+    // Create a mock query builder for checking if user exists
+    const mockExistsSelect = jest.fn().mockReturnThis();
+    const mockExistsEq = jest.fn().mockReturnThis();
+    const mockExistsSingle = jest.fn().mockResolvedValue({
+      data: null, // No existing user
+      error: null,
     });
+    
+    // Create a mock query builder for inserting user
+    const mockInsertSelect = jest.fn().mockReturnThis();
+    const mockInsertSingle = jest.fn().mockResolvedValue({
+      data: mockClient,
+      error: null,
+    });
+    
+    const mockInsert = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        single: mockInsertSingle,
+      }),
+    });
+    
+    // Mock the from method to return different mocks based on the call
+    mockSupabase.from = jest.fn()
+      .mockReturnValueOnce({
+        select: mockExistsSelect,
+        eq: mockExistsEq,
+        single: mockExistsSingle,
+      })
+      .mockReturnValueOnce({
+        insert: mockInsert,
+      });
 
     // Act
     const response = await POST(mockRequest);
@@ -116,21 +129,47 @@ describe('POST /api/auth/signup with role', () => {
       role: 'client',
     };
 
-    mockSupabase.auth.signUp.mockResolvedValue({
-      data: {
-        user: mockAuthUser,
-      },
-      error: null,
-    });
-
-    mockSupabase.from.mockReturnValue({
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({
-        data: mockClient,
+    // Set up the mock implementation for this test
+    mockSupabase.auth = {
+      signUp: jest.fn().mockResolvedValue({
+        data: {
+          user: mockAuthUser,
+        },
         error: null,
       }),
+    };
+    
+    // Create a mock query builder for checking if user exists
+    const mockExistsSelect = jest.fn().mockReturnThis();
+    const mockExistsEq = jest.fn().mockReturnThis();
+    const mockExistsSingle = jest.fn().mockResolvedValue({
+      data: null, // No existing user
+      error: null,
     });
+    
+    // Create a mock query builder for inserting user
+    const mockInsertSelect = jest.fn().mockReturnThis();
+    const mockInsertSingle = jest.fn().mockResolvedValue({
+      data: mockClient,
+      error: null,
+    });
+    
+    const mockInsert = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        single: mockInsertSingle,
+      }),
+    });
+    
+    // Mock the from method to return different mocks based on the call
+    mockSupabase.from = jest.fn()
+      .mockReturnValueOnce({
+        select: mockExistsSelect,
+        eq: mockExistsEq,
+        single: mockExistsSingle,
+      })
+      .mockReturnValueOnce({
+        insert: mockInsert,
+      });
 
     // Act
     const response = await POST(mockRequest);
@@ -174,25 +213,47 @@ describe('POST /api/auth/signup with role', () => {
       role: 'client',
     };
 
-    mockSupabase.auth.signUp.mockResolvedValue({
-      data: {
-        user: mockAuthUser,
-      },
+    // Set up the mock implementation for this test
+    mockSupabase.auth = {
+      signUp: jest.fn().mockResolvedValue({
+        data: {
+          user: mockAuthUser,
+        },
+        error: null,
+      }),
+    };
+    
+    // Create a mock query builder for checking if user exists
+    const mockExistsSelect = jest.fn().mockReturnThis();
+    const mockExistsEq = jest.fn().mockReturnThis();
+    const mockExistsSingle = jest.fn().mockResolvedValue({
+      data: null, // No existing user
       error: null,
     });
-
-    const mockInsert = jest.fn().mockReturnThis();
-    const mockSelect = jest.fn().mockReturnThis();
-    const mockSingle = jest.fn().mockResolvedValue({
+    
+    // Create a mock query builder for inserting user
+    const mockInsertSelect = jest.fn().mockReturnThis();
+    const mockInsertSingle = jest.fn().mockResolvedValue({
       data: mockClient,
       error: null,
     });
-
-    mockSupabase.from.mockReturnValue({
-      select: mockSelect,
-      insert: mockInsert,
-      single: mockSingle,
+    
+    const mockInsert = jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        single: mockInsertSingle,
+      }),
     });
+    
+    // Mock the from method to return different mocks based on the call
+    mockSupabase.from = jest.fn()
+      .mockReturnValueOnce({
+        select: mockExistsSelect,
+        eq: mockExistsEq,
+        single: mockExistsSingle,
+      })
+      .mockReturnValueOnce({
+        insert: mockInsert,
+      });
 
     // Act
     await POST(mockRequest);

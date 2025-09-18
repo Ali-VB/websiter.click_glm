@@ -48,6 +48,8 @@ describe('Client Onboarding Flow', () => {
     jest.clearAllMocks();
     sessionStorageMock.getItem.mockReturnValue(null);
     localStorageMock.getItem.mockReturnValue(null);
+    // Reset mockFetch
+    mockFetch.mockReset();
   });
 
   describe('Guest Access to Onboarding Steps 1-5', () => {
@@ -197,6 +199,13 @@ describe('Client Onboarding Flow', () => {
         json: async () => ({
           success: true,
           message: 'Account created successfully! Please check your email to verify your account.',
+          user: {
+            id: 'user-id',
+            email: 'test@example.com',
+            name: 'Test User',
+            emailVerified: false,
+            role: 'client',
+          },
           requiresEmailVerification: true,
         }),
       } as Response);
@@ -233,30 +242,31 @@ describe('Client Onboarding Flow', () => {
         status: 201,
         json: async () => ({
           success: true,
+          message: 'Account created successfully! Please check your email to verify your account.',
           project: {
             id: 'project-id',
+            selectedPackage: mockProjectData.selectedPackage,
+            addOns: mockProjectData.addOns,
+            designStyle: mockProjectData.designStyle,
+            referenceWebsites: mockProjectData.referenceWebsites,
+            colorScheme: mockProjectData.colorScheme,
+            layoutPreferences: mockProjectData.layoutPreferences,
+            domainOption: mockProjectData.domainOption,
+            hostingOption: mockProjectData.hostingOption,
+            maintenancePlan: mockProjectData.maintenancePlan,
+            email: 'test@example.com',
             status: 'ongoing',
-            website_type: mockProjectData.selectedPackage,
-            design_preferences: {
-              designStyle: mockProjectData.designStyle,
-              referenceWebsites: mockProjectData.referenceWebsites,
-              colorScheme: mockProjectData.colorScheme,
-              layoutPreferences: mockProjectData.layoutPreferences,
-            },
-            add_ons: mockProjectData.addOns,
-            domain_info: {
-              domainOption: mockProjectData.domainOption,
-              hostingOption: mockProjectData.hostingOption,
-            },
-            maintenance_plan: mockProjectData.maintenancePlan,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
           },
+          requiresEmailVerification: true,
         }),
       } as Response);
 
       // Test project creation
       const response = await mockFetch('/api/onboarding', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer mock-token',
         },
@@ -270,7 +280,7 @@ describe('Client Onboarding Flow', () => {
       expect(response.ok).toBe(true);
       const data = await response.json();
       expect(data.success).toBe(true);
-      expect(data.project.website_type).toBe(mockProjectData.selectedPackage);
+      expect(data.project.selectedPackage).toBe(mockProjectData.selectedPackage);
     });
 
     it('should allow authenticated users to create projects directly', async () => {
@@ -303,6 +313,14 @@ describe('Client Onboarding Flow', () => {
         status: 201,
         json: async () => ({
           success: true,
+          message: 'Account created successfully! Please check your email to verify your account.',
+          user: {
+            id: 'user-id',
+            email: 'test@example.com',
+            name: 'Test User',
+            emailVerified: false,
+            role: 'client',
+          },
           requiresEmailVerification: true,
         }),
       } as Response);
@@ -330,6 +348,13 @@ describe('Client Onboarding Flow', () => {
         json: async () => ({
           success: true,
           message: 'Account created successfully! Please check your email to verify your account.',
+          user: {
+            id: 'user-id',
+            email: 'test@example.com',
+            name: 'Test User',
+            emailVerified: false,
+            role: 'client',
+          },
           requiresEmailVerification: true,
         }),
       } as Response);
