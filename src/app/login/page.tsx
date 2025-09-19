@@ -86,9 +86,24 @@ export default function LoginPage() {
             access_token: data.session.access_token,
             refresh_token: data.session.refresh_token,
           });
+          
+          // Store the token in localStorage for middleware authentication
+          localStorage.setItem('auth_token', data.session.access_token);
+          
+          // Also store in the format that admin pages expect
+          localStorage.setItem('supabase.auth.token', JSON.stringify({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+            expires_at: Date.now() + (data.session.expires_in * 1000)
+          }));
         }
-        // Redirect to dashboard after successful login
-        router.push("/dashboard");
+        
+        // Redirect based on user role
+        if (data.user?.role === 'admin') {
+          router.push("/admin");
+        } else {
+          router.push("/dashboard");
+        }
       } else {
         if (data.requiresEmailVerification) {
           setError(data.message || "Please verify your email before logging in.");

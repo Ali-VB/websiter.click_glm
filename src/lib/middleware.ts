@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import type { NextRequest } from 'next/server';
 
 export type Role = 'client' | 'admin';
@@ -18,16 +18,57 @@ interface AuthFailure {
   error: string;
 }
 
-type AuthResult = AuthSuccess | AuthFailure;
+type AuthResult = (AuthSuccess | AuthFailure) & { response: NextResponse };
 
 export async function requireAuth(request: NextRequest): Promise<AuthResult> {
-  const supabase = createServerClient();
+  // Try to get the authorization header first
+  const authHeader = request.headers.get('authorization');
   
-  // Get the user from the session
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    // If we have a bearer token, use it directly
+    const token = authHeader.substring(7);
+    const supabase = createServerClient();
+    
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+    
+    // Get the user's role from the clients table
+    const { data: client, error: clientError } = await supabase
+      .from('clients')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (clientError || !client) {
+      return { success: false, error: 'User not found', response };
+    }
+    
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: client.role as Role
+      }
+    };
+  }
+  
+  // Fall back to cookie-based authentication
+  const response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+  const supabase = createMiddlewareClient({ req: request, res: response });
+  
+  // Try to get the user from the session
   const { data: { user }, error } = await supabase.auth.getUser();
   
   if (error || !user) {
-    return { success: false, error: 'Unauthorized' };
+    return { success: false, error: 'Unauthorized', response };
   }
   
   // Get the user's role from the clients table

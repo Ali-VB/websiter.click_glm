@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { NextRequest } from 'next/server'
 
 // These environment variables will be set up in the next step
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -15,12 +16,29 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
-// Server client for API routes
-export function createServerClient() {
-  return createClient(supabaseUrl, supabaseServiceRoleKey, {
+// Server client for API routes and middleware
+export function createServerClient(request?: NextRequest) {
+  if (request) {
+    // For middleware usage with request context
+    return createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+      global: {
+        headers: {
+          // Forward cookies from the request to the server client
+          cookie: request.headers.get('cookie') || '',
+        },
+      },
+    });
+  }
+  
+  // For API routes usage
+  return createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
-  })
+  });
 }

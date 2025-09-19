@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, createServerClient } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,7 +63,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
+    // Set the session cookies for the server-side
+    const supabaseServer = createServerClient(); // Create a server client without request context
+    const { data: setSessionData, error: setSessionError } = await supabaseServer.auth.setSession({
+      access_token: data.session?.access_token!,
+      refresh_token: data.session?.refresh_token!,
+    });
+
+    if (setSessionError) {
+      console.error('Error setting session:', setSessionError);
+      return NextResponse.json(
+        { success: false, message: 'An error occurred during login' },
+        { status: 500 }
+      );
+    }
+
+    const response = NextResponse.json({
       success: true,
       message: 'Login successful',
       user: {
@@ -79,6 +94,13 @@ export async function POST(request: NextRequest) {
         expires_in: data.session?.expires_in,
       },
     }, { status: 200 });
+
+    // Forward the set-cookie headers from Supabase to the Next.js response
+    setSessionData.session?.cookies?.forEach((cookie) => {
+      response.headers.append('Set-Cookie', cookie);
+    });
+
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
