@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import AssetUpload from "@/components/AssetUpload";
+import { Bell } from "lucide-react";
 
 interface Project {
   id: string;
@@ -54,6 +55,15 @@ interface SupportTicket {
   }>;
 }
 
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  sent_at: string;
+  read: boolean;
+  type: "system" | "project" | "invoice" | "support";
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -62,6 +72,8 @@ export default function DashboardPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const fetchDashboardData = useCallback(async (token: string) => {
     // This function is now only called when a session is guaranteed to exist.
@@ -106,6 +118,20 @@ export default function DashboardPage() {
       if (ticketsResponse.ok) {
         const ticketsData = await ticketsResponse.json();
         setSupportTickets(ticketsData.tickets || []);
+      }
+
+      // Fetch notifications
+      const notificationsResponse = await fetch("/api/notifications", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (notificationsResponse.ok) {
+        const notificationsData = await notificationsResponse.json();
+        setNotifications(notificationsData.notifications || []);
+        setUnreadCount(notificationsData.notifications.filter((n: Notification) => !n.read).length);
       }
     } catch (err) {
       setError("An error occurred while loading your dashboard");
@@ -186,6 +212,65 @@ export default function DashboardPage() {
     router.push("/");
   };
 
+  const markNotificationAsRead = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}/read`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        setNotifications(notifications.map(n => 
+          n.id === id ? { ...n, read: true } : n
+        ));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (err) {
+      console.error("Error marking notification as read:", err);
+    }
+  };
+
+  const dismissNotification = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}/dismiss`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const notification = notifications.find(n => n.id === id);
+        setNotifications(notifications.filter(n => n.id !== id));
+        if (notification && !notification.read) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+      }
+    } catch (err) {
+      console.error("Error dismissing notification:", err);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    try {
+      const response = await fetch("/api/notifications/read-all", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        setNotifications(notifications.map(n => ({ ...n, read: true })));
+        setUnreadCount(0);
+      }
+    } catch (err) {
+      console.error("Error marking all notifications as read:", err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted">
       {/* Header */}
@@ -198,6 +283,19 @@ export default function DashboardPage() {
           <Button variant="outline" asChild>
             <Link href="/" aria-label="Return to home page">Home</Link>
           </Button>
+          <div className="relative">
+            <Button variant="outline" size="icon" aria-label="View notifications">
+              <Bell className="h-4 w-4" />
+            </Button>
+            {unreadCount > 0 && (
+              <Badge 
+                className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-destructive text-destructive-foreground"
+                aria-label={`${unreadCount} unread notifications`}
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Badge>
+            )}
+          </div>
           <Button variant="outline" onClick={handleLogout} aria-label="Log out of your account">
             Log Out
           </Button>
@@ -351,6 +449,7 @@ export default function DashboardPage() {
                 <TabsTrigger value="support" role="tab" aria-selected="false" aria-controls="support-tabpanel" tabIndex={-1}>Support</TabsTrigger>
                 <TabsTrigger value="account" role="tab" aria-selected="false" aria-controls="account-tabpanel" tabIndex={-1}>Account</TabsTrigger>
                 <TabsTrigger value="invoices" role="tab" aria-selected="false" aria-controls="invoices-tabpanel" tabIndex={-1}>Invoices</TabsTrigger>
+                <TabsTrigger value="notifications" role="tab" aria-selected="false" aria-controls="notifications-tabpanel" tabIndex={-1}>Notifications</TabsTrigger>
               </TabsList>
               
               <TabsContent value="projects" className="space-y-4" role="tabpanel" id="projects-tabpanel" aria-labelledby="projects-tab">
@@ -978,6 +1077,99 @@ export default function DashboardPage() {
                         </table>
                       </div>
                     )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="notifications" className="space-y-4" role="tabpanel" id="notifications-tabpanel" aria-labelledby="notifications-tab">
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle>Notifications</CardTitle>
+                        <CardDescription>
+                          View and manage your notifications
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-muted-foreground">
+                          {unreadCount} unread
+                        </span>
+                        <Button variant="outline" size="sm" onClick={markAllNotificationsAsRead}>Mark All as Read</Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Notification Filters */}
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" size="sm">All</Button>
+                        <Button variant="outline" size="sm">Unread</Button>
+                        <Button variant="outline" size="sm">System</Button>
+                        <Button variant="outline" size="sm">Projects</Button>
+                        <Button variant="outline" size="sm">Invoices</Button>
+                        <Button variant="outline" size="sm">Support</Button>
+                      </div>
+                      
+                      {/* Notifications List */}
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold">Recent Notifications</h3>
+                        
+                        {notifications.length === 0 ? (
+                          <div className="text-center py-8">
+                            <p className="text-muted-foreground">You don't have any notifications yet.</p>
+                          </div>
+                        ) : (
+                          notifications.map((notification) => (
+                            <Card 
+                              key={notification.id} 
+                              className={`transition-colors ${!notification.read ? 'bg-muted/30 border-l-4 border-l-primary' : ''}`}
+                            >
+                              <CardContent className="p-4">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      <h4 className="font-medium">{notification.title}</h4>
+                                      <Badge
+                                        variant="outline"
+                                        className={
+                                          notification.type === "system" ? "bg-blue-100 text-blue-800" :
+                                          notification.type === "project" ? "bg-green-100 text-green-800" :
+                                          notification.type === "invoice" ? "bg-yellow-100 text-yellow-800" :
+                                          "bg-purple-100 text-purple-800"
+                                        }
+                                      >
+                                        {notification.type}
+                                      </Badge>
+                                      {!notification.read && (
+                                        <Badge className="bg-destructive text-destructive-foreground">New</Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-muted-foreground mb-2">
+                                      {notification.message}
+                                    </p>
+                                    <div className="flex items-center text-xs text-muted-foreground">
+                                      <span>Sent: {formatDate(notification.sent_at)}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    {!notification.read && (
+                                      <Button variant="outline" size="sm" onClick={() => markNotificationAsRead(notification.id)}>Mark as Read</Button>
+                                    )}
+                                    <Button variant="outline" size="sm" onClick={() => dismissNotification(notification.id)}>Dismiss</Button>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))
+                        )}
+                      </div>
+                      
+                      {/* View All Notifications Button */}
+                      <div className="flex justify-center">
+                        <Button variant="outline">View All Notifications</Button>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

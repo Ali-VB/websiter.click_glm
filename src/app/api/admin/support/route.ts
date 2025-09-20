@@ -1,28 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
+import { requireAdminFromToken } from "@/lib/auth-helpers";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
+    // Use standardized authentication
+    const authError = await requireAdminFromToken(request);
+    if (authError) {
+      return authError;
+    }
+
     const supabase = createServerClient();
-    
-    // Get the auth token from the request headers
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
-      return NextResponse.json({ error: "Authorization header is required" }, { status: 401 });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    
-    // Verify the token and get the user
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
-    }
-
-    // Check if the user is an admin (you might need to implement a role system)
-    // For now, we'll assume any authenticated user can access this
-    // In a real implementation, you would check for admin role
 
     // Fetch support tickets with client information
     const { data: tickets, error } = await supabase
@@ -32,8 +20,10 @@ export async function GET(request: Request) {
         client:clients(id, name, email),
         project:projects(id, name),
         replies:support_ticket_replies(
-          *,
-          author:clients(id, name, email)
+          id,
+          message,
+          created_at,
+          author_id
         )
       `)
       .order("created_at", { ascending: false });
@@ -53,6 +43,23 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Failed to fetch team members" }, { status: 500 });
     }
 
+    // Manually fetch author details for replies to avoid foreign key issues
+    if (tickets) {
+      for (const ticket of tickets) {
+        if (ticket.replies) {
+          for (const reply of ticket.replies) {
+            const { data: author } = await supabase
+              .from("clients")
+              .select("id, name, email")
+              .eq("id", reply.author_id)
+              .single();
+            
+            reply.author = author;
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       tickets: tickets || [],
       teamMembers: teamMembers || []
@@ -63,24 +70,15 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient();
-    
-    // Get the auth token from the request headers
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
-      return NextResponse.json({ error: "Authorization header is required" }, { status: 401 });
+    // Use standardized authentication
+    const authError = await requireAdminFromToken(request);
+    if (authError) {
+      return authError;
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    
-    // Verify the token and get the user
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
-    if (userError || !user) {
-      return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
-    }
+    const supabase = createServerClient();
 
     // Get the ticket data from the request body
     const { clientId, projectId, subject, description, priority, category } = await request.json();

@@ -142,7 +142,7 @@ export default function AdminClientsPage() {
 
     try {
       // Get the auth token from localStorage
-      const token = localStorage.getItem("supabase.auth.token");
+      const token = localStorage.getItem("auth_token");
       
       if (!token) {
         setError("You must be logged in to view the admin portal");
@@ -150,33 +150,37 @@ export default function AdminClientsPage() {
         return;
       }
 
-      // In a real implementation, we would fetch from the API
-      // For now, we'll use mock data
+      // Try to fetch from API first
+      try {
+        const response = await fetch("/api/admin/clients", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setClients(data.clients || []);
+            setFilteredClients(data.clients || []);
+            setContactSubmissions(data.contactSubmissions || []);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (apiErr) {
+        console.log("API endpoint not available, using mock data");
+      }
+
+      // If API fails, use mock data (for development)
       setTimeout(() => {
         setClients(mockClients);
         setFilteredClients(mockClients);
         setContactSubmissions(mockContactSubmissions);
         setIsLoading(false);
-      }, 1000);
+      }, 500);
       
-      // Actual implementation would be:
-      /*
-      const response = await fetch("/api/admin/clients", {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${JSON.parse(token).access_token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setClients(data.clients || []);
-        setFilteredClients(data.clients || []);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to fetch clients");
-      }
-      */
     } catch (err) {
       setError("An error occurred while loading clients");
       console.error("Admin clients error:", err);
@@ -314,7 +318,7 @@ export default function AdminClientsPage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("supabase.auth.token");
+    localStorage.removeItem("auth_token");
     router.push("/");
   };
 

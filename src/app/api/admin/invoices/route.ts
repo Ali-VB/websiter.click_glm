@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
+import { requireAdminFromToken } from '@/lib/auth-helpers';
 import { formatCurrency } from '@/lib/tax';
 
 // Type for tax details
@@ -14,36 +15,13 @@ interface TaxDetails {
 
 export async function GET(request: NextRequest) {
   try {
-    // Check if user is authenticated
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
+    // Use standardized authentication
+    const authError = await requireAdminFromToken(request);
+    if (authError) {
+      return authError;
     }
 
-    const token = authHeader.substring(7);
-    
-    // Verify the token and get the user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is an admin
-    // For now, we'll check if the user's email contains 'admin'
-    // In a real application, this would be a proper role-based access control system
-    if (!user.email || !user.email.includes('admin')) {
-      return NextResponse.json(
-        { success: false, message: 'Admin access required' },
-        { status: 403 }
-      );
-    }
+    const supabase = createServerClient();
 
     // Get query parameters
     const { searchParams } = new URL(request.url);
@@ -67,14 +45,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build the query
+    // Build the query - fix the relationship issue
     let query = supabase
       .from('invoices')
       .select(`
         id,
         project_id,
         projects(name, client_id),
-        clients(name, email),
         status,
         total_amount,
         tax_amount,
@@ -110,7 +87,6 @@ export async function GET(request: NextRequest) {
     // Transform the data to match the expected format
     const invoices = data?.map(invoice => {
       const projects = invoice.projects as { name: string; client_id: string }[] | null;
-      const clients = invoice.clients as { name: string; email: string }[] | null;
       const taxDetails = invoice.tax_details as TaxDetails || {};
       
       // Calculate subtotal (total amount - tax amount)
@@ -120,8 +96,8 @@ export async function GET(request: NextRequest) {
         id: invoice.id,
         projectId: invoice.project_id,
         projectName: projects?.[0]?.name || 'Unknown Project',
-        clientName: clients?.[0]?.name || 'Unknown Client',
-        clientEmail: clients?.[0]?.email || 'unknown@example.com',
+        clientName: 'Unknown Client', // Will need to fetch client data separately
+        clientEmail: 'unknown@example.com',
         subtotal,
         taxAmount: invoice.tax_amount || 0,
         totalAmount: invoice.total_amount,
@@ -136,6 +112,43 @@ export async function GET(request: NextRequest) {
         formattedTotalAmount: formatCurrency(invoice.total_amount),
       };
     }) || [];
+
+    // If we have invoices, fetch client information separately
+    if (invoices.length > 0) {
+      const projectIds = invoices
+        .filter(invoice => invoice.projectId)
+        .map(invoice => invoice.projectId);
+
+      if (projectIds.length > 0) {
+        const { data: projectClients } = await supabase
+          .from('projects')
+          .select('id, client_id, clients(name, email)')
+          .in('id', projectIds);
+
+        if (projectClients) {
+          const clientMap = new Map();
+          projectClients.forEach(pc => {
+            const clients = pc.clients as { name: string; email: string }[] | null;
+            if (clients && clients.length > 0) {
+              clientMap.set(pc.id, {
+                name: clients[0].name,
+                email: clients[0].email
+              });
+            }
+          });
+
+          invoices.forEach(invoice => {
+            if (invoice.projectId && clientMap.has(invoice.projectId)) {
+              const client = clientMap.get(invoice.projectId);
+              if (client) {
+                invoice.clientName = client.name;
+                invoice.clientEmail = client.email;
+              }
+            }
+          });
+        }
+      }
+    }
 
     // Prepare the response
     const response: {

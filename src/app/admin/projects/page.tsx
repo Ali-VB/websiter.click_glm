@@ -132,7 +132,7 @@ export default function AdminProjectsPage() {
 
     try {
       // Get the auth token from localStorage
-      const token = localStorage.getItem("supabase.auth.token");
+      const token = localStorage.getItem("auth_token");
       
       if (!token) {
         setError("You must be logged in to view the admin portal");
@@ -140,32 +140,35 @@ export default function AdminProjectsPage() {
         return;
       }
 
-      // In a real implementation, we would fetch from the API
-      // For now, we'll use mock data
+      // Try to fetch from API first
+      try {
+        const response = await fetch("/api/admin/projects", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setProjects(data.projects || []);
+            setFilteredProjects(data.projects || []);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (apiErr) {
+        console.log("API endpoint not available, using mock data");
+      }
+
+      // If API fails, use mock data (for development)
       setTimeout(() => {
         setProjects(mockProjects);
         setFilteredProjects(mockProjects);
         setIsLoading(false);
-      }, 1000);
+      }, 500);
       
-      // Actual implementation would be:
-      /*
-      const response = await fetch("/api/admin/projects", {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${JSON.parse(token).access_token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProjects(data.projects || []);
-        setFilteredProjects(data.projects || []);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to fetch projects");
-      }
-      */
     } catch (err) {
       setError("An error occurred while loading projects");
       console.error("Admin projects error:", err);
@@ -246,7 +249,7 @@ export default function AdminProjectsPage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("supabase.auth.token");
+    localStorage.removeItem("auth_token");
     router.push("/");
   };
 

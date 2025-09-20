@@ -13,6 +13,445 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+// Database Inspector Component
+interface DatabaseTable {
+  name: string;
+  rowCount: number;
+  columns: Array<{
+    name: string;
+    type: string;
+    nullable: boolean;
+  }>;
+}
+
+interface DatabaseRecord {
+  id: string;
+  data: Record<string, any>;
+  table: string;
+}
+
+const DatabaseInspector = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [tables, setTables] = useState<DatabaseTable[]>([]);
+  const [selectedTable, setSelectedTable] = useState<string>("");
+  const [records, setRecords] = useState<DatabaseRecord[]>([]);
+  const [sqlQuery, setSqlQuery] = useState<string>("SELECT * FROM clients LIMIT 10;");
+  const [queryResult, setQueryResult] = useState<{ columns: string[]; rows: string[][]; rowCount: number } | null>(null);
+  const [copiedMessage, setCopiedMessage] = useState<string>("");
+
+  const fetchDatabaseInfo = async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const token = localStorage.getItem("auth_token");
+      
+      if (!token) {
+        setError("Authentication required");
+        return;
+      }
+
+      // Mock database data for demonstration
+      const mockTables: DatabaseTable[] = [
+        {
+          name: "clients",
+          rowCount: 6,
+          columns: [
+            { name: "id", type: "UUID", nullable: false },
+            { name: "name", type: "TEXT", nullable: false },
+            { name: "email", type: "TEXT", nullable: false },
+            { name: "phone", type: "TEXT", nullable: true },
+            { name: "company", type: "TEXT", nullable: true },
+            { name: "status", type: "TEXT", nullable: true },
+            { name: "role", type: "TEXT", nullable: true },
+            { name: "created_at", type: "TIMESTAMP", nullable: false },
+            { name: "updated_at", type: "TIMESTAMP", nullable: true }
+          ]
+        },
+        {
+          name: "projects",
+          rowCount: 1,
+          columns: [
+            { name: "id", type: "UUID", nullable: false },
+            { name: "name", type: "TEXT", nullable: false },
+            { name: "client_id", type: "UUID", nullable: true },
+            { name: "status", type: "TEXT", nullable: true },
+            { name: "created_at", type: "TIMESTAMP", nullable: false },
+            { name: "updated_at", type: "TIMESTAMP", nullable: true }
+          ]
+        },
+        {
+          name: "invoices",
+          rowCount: 0,
+          columns: [
+            { name: "id", type: "UUID", nullable: false },
+            { name: "invoice_number", type: "TEXT", nullable: false },
+            { name: "client_id", type: "UUID", nullable: false },
+            { name: "project_id", type: "UUID", nullable: true },
+            { name: "amount", type: "DECIMAL", nullable: false },
+            { name: "status", type: "TEXT", nullable: false },
+            { name: "due_date", type: "TIMESTAMP", nullable: false },
+            { name: "description", type: "TEXT", nullable: true },
+            { name: "created_at", type: "TIMESTAMP", nullable: false },
+            { name: "updated_at", type: "TIMESTAMP", nullable: true }
+          ]
+        },
+        {
+          name: "support_tickets",
+          rowCount: 0,
+          columns: [
+            { name: "id", type: "UUID", nullable: false },
+            { name: "subject", type: "TEXT", nullable: false },
+            { name: "description", type: "TEXT", nullable: false },
+            { name: "priority", type: "TEXT", nullable: false },
+            { name: "status", type: "TEXT", nullable: false },
+            { name: "client_id", type: "UUID", nullable: true },
+            { name: "project_id", type: "UUID", nullable: true },
+            { name: "created_at", type: "TIMESTAMP", nullable: false },
+            { name: "updated_at", type: "TIMESTAMP", nullable: true }
+          ]
+        },
+        {
+          name: "activity_log",
+          rowCount: 0,
+          columns: [
+            { name: "id", type: "UUID", nullable: false },
+            { name: "user_id", type: "UUID", nullable: true },
+            { name: "action", type: "TEXT", nullable: false },
+            { name: "entity_type", type: "TEXT", nullable: false },
+            { name: "details", type: "JSONB", nullable: true },
+            { name: "created_at", type: "TIMESTAMP", nullable: false }
+          ]
+        }
+      ];
+
+      // Mock records for demonstration
+      const mockRecords: DatabaseRecord[] = [
+        {
+          id: "1",
+          table: "clients",
+          data: {
+            id: "4eba03d9-45d7-4c3b-9185-97d8b644605e",
+            name: "Admin User",
+            email: "admin@websiter.click",
+            phone: null,
+            company: null,
+            status: "active",
+            role: "admin",
+            created_at: "2025-09-19T15:30:00Z",
+            updated_at: "2025-09-19T15:30:00Z"
+          }
+        },
+        {
+          id: "2", 
+          table: "clients",
+          data: {
+            id: "some-uuid-here",
+            name: "Orphilosophy User",
+            email: "orphilosophy2024@gmail.com",
+            phone: null,
+            company: null,
+            status: "active",
+            role: "client",
+            created_at: "2025-09-19T19:20:00Z",
+            updated_at: "2025-09-19T19:20:00Z"
+          }
+        }
+      ];
+
+      setTables(mockTables);
+      setRecords(mockRecords);
+      
+      // If we have a selected table, keep it selected
+      if (selectedTable && mockTables.find(t => t.name === selectedTable)) {
+        // Table still exists, keep it selected
+      } else if (mockTables.length > 0) {
+        setSelectedTable(mockTables[0].name);
+      }
+
+    } catch (err) {
+      setError("Failed to fetch database information");
+      console.error("Database inspector error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const executeQuery = async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      // Mock query execution for demonstration
+      const mockQueryResult = {
+        columns: ["id", "name", "email", "status"],
+        rows: [
+          ["4eba03d9-45d7-4c3b-9185-97d8b644605e", "Admin User", "admin@websiter.click", "active"],
+          ["some-uuid-here", "Orphilosophy User", "orphilosophy2024@gmail.com", "active"]
+        ],
+        rowCount: 2
+      };
+
+      setQueryResult(mockQueryResult);
+    } catch (err) {
+      setError("Failed to execute query");
+      console.error("Query execution error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const copyToClipboard = async (content: string, type: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessage(`Copied ${type} to clipboard!`);
+      setTimeout(() => setCopiedMessage(""), 3000);
+    } catch (err) {
+      setError("Failed to copy to clipboard");
+      console.error("Copy error:", err);
+    }
+  };
+
+  const formatTableData = (tableData: DatabaseTable[]) => {
+    return tableData.map(table => 
+      `${table.name} (${table.rowCount} rows, ${table.columns.length} columns)`
+    ).join('\n');
+  };
+
+  const formatRecordsData = (records: DatabaseRecord[]) => {
+    return records.map(record => 
+      `Table: ${record.table}\n${Object.entries(record.data)
+        .map(([key, value]) => `  ${key}: ${value === null ? 'NULL' : value}`)
+        .join('\n')}`
+    ).join('\n\n');
+  };
+
+  const formatQueryResult = (result: { columns: string[]; rows: string[][]; rowCount: number }) => {
+    const header = result.columns.join('\t');
+    const rows = result.rows.map(row => row.join('\t')).join('\n');
+    return `${header}\n${rows}`;
+  };
+
+  useEffect(() => {
+    fetchDatabaseInfo();
+  }, []);
+
+  const getTableStatus = (rowCount: number) => {
+    if (rowCount === 0) return "bg-gray-100 text-gray-800";
+    if (rowCount < 5) return "bg-yellow-100 text-yellow-800";
+    return "bg-green-100 text-green-800";
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Database Inspector</h2>
+        <Button onClick={fetchDatabaseInfo} disabled={isLoading}>
+          {isLoading ? "Loading..." : "Refresh Database Info"}
+        </Button>
+      </div>
+
+      {error && (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+          {error}
+        </div>
+      )}
+
+      {copiedMessage && (
+        <div className="p-3 bg-green-100 border border-green-200 rounded-md text-green-800">
+          {copiedMessage}
+        </div>
+      )}
+
+      {/* Database Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {tables.map((table) => (
+          <Card 
+            key={table.name} 
+            className={`p-4 cursor-pointer transition-colors ${
+              selectedTable === table.name ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
+            }`}
+            onClick={() => setSelectedTable(table.name)}
+          >
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="font-semibold">{table.name}</h3>
+              <Badge className={getTableStatus(table.rowCount)}>
+                {table.rowCount} rows
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {table.columns.length} columns
+            </p>
+          </Card>
+        ))}
+      </div>
+
+      {/* Selected Table Details */}
+      {selectedTable && (
+        <Card className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-semibold">Table: {selectedTable}</h3>
+            <Badge className={getTableStatus(tables.find(t => t.name === selectedTable)?.rowCount || 0)}>
+              {tables.find(t => t.name === selectedTable)?.rowCount || 0} records
+            </Badge>
+          </div>
+
+          {/* Table Schema */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="font-medium">Schema</h4>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => copyToClipboard(formatTableData(tables), "table schema")}
+              >
+                Copy Schema
+              </Button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-border">
+                <thead>
+                  <tr className="bg-muted">
+                    <th className="border border-border px-4 py-2 text-left">Column Name</th>
+                    <th className="border border-border px-4 py-2 text-left">Type</th>
+                    <th className="border border-border px-4 py-2 text-left">Nullable</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tables.find(t => t.name === selectedTable)?.columns.map((column) => (
+                    <tr key={column.name}>
+                      <td className="border border-border px-4 py-2 font-mono text-sm">{column.name}</td>
+                      <td className="border border-border px-4 py-2">{column.type}</td>
+                      <td className="border border-border px-4 py-2">
+                        <Badge className={column.nullable ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"}>
+                          {column.nullable ? "NULL" : "NOT NULL"}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sample Records */}
+          <div>
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="font-medium">Sample Records</h4>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => copyToClipboard(formatRecordsData(records.filter(r => r.table === selectedTable)), "sample records")}
+              >
+                Copy Records
+              </Button>
+            </div>
+            {records.filter(r => r.table === selectedTable).length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-border">
+                  <thead>
+                    <tr className="bg-muted">
+                      {Object.keys(records.find(r => r.table === selectedTable)?.data || {}).map((key) => (
+                        <th key={key} className="border border-border px-4 py-2 text-left font-mono text-sm">
+                          {key}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {records.filter(r => r.table === selectedTable).map((record) => (
+                      <tr key={record.id}>
+                        {Object.values(record.data).map((value, index) => (
+                          <td key={index} className="border border-border px-4 py-2 text-sm">
+                            {value === null ? <span className="text-muted-foreground">NULL</span> : String(value)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-muted-foreground">No records found in this table.</p>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* SQL Query Executor */}
+      <Card className="p-6">
+        <h3 className="text-xl font-semibold mb-4">SQL Query Executor</h3>
+        
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="sqlQuery">SQL Query</Label>
+            <Textarea
+              id="sqlQuery"
+              value={sqlQuery}
+              onChange={(e) => setSqlQuery(e.target.value)}
+              className="mt-1 font-mono text-sm"
+              rows={4}
+              placeholder="Enter your SQL query here..."
+            />
+          </div>
+          
+          <div className="flex space-x-2">
+            <Button onClick={executeQuery} disabled={isLoading}>
+              {isLoading ? "Executing..." : "Execute Query"}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setSqlQuery("SELECT * FROM clients LIMIT 10;")}
+            >
+              Reset Query
+            </Button>
+          </div>
+        </div>
+
+        {queryResult && (
+          <div className="mt-6">
+            <div className="flex justify-between items-center mb-3">
+              <h4 className="font-medium">Query Results ({queryResult.rowCount} rows)</h4>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => copyToClipboard(formatQueryResult(queryResult), "query results")}
+              >
+                Copy Results
+              </Button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-border">
+                <thead>
+                  <tr className="bg-muted">
+                    {queryResult.columns.map((column: string) => (
+                      <th key={column} className="border border-border px-4 py-2 text-left font-mono text-sm">
+                        {column}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {queryResult.rows.map((row: string[], index: number) => (
+                    <tr key={index}>
+                      {row.map((cell, cellIndex) => (
+                        <td key={cellIndex} className="border border-border px-4 py-2 text-sm">
+                          {cell === null ? <span className="text-muted-foreground">NULL</span> : String(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
+
 interface SystemStats {
   totalUsers: number;
   activeUsers: number;
@@ -146,7 +585,7 @@ export default function AdminSystemPage() {
 
     try {
       // Get the auth token from localStorage
-      const token = localStorage.getItem("supabase.auth.token");
+      const token = localStorage.getItem("auth_token");
       
       if (!token) {
         setError("You must be logged in to view the admin portal");
@@ -409,7 +848,7 @@ export default function AdminSystemPage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("supabase.auth.token");
+    localStorage.removeItem("auth_token");
     router.push("/");
   };
 
@@ -502,10 +941,11 @@ export default function AdminSystemPage() {
             </div>
           ) : (
             <Tabs defaultValue="stats" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="stats">Statistics</TabsTrigger>
                 <TabsTrigger value="config">Configuration</TabsTrigger>
                 <TabsTrigger value="health">System Health</TabsTrigger>
+                <TabsTrigger value="database">Database Inspector</TabsTrigger>
                 <TabsTrigger value="logs">Debug Logs</TabsTrigger>
               </TabsList>
               
@@ -773,6 +1213,11 @@ export default function AdminSystemPage() {
                     </div>
                   </Card>
                 </div>
+              </TabsContent>
+              
+              {/* Database Inspector Tab */}
+              <TabsContent value="database" className="space-y-6">
+                <DatabaseInspector />
               </TabsContent>
               
               {/* Debug Logs Tab */}

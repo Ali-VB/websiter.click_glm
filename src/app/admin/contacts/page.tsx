@@ -145,7 +145,7 @@ export default function AdminContactsPage() {
 
     try {
       // Get the auth token from localStorage
-      const token = localStorage.getItem("supabase.auth.token");
+      const token = localStorage.getItem("auth_token");
       
       if (!token) {
         setError("You must be logged in to view the admin portal");
@@ -153,34 +153,37 @@ export default function AdminContactsPage() {
         return;
       }
 
-      // In a real implementation, we would fetch from the API
-      // For now, we'll use mock data
+      // Try to fetch from API first
+      try {
+        const response = await fetch("/api/admin/contacts", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setSubmissions(data.submissions || []);
+            setFilteredSubmissions(data.submissions || []);
+            setTeamMembers(data.teamMembers || []);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (apiErr) {
+        console.log("API endpoint not available, using mock data");
+      }
+
+      // If API fails, use mock data (for development)
       setTimeout(() => {
         setSubmissions(mockSubmissions);
         setFilteredSubmissions(mockSubmissions);
         setTeamMembers(mockTeamMembers);
         setIsLoading(false);
-      }, 1000);
+      }, 500);
       
-      // Actual implementation would be:
-      /*
-      const response = await fetch("/api/admin/contacts", {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${JSON.parse(token).access_token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSubmissions(data.submissions || []);
-        setFilteredSubmissions(data.submissions || []);
-        setTeamMembers(data.teamMembers || []);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to fetch contact submissions");
-      }
-      */
     } catch (err) {
       setError("An error occurred while loading contact submissions");
       console.error("Admin contacts error:", err);
@@ -671,7 +674,7 @@ export default function AdminContactsPage() {
                             </td>
                             <td className="py-3 px-4">
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSourceColor(submission.source)}`}>
-                                {submission.source.replace('_', ' ')}
+                                {submission.source ? submission.source.replace('_', ' ') : 'Unknown'}
                               </span>
                             </td>
                             <td className="py-3 px-4">{getAssignedToName(submission.assignedTo)}</td>
@@ -704,7 +707,7 @@ export default function AdminContactsPage() {
                           {selectedSubmission.status}
                         </Badge>
                         <Badge className={getSourceColor(selectedSubmission.source).replace('bg-', 'bg-').replace('text-', 'text-')}>
-                          {selectedSubmission.source.replace('_', ' ')}
+                          {selectedSubmission.source ? selectedSubmission.source.replace('_', ' ') : 'Unknown'}
                         </Badge>
                       </div>
                       <p className="text-muted-foreground">
@@ -749,7 +752,7 @@ export default function AdminContactsPage() {
                         <div className="flex">
                           <span className="w-32 text-muted-foreground">Source:</span>
                           <Badge className={getSourceColor(selectedSubmission.source).replace('bg-', 'bg-').replace('text-', 'text-')}>
-                            {selectedSubmission.source.replace('_', ' ')}
+                            {selectedSubmission.source ? selectedSubmission.source.replace('_', ' ') : 'Unknown'}
                           </Badge>
                         </div>
                         <div className="flex">
@@ -773,7 +776,7 @@ export default function AdminContactsPage() {
                               <SelectValue placeholder="Select team member" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">Unassigned</SelectItem>
+                              <SelectItem value="unassigned">Unassigned</SelectItem>
                               {teamMembers.map((member) => (
                                 <SelectItem key={member.id} value={member.id}>
                                   {member.name} ({member.role})

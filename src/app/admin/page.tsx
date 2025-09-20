@@ -7,18 +7,74 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
+interface DashboardStats {
+  totalClients: number;
+  activeProjects: number;
+  pendingInvoices: number;
+  openSupportTickets: number;
+  recentActivity: Array<{
+    id: string;
+    action: string;
+    description: string;
+    createdAt: string;
+  }>;
+  systemStatus: {
+    database: string;
+    api: string;
+    storage: string;
+    email: string;
+  };
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [stats, setStats] = useState<DashboardStats | null>(null);
 
   useEffect(() => {
-    // Simulate loading admin data
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    fetchDashboardStats();
   }, []);
+
+  const fetchDashboardStats = async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      // Get the auth token from localStorage
+      const token = localStorage.getItem("supabase.auth.token");
+      
+      if (!token) {
+        setError("You must be logged in to view the admin portal");
+        router.push("/login");
+        return;
+      }
+
+      const response = await fetch("/api/admin/stats", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${JSON.parse(token).access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setStats(data.stats);
+        } else {
+          setError(data.message || "Failed to fetch dashboard stats");
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to fetch dashboard stats");
+      }
+    } catch (err) {
+      setError("An error occurred while loading dashboard stats");
+      console.error("Admin dashboard error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     // Clear any stored auth tokens
@@ -97,6 +153,9 @@ export default function AdminDashboardPage() {
             <h1 className="text-2xl font-bold">Admin Dashboard</h1>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">Welcome, Admin</span>
+              <Button onClick={fetchDashboardStats} disabled={isLoading} variant="outline" size="sm">
+                {isLoading ? "Loading..." : "Refresh"}
+              </Button>
             </div>
           </div>
         </header>
@@ -109,13 +168,19 @@ export default function AdminDashboardPage() {
             </p>
           </div>
 
+          {error && (
+            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+              {error}
+            </div>
+          )}
+
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Clients</p>
-                  <p className="text-2xl font-bold">24</p>
+                  <p className="text-2xl font-bold">{stats?.totalClients || 0}</p>
                 </div>
                 <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                   <span className="text-blue-600 text-sm font-medium">👥</span>
@@ -127,7 +192,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Active Projects</p>
-                  <p className="text-2xl font-bold">18</p>
+                  <p className="text-2xl font-bold">{stats?.activeProjects || 0}</p>
                 </div>
                 <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                   <span className="text-green-600 text-sm font-medium">🚀</span>
@@ -139,7 +204,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Pending Invoices</p>
-                  <p className="text-2xl font-bold">7</p>
+                  <p className="text-2xl font-bold">{stats?.pendingInvoices || 0}</p>
                 </div>
                 <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
                   <span className="text-yellow-600 text-sm font-medium">📄</span>
@@ -151,7 +216,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Support Tickets</p>
-                  <p className="text-2xl font-bold">3</p>
+                  <p className="text-2xl font-bold">{stats?.openSupportTickets || 0}</p>
                 </div>
                 <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
                   <span className="text-red-600 text-sm font-medium">🎫</span>
@@ -199,27 +264,19 @@ export default function AdminDashboardPage() {
             <Card className="p-6">
               <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
               <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                  <div>
-                    <p className="text-sm font-medium">New client registered</p>
-                    <p className="text-xs text-muted-foreground">John Doe - 2 hours ago</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                  <div>
-                    <p className="text-sm font-medium">Project completed</p>
-                    <p className="text-xs text-muted-foreground">Business Website - 5 hours ago</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
-                  <div>
-                    <p className="text-sm font-medium">Invoice sent</p>
-                    <p className="text-xs text-muted-foreground">Jane Smith - 1 day ago</p>
-                  </div>
-                </div>
+                {stats?.recentActivity && stats.recentActivity.length > 0 ? (
+                  stats.recentActivity.map((activity) => (
+                    <div key={activity.id} className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                      <div>
+                        <p className="text-sm font-medium">{activity.action}</p>
+                        <p className="text-xs text-muted-foreground">{activity.description}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground">No recent activity</p>
+                )}
               </div>
             </Card>
 
@@ -228,19 +285,43 @@ export default function AdminDashboardPage() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Database</span>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Operational</span>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    stats?.systemStatus.database === 'operational' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {stats?.systemStatus.database || 'Unknown'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">API Services</span>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Operational</span>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    stats?.systemStatus.api === 'operational' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {stats?.systemStatus.api || 'Unknown'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Storage</span>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Operational</span>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    stats?.systemStatus.storage === 'operational' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {stats?.systemStatus.storage || 'Unknown'}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium">Email Service</span>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Operational</span>
+                  <span className={`text-xs px-2 py-1 rounded ${
+                    stats?.systemStatus.email === 'operational' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {stats?.systemStatus.email || 'Unknown'}
+                  </span>
                 </div>
               </div>
             </Card>
