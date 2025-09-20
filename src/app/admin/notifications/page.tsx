@@ -101,75 +101,64 @@ export default function AdminNotificationsPage() {
         return;
       }
 
-      // Try to fetch real clients from API first
-      try {
-        const clientsResponse = await fetch("/api/admin/clients", {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-        });
+      // Fetch real clients from API
+      const clientsResponse = await fetch("/api/admin/clients", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
 
-        if (clientsResponse.ok) {
-          const clientsData = await clientsResponse.json();
-          if (clientsData.success) {
-            // Transform real client data to the format needed for notifications
-            interface ApiClient {
-              id: string;
-              name: string;
-              email: string;
-              status: "active" | "inactive" | "prospect";
-            }
-            
-            const realClients = (clientsData.clients || []).map((client: ApiClient) => ({
-              id: client.id,
-              name: client.name,
-              email: client.email,
-              status: client.status
-            }));
-            setClients(realClients);
+      if (clientsResponse.ok) {
+        const clientsData = await clientsResponse.json();
+        if (clientsData.success) {
+          // Transform real client data to the format needed for notifications
+          interface ApiClient {
+            id: string;
+            name: string;
+            email: string;
+            status: "active" | "inactive" | "prospect";
           }
+          
+          const realClients = (clientsData.clients || []).map((client: ApiClient) => ({
+            id: client.id,
+            name: client.name,
+            email: client.email,
+            status: client.status
+          }));
+          setClients(realClients);
+        } else {
+          setError(clientsData.message || "Failed to fetch clients");
         }
-      } catch (apiErr) {
-        console.log("API endpoint not available for clients, using mock data");
+      } else {
+        const errorData = await clientsResponse.json();
+        setError(errorData.message || "Failed to fetch clients");
       }
 
-      // Try to fetch notifications from API
-      try {
-        const notificationsResponse = await fetch("/api/admin/notifications", {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-        });
+      // Fetch notifications from API
+      const notificationsResponse = await fetch("/api/admin/notifications", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
 
-        if (notificationsResponse.ok) {
-          const notificationsData = await notificationsResponse.json();
-          if (notificationsData.success) {
-            setNotifications(notificationsData.notifications || []);
-            setIsLoading(false);
-            return;
-          }
+      if (notificationsResponse.ok) {
+        const notificationsData = await notificationsResponse.json();
+        if (notificationsData.success) {
+          setNotifications(notificationsData.notifications || []);
+        } else {
+          setError(notificationsData.message || "Failed to fetch notifications");
         }
-      } catch (apiErr) {
-        console.log("API endpoint not available for notifications, using mock data");
+      } else {
+        const errorData = await notificationsResponse.json();
+        setError(errorData.message || "Failed to fetch notifications");
       }
-
-      // If API fails, use mock data (for development)
-      setTimeout(() => {
-        // Only set mock data if we don't already have real data
-        if (clients.length === 0) {
-          setClients(mockClients);
-        }
-        if (notifications.length === 0) {
-          setNotifications(mockNotifications);
-        }
-        setIsLoading(false);
-      }, 500);
       
     } catch (err) {
       setError("An error occurred while loading data");
       console.error("Admin notifications error:", err);
+    } finally {
       setIsLoading(false);
     }
   }, [router]);
@@ -218,60 +207,40 @@ export default function AdminNotificationsPage() {
         return;
       }
 
-      // Try to send via API first
-      try {
-        const response = await fetch("/api/admin/notifications", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            title,
-            message,
-            recipientType,
-            recipients: recipientType === "specific" ? selectedClients : []
-          }),
-        });
+      // Send via API
+      const response = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          client_ids: recipientType === "specific" ? selectedClients : clients.map(c => c.id),
+          title,
+          message,
+          type: "system"
+        }),
+      });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            // Refresh the notifications list
-            await fetchClients();
-            // Reset form
-            setTitle("");
-            setMessage("");
-            setSelectedClients([]);
-            setRecipientType("all");
-            setIsPreviewMode(false);
-            return;
-          }
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Refresh the notifications list
+          await fetchClients();
+          // Reset form
+          setTitle("");
+          setMessage("");
+          setSelectedClients([]);
+          setRecipientType("all");
+          setIsPreviewMode(false);
+          return;
+        } else {
+          setError(data.message || "Failed to send notification");
         }
-      } catch (apiErr) {
-        console.log("API endpoint not available for sending notifications, using mock implementation");
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to send notification");
       }
-
-      // If API fails, use mock implementation (for development)
-      const newNotification: Notification = {
-        id: Date.now().toString(),
-        title,
-        message,
-        recipientType,
-        recipients: recipientType === "specific" ? selectedClients : [],
-        sentAt: new Date().toISOString(),
-        sentBy: "Admin",
-        status: "sent"
-      };
-
-      setNotifications([newNotification, ...notifications]);
-      
-      // Reset form
-      setTitle("");
-      setMessage("");
-      setSelectedClients([]);
-      setRecipientType("all");
-      setIsPreviewMode(false);
       
     } catch (err) {
       setError("An error occurred while sending the notification");
