@@ -93,14 +93,22 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to match expected interface
-    const transformedNotifications = (data || []).map((n: DatabaseNotification) => ({
-      id: n.id,
-      title: n.title || 'System Notification',
-      message: n.message,
-      sent_at: n.sent_at || n.created_at,
-      read: n.read || n.is_read,
-      type: (n.type || 'system') as "system" | "project" | "invoice" | "support"
-    }));
+    const transformedNotifications = (data || []).map((n: DatabaseNotification) => {
+      // Parse the message to extract title and content
+      // Messages are stored as "Title: Content"
+      const messageParts = n.message.split(': ');
+      const title = messageParts.length > 1 ? messageParts[0] : 'System Notification';
+      const message = messageParts.length > 1 ? messageParts.slice(1).join(': ') : n.message;
+      
+      return {
+        id: n.id,
+        title,
+        message,
+        sent_at: n.sent_at || n.created_at,
+        read: n.read || n.is_read,
+        type: 'system' as "system" | "project" | "invoice" | "support"
+      };
+    });
 
     // Prepare the response
     const response: {

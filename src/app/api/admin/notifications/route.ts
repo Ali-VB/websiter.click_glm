@@ -124,17 +124,25 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the data to match expected format
-    const transformedNotifications = (data || []).map((item: NotificationWithClient) => ({
-      id: item.id,
-      title: item.title || 'System Notification',
-      message: item.message,
-      recipientType: 'specific', // All notifications are client-specific
-      recipients: [item.client_id],
-      sentAt: item.sent_at || item.created_at,
-      sentBy: 'System',
-      status: item.is_read ? 'read' : 'sent',
-      client: item.clients
-    }));
+    const transformedNotifications = (data || []).map((item: NotificationWithClient) => {
+      // Parse the message to extract title and content
+      // Messages are stored as "Title: Content"
+      const messageParts = item.message.split(': ');
+      const title = messageParts.length > 1 ? messageParts[0] : 'System Notification';
+      const message = messageParts.length > 1 ? messageParts.slice(1).join(': ') : item.message;
+      
+      return {
+        id: item.id,
+        title,
+        message,
+        recipientType: 'specific', // All notifications are client-specific
+        recipients: [item.client_id],
+        sentAt: item.sent_at || item.created_at,
+        sentBy: 'System',
+        status: item.is_read ? 'read' : 'sent',
+        client: item.clients
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -216,9 +224,7 @@ export async function POST(request: NextRequest) {
     // Create notifications for each client
     const notifications = client_ids.map((client_id: string) => ({
       client_id,
-      title,
-      message,
-      type,
+      message: `${title}: ${message}`, // Include title in the message since we don't have a title column
       is_read: false,
       created_at: new Date().toISOString()
     }));
