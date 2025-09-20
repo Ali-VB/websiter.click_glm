@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 
 interface OnboardingData {
   // Step 1: Base Package Selection
@@ -1134,10 +1135,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted">
       {/* Header */}
       <header className="container mx-auto px-4 py-6 flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary rounded-full"></div>
-          <span className="font-bold text-xl">websiter.click</span>
-        </div>
+        <Logo />
         <nav aria-label="Page navigation">
           <Button variant="outline" asChild>
             <Link href="/" aria-label="Return to home page">Back to Home</Link>
