@@ -1,15 +1,19 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/components/theme-provider";
+import { Logo } from "@/components/logo";
 
 export default function Home() {
+  const { isDark } = useTheme();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted">
       {/* Header */}
       <header className="container mx-auto px-4 py-6 flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-primary rounded-full"></div>
-          <span className="font-bold text-xl">websiter.click</span>
-        </div>
+        <Logo />
         <nav className="hidden md:flex space-x-6" aria-label="Main navigation">
           <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors" aria-current="page">
             Features
@@ -135,10 +139,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="container mx-auto px-4 py-8 border-t">
         <div className="flex flex-col md:flex-row justify-between items-center">
-          <div className="flex items-center space-x-2 mb-4 md:mb-0">
-            <div className="w-6 h-6 bg-primary rounded-full"></div>
-            <span className="font-bold">websiter.click</span>
-          </div>
+          <Logo size={24} showText={true} />
           <div className="text-center md:text-right text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} websiter.click. All rights reserved.</p>
           </div>
