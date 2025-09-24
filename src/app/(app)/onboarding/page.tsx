@@ -1011,7 +1011,7 @@ export default function OnboardingPage() {
                 
                 <div className="p-3 bg-blue-50 rounded-md border border-blue-100">
                   <p className="text-sm text-blue-800">
-                    After creating your account, you&apos;ll receive a confirmation email.
+                    After creating your account, you'll receive a confirmation email.
                     Once verified, your project will be created and you can access your dashboard.
                     Our team will review your project, confirm the details, and notify you when payment is required.
                     After payment, development will begin on your website.

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Logo } from "@/components/logo";
 
 interface ContactSubmission {
   id: string;
@@ -500,8 +501,7 @@ export default function AdminContactsPage() {
       {/* Sidebar Navigation */}
       <aside className="w-64 bg-card border-r min-h-screen p-4">
         <div className="flex items-center space-x-2 mb-8">
-          <div className="w-8 h-8 bg-primary rounded-full"></div>
-          <span className="font-bold text-xl">websiter.click</span>
+          <Logo size={32} showText={true} />
         </div>
         
         <div className="mb-2">

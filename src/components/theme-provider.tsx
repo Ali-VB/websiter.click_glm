@@ -8,6 +8,7 @@ type ThemeProviderProps = {
   children: React.ReactNode;
   defaultTheme?: Theme;
   storageKey?: string;
+  forceSystemTheme?: boolean;
 };
 
 type ThemeProviderState = {
@@ -28,6 +29,7 @@ export function ThemeProvider({
   children,
   defaultTheme = "system",
   storageKey = "vite-ui-theme",
+  forceSystemTheme = false,
   ...props
 }: ThemeProviderProps) {
   // Initialize with default theme to avoid SSR issues
@@ -38,13 +40,18 @@ export function ThemeProvider({
   // Only run on client side
   useEffect(() => {
     setMounted(true);
+
+    if (forceSystemTheme) {
+      setTheme("system");
+      return;
+    }
     
     // Get saved theme from localStorage
     const savedTheme = localStorage.getItem(storageKey) as Theme | null;
     const initialTheme = savedTheme || defaultTheme;
     
     setTheme(initialTheme);
-  }, [defaultTheme, storageKey]);
+  }, [defaultTheme, storageKey, forceSystemTheme]);
 
   useEffect(() => {
     if (!mounted) return;

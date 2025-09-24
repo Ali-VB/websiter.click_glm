@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Logo } from "@/components/logo";
 
 interface DashboardStats {
   totalClients: number;
@@ -95,8 +96,7 @@ export default function AdminDashboardPage() {
       {/* Sidebar Navigation */}
       <aside className="w-64 bg-card border-r min-h-screen p-4">
         <div className="flex items-center space-x-2 mb-8">
-          <div className="w-8 h-8 bg-primary rounded-full"></div>
-          <span className="font-bold text-xl">websiter.click</span>
+          <Logo size={32} showText={true} />
         </div>
         
         <div className="mb-2">

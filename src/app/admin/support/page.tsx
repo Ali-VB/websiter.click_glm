@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Logo } from "@/components/logo";
 
 interface SupportTicket {
   id: string;
@@ -167,7 +168,24 @@ export default function AdminSupportPage() {
       if (response.ok) {
         const data = await response.json();
         // Transform the data to match the expected format
-        const transformedTickets = data.tickets.map((ticket: any) => ({
+        const transformedTickets = data.tickets.map((ticket: {
+          id: string;
+          subject: string;
+          replies?: Array<{
+            id: string;
+            message: string;
+            author: { name: string };
+            created_at: string;
+            is_internal?: boolean;
+          }>;
+          client: { name: string; email: string };
+          status: string;
+          priority: string;
+          category: string;
+          assigned_to?: string;
+          created_at: string;
+          updated_at: string;
+        }) => ({
           id: ticket.id,
           title: ticket.subject,
           description: ticket.replies && ticket.replies.length > 0 ? ticket.replies[0].message : "",
@@ -180,7 +198,7 @@ export default function AdminSupportPage() {
           createdAt: ticket.created_at,
           updatedAt: ticket.updated_at,
           attachments: [],
-          responses: ticket.replies ? ticket.replies.map((reply: any) => ({
+          responses: ticket.replies ? ticket.replies.map((reply) => ({
             id: reply.id,
             content: reply.message,
             author: reply.author.name,
@@ -189,7 +207,12 @@ export default function AdminSupportPage() {
           })) : []
         }));
         
-        const transformedTeamMembers = data.teamMembers.map((member: any) => ({
+        const transformedTeamMembers = data.teamMembers.map((member: {
+          id: string;
+          name: string;
+          email: string;
+          role: string;
+        }) => ({
           id: member.id,
           name: member.name,
           email: member.email,
@@ -457,8 +480,7 @@ export default function AdminSupportPage() {
       {/* Sidebar Navigation */}
       <aside className="w-64 bg-card border-r min-h-screen p-4">
         <div className="flex items-center space-x-2 mb-8">
-          <div className="w-8 h-8 bg-primary rounded-full"></div>
-          <span className="font-bold text-xl">websiter.click</span>
+          <Logo size={32} showText={true} />
         </div>
         
         <div className="mb-2">

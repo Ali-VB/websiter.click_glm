@@ -22,7 +22,8 @@ import {
   Moon,
   Clock,
   Upload,
-  User
+  User,
+  CreditCard
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/components/theme-provider";
@@ -59,6 +60,11 @@ const navigationItems = [
     name: "Assets",
     href: "/dashboard?tab=assets",
     icon: Upload,
+  },
+  {
+    name: "Payments",
+    href: "/dashboard?tab=payments",
+    icon: CreditCard,
   },
   {
     name: "Support",

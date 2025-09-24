@@ -103,7 +103,7 @@ export default function ContactPage() {
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
             <p className="text-xl text-muted-foreground">
-              Have questions about our services? We&apos;d love to hear from you.
+              Have questions about our services? We'd love to hear from you.
             </p>
           </div>
 
@@ -111,7 +111,7 @@ export default function ContactPage() {
             <CardHeader>
               <CardTitle>Send us a message</CardTitle>
               <CardDescription>
-                Fill out the form below and we&apos;ll get back to you as soon as possible.
+                Fill out the form below and we'll get back to you as soon as possible.
               </CardDescription>
             </CardHeader>
             <CardContent>
