@@ -16,7 +16,7 @@ import AssetUpload from "@/components/AssetUpload";
 import { ClientSidebar } from "@/components/client-sidebar";
 import { ClientHeader } from "@/components/client-header";
 import { useTheme } from "@/components/theme-provider";
-import { Bell } from "lucide-react";
+import { Bell, Calendar, Clock, CheckCircle } from "lucide-react";
 
 interface Project {
   id: string;
@@ -154,6 +154,22 @@ export default function DashboardPage() {
         setNotifications(notificationsData.notifications || []);
         setUnreadCount(notificationsData.notifications.filter((n: Notification) => !n.read).length);
       }
+
+      // Fetch project assets (only if projects exist)
+      if (projects.length > 0) {
+        const assetsResponse = await fetch(`/api/assets?projectId=${projects[0].id}`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+
+        if (assetsResponse.ok) {
+          const assetsData = await assetsResponse.json();
+          // Store assets in state if needed for dashboard display
+          console.log("Assets loaded:", assetsData.assets?.length || 0);
+        }
+      }
     } catch (err) {
       setError("An error occurred while loading your dashboard");
       console.error("Dashboard error:", err);
@@ -219,6 +235,11 @@ export default function DashboardPage() {
     inProgress: projects.filter(p => p.status === "in_progress").length,
     completed: projects.filter(p => p.status === "completed").length,
   };
+
+  // Check if client can create a new project (business rule: only one active project at a time)
+  const hasActiveProject = projects.some(p => 
+    p.status === "in_progress" || p.status === "pending"
+  );
 
   // Calculate invoice statistics
   const invoiceStats = {
@@ -294,6 +315,54 @@ export default function DashboardPage() {
     } catch (err) {
       console.error("Error marking all notifications as read:", err);
     }
+  };
+
+  // Timeline helper functions
+  const getProjectProgress = (project: Project): number => {
+    switch (project.status) {
+      case "completed":
+        return 100;
+      case "in_progress":
+        return 65;
+      case "pending":
+        return 25;
+      case "cancelled":
+        return 0;
+      default:
+        return 0;
+    }
+  };
+
+  const generateProjectMilestones = (project: Project): Array<{
+    name: string;
+    completed: boolean;
+    current: boolean;
+  }> => {
+    const baseMilestones = [
+      { name: "Discovery", completed: true, current: false },
+      { name: "Design", completed: project.status !== "pending", current: project.status === "pending" },
+      { name: "Development", completed: project.status === "completed", current: project.status === "in_progress" },
+      { name: "Testing", completed: project.status === "completed", current: false },
+      { name: "Launch", completed: project.status === "completed", current: false },
+    ];
+
+    return baseMilestones;
+  };
+
+  const getTotalDuration = (): number => {
+    if (projects.length === 0) return 0;
+    
+    const sortedProjects = [...projects].sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    
+    const firstProject = sortedProjects[0];
+    const lastProject = sortedProjects[sortedProjects.length - 1];
+    
+    const startDate = new Date(firstProject.created_at);
+    const endDate = new Date(lastProject.updated_at);
+    
+    return Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   return (
@@ -415,8 +484,21 @@ export default function DashboardPage() {
                             View and manage all your website projects
                           </CardDescription>
                         </div>
-                        <Button asChild>
-                          <Link href="/onboarding">New Project</Link>
+                        <Button 
+                          disabled={hasActiveProject}
+                          title={hasActiveProject ? "You can only have one active project at a time" : ""}
+                          onClick={() => {
+                            if (hasActiveProject) {
+                              alert("You can only have one active project at a time. Please complete or cancel your current project before starting a new one.");
+                            } else {
+                              router.push("/onboarding");
+                            }
+                          }}
+                        >
+                          New Project
+                          {hasActiveProject && (
+                            <span className="ml-2 text-xs">(Project in progress)</span>
+                          )}
                         </Button>
                       </div>
                     </CardHeader>
@@ -434,7 +516,7 @@ export default function DashboardPage() {
                             <thead>
                               <tr className="border-b">
                                 <th className="text-left py-3 px-4" scope="col">Project Name</th>
-                                <th className="text-left py-3 px-4" scope="col">Description</th>
+                                <th className="text-left py-3 px-4" scope="col">Owner</th>
                                 <th className="text-left py-3 px-4" scope="col">Status</th>
                                 <th className="text-left py-3 px-4" scope="col">Created</th>
                                 <th className="text-left py-3 px-4" scope="col">Actions</th>
@@ -445,7 +527,12 @@ export default function DashboardPage() {
                                 <tr key={project.id} className="border-b hover:bg-muted/50 transition-colors">
                                   <td className="py-3 px-4 font-medium">{project.name}</td>
                                   <td className="py-3 px-4 text-muted-foreground max-w-xs truncate">
-                                    {project.description}
+                                    <div className="flex items-center space-x-2">
+                                      <Avatar className="w-6 h-6">
+                                        <AvatarFallback>JD</AvatarFallback>
+                                      </Avatar>
+                                      <span>John Doe</span>
+                                    </div>
                                   </td>
                                   <td className="py-3 px-4">
                                     <Badge variant="outline" className={getStatusColor(project.status)}>
@@ -468,70 +555,6 @@ export default function DashboardPage() {
                   </Card>
                 )}
                 
-                {activeTab === 'timeline' && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Project Timeline</CardTitle>
-                      <CardDescription>
-                        Track the progress and milestones of your projects
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {projects.length === 0 ? (
-                        <div className="text-center py-8">
-                          <p className="text-muted-foreground">No projects to display in timeline.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-8">
-                          {projects.map((project, index) => (
-                            <div key={project.id} className="flex">
-                              <div className="flex flex-col items-center mr-4">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                  project.status === "completed" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" :
-                                  project.status === "in_progress" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" :
-                                  project.status === "pending" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" :
-                                  "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
-                                }`}>
-                                  {project.status === "completed" ? "✓" :
-                                   project.status === "in_progress" ? "→" :
-                                   project.status === "pending" ? "!" : "✗"}
-                                </div>
-                                {index < projects.length - 1 && (
-                                  <div className="w-0.5 h-full bg-gray-200 mt-2"></div>
-                                )}
-                              </div>
-                              <div className="pb-8 flex-1">
-                                <div className="flex items-center justify-between">
-                                  <h3 className="text-lg font-semibold">{project.name}</h3>
-                                  <Badge variant="outline" className={getStatusColor(project.status)}>
-                                    {project.status.replace("_", " ")}
-                                  </Badge>
-                                </div>
-                                <p className="text-muted-foreground mt-1">{project.description}</p>
-                                <div className="mt-4 space-y-2">
-                                  <div className="flex items-center text-sm text-muted-foreground">
-                                    <span className="font-medium">Created:</span>
-                                    <span className="ml-2">{formatDate(project.created_at)}</span>
-                                  </div>
-                                  <div className="flex items-center text-sm text-muted-foreground">
-                                    <span className="font-medium">Last Updated:</span>
-                                    <span className="ml-2">{formatDate(project.updated_at)}</span>
-                                  </div>
-                                </div>
-                                
-                                <div className="mt-4">
-                                  <Button variant="outline" size="sm" asChild>
-                                      <Link href={`/projects/${project.id}`} aria-label={`View details for project ${project.name}`}>View Details</Link>
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
                 
                 {activeTab === 'assets' && (
                   <Card>

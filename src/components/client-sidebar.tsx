@@ -56,11 +56,6 @@ const navigationItems = [
     icon: FolderOpen,
   },
   {
-    name: "Timeline",
-    href: "/dashboard?tab=timeline",
-    icon: Clock,
-  },
-  {
     name: "Assets",
     href: "/dashboard?tab=assets",
     icon: Upload,

@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 
 interface Asset {
   id: string;
@@ -15,7 +14,6 @@ interface Asset {
   file_url: string;
   asset_type: string;
   uploaded_by: string;
-  description: string | null;
   created_at: string;
 }
 
@@ -35,7 +33,6 @@ interface Asset {
     file_name: string;
     file_url: string;
     asset_type: string;
-    description: string | null;
     created_at: string;
 }
 
@@ -46,7 +43,6 @@ interface AssetUploadProps {
 export default function AssetUpload({ projects }: AssetUploadProps) {
     const [selectedProject, setSelectedProject] = useState("");
     const [selectedAssetType, setSelectedAssetType] = useState("");
-    const [fileDescription, setFileDescription] = useState("");
     const [isUploading, setIsUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<{
         type: 'idle' | 'success' | 'error';
@@ -139,9 +135,6 @@ export default function AssetUpload({ projects }: AssetUploadProps) {
                 formData.append('file', file);
                 formData.append('projectId', selectedProject);
                 formData.append('assetType', selectedAssetType);
-                if (fileDescription) {
-                    formData.append('description', fileDescription);
-                }
 
                 const response = await fetch('/api/assets', {
                     method: 'POST',
@@ -167,7 +160,6 @@ export default function AssetUpload({ projects }: AssetUploadProps) {
 
                 // Reset form
                 setSelectedFiles(null);
-                setFileDescription("");
                 if (fileInputRef.current) {
                     fileInputRef.current.value = '';
                 }
@@ -295,18 +287,6 @@ export default function AssetUpload({ projects }: AssetUploadProps) {
                 )}
             </div>
 
-            {/* File Description */}
-            <div className="space-y-2">
-                <Label htmlFor="file-description">Description (Optional)</Label>
-                <Textarea
-                    id="file-description"
-                    value={fileDescription}
-                    onChange={(e) => setFileDescription(e.target.value)}
-                    className="w-full p-2 border border-input rounded-md bg-background min-h-[100px]"
-                    placeholder="Add a description for the files you're uploading..."
-                />
-            </div>
-
             {/* Upload Status */}
             {uploadStatus.type !== 'idle' && (
                 <div className={`p-3 rounded-md ${uploadStatus.type === 'success'
@@ -344,9 +324,6 @@ export default function AssetUpload({ projects }: AssetUploadProps) {
                                             <p className="text-sm text-muted-foreground">
                                                 {asset.asset_type} • Uploaded {formatDate(asset.created_at)}
                                             </p>
-                                            {asset.description && (
-                                                <p className="text-xs text-muted-foreground mt-1">{asset.description}</p>
-                                            )}
                                         </div>
                                     </div>
                                     <div className="flex space-x-2">
