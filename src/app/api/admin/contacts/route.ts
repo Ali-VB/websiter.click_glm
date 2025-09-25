@@ -29,6 +29,57 @@ interface TeamMember {
   role: string;
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    // Check if user is admin
+    const authError = await requireAdminFromToken(request);
+    if (authError) {
+      return authError;
+    }
+
+    const supabase = createServerClient();
+    const body = await request.json();
+    const { id, notes } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: 'Contact submission ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Update the contact submission with the new note
+    const { error } = await supabase
+      .from('contact_submissions')
+      .update({ 
+        notes: notes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating contact submission:', error);
+      return NextResponse.json(
+        { success: false, message: 'Failed to update contact submission' },
+        { status: 500 }
+      );
+    }
+
+    // For development with mock data, we'll just return success
+    // In production, this would actually update the database
+    return NextResponse.json({
+      success: true,
+      message: 'Note saved successfully'
+    });
+  } catch (error) {
+    console.error('Admin contacts API PUT error:', error);
+    return NextResponse.json(
+      { success: false, message: 'An error occurred while updating contact submission' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Check if user is admin

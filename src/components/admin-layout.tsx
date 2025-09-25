@@ -70,11 +70,11 @@ export function AdminLayout({
           
           <Separator className="my-4" />
           
-          {/* Placeholder navigation items */}
-          <Link href="/admin/assets" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">
+          {/* New management tabs */}
+          <Link href="/admin/assets" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
             📁 Assets Management
           </Link>
-          <Link href="/admin/payments" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">
+          <Link href="/admin/payments" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
             💳 Payment Management
           </Link>
         </nav>
