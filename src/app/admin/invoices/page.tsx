@@ -2,12 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Logo } from "@/components/logo";
+import { AdminLayout } from "@/components/admin-layout";
 
 interface Invoice {
   id: string;
@@ -184,81 +181,14 @@ export default function AdminInvoicesPage() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("supabase.auth.token");
-    router.push("/");
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted flex">
-      {/* Sidebar Navigation */}
-      <aside className="w-64 bg-card border-r min-h-screen p-4">
-        <div className="flex items-center space-x-2 mb-8">
-          <Logo size={32} showText={true} />
-        </div>
-        
-        <div className="mb-2">
-          <p className="text-sm font-medium text-muted-foreground mb-2">Admin Portal</p>
-        </div>
-        
-        <nav className="space-y-1">
-          <Link href="/admin" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Dashboard
-          </Link>
-          <Link href="/admin/projects" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Project Management
-          </Link>
-          <Link href="/admin/clients" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Client Management
-          </Link>
-          <Link href="/admin/invoices" className="flex items-center px-3 py-2 text-sm font-medium rounded-md bg-accent text-accent-foreground">
-            Invoice Management
-          </Link>
-          <Link href="/admin/support" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Support Tickets
-          </Link>
-          <Link href="/admin/contacts" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Contact Submissions
-          </Link>
-          <Link href="/admin/notifications" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Broadcast Notifications
-          </Link>
-          <Link href="/admin/system" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            System Administration
-          </Link>
-        </nav>
-        
-        <Separator className="my-6" />
-        
-        <div className="space-y-1">
-          <Button variant="outline" asChild className="w-full justify-start">
-            <Link href="/">Home</Link>
-          </Button>
-          <Button variant="outline" asChild className="w-full justify-start">
-            <Link href="/dashboard">Client Dashboard</Link>
-          </Button>
-          <Button variant="outline" onClick={handleLogout} className="w-full justify-start">
-            Log Out
-          </Button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1">
-        {/* Header */}
-        <header className="bg-background border-b p-4">
-          <div className="container mx-auto flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Invoice Management</h1>
-            <div className="flex items-center space-x-4">
-              <Button onClick={fetchInvoices} disabled={isLoading}>
-                {isLoading ? "Loading..." : "Refresh"}
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        {/* Admin Invoices Content */}
-        <section className="container mx-auto px-4 py-8">
+    <AdminLayout
+      title="Invoice Management"
+      showRefresh={true}
+      onRefresh={fetchInvoices}
+      isLoading={isLoading}
+    >
+      <section className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <p className="text-muted-foreground">
             Review, edit, and approve client invoices
@@ -434,7 +364,6 @@ export default function AdminInvoicesPage() {
           </div>
         </div>
       )}
-      </main>
-    </div>
+    </AdminLayout>
   );
 }

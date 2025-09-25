@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Logo } from "@/components/logo";
+import { AdminLayout } from "@/components/admin-layout";
 
 interface DashboardStats {
   totalClients: number;
@@ -301,294 +299,226 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted flex">
-      {/* Sidebar Navigation */}
-      <aside className="w-64 bg-card border-r min-h-screen p-4">
-        <div className="flex items-center space-x-2 mb-8">
-          <Logo size={32} showText={true} />
+    <AdminLayout 
+      title="Admin Dashboard" 
+      showRefresh={true}
+      onRefresh={fetchDashboardData}
+      isLoading={isLoading}
+    >
+      <section className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <p className="text-muted-foreground">
+            Real-time overview of your websiter.click administration panel
+          </p>
         </div>
-        
-        <div className="mb-2">
-          <p className="text-sm font-medium text-muted-foreground mb-2">Admin Portal</p>
-        </div>
-        
-        <nav className="space-y-1">
-          <Link href="/admin" className="flex items-center px-3 py-2 text-sm font-medium rounded-md bg-accent text-accent-foreground">
-            Dashboard
-          </Link>
-          <Link href="/admin/projects" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Project Management
-          </Link>
-          <Link href="/admin/clients" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Client Management
-          </Link>
-          <Link href="/admin/invoices" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Invoice Management
-          </Link>
-          <Link href="/admin/support" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Support Tickets
-          </Link>
-          <Link href="/admin/contacts" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Contact Submissions
-          </Link>
-          <Link href="/admin/notifications" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Broadcast Notifications
-          </Link>
-          <Link href="/admin/system" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            System Administration
-          </Link>
-          
-          <Separator className="my-4" />
-          
-          {/* Placeholder navigation items */}
-          <Link href="/admin/assets" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">
-            📁 Assets Management
-          </Link>
-          <Link href="/admin/payments" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">
-            💳 Payment Management
-          </Link>
-        </nav>
-        
-        <Separator className="my-6" />
-        
-        <div className="space-y-1">
-          <Button variant="outline" onClick={handleLogout} className="w-full justify-start">
-            Log Out
-          </Button>
-        </div>
-      </aside>
 
-      {/* Main Content */}
-      <main className="flex-1">
-        {/* Header */}
-        <header className="bg-background border-b p-4">
-          <div className="container mx-auto flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-muted-foreground">Welcome, Admin</span>
-              <Button onClick={fetchDashboardData} disabled={isLoading} variant="outline" size="sm">
-                {isLoading ? "Loading..." : "Refresh"}
-              </Button>
+        {error && (
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+            {error}
+          </div>
+        )}
+
+        {/* Top Metrics Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Active Projects</p>
+                <p className="text-2xl font-bold">{metrics?.activeProjectsWithCompletion.count || 0}</p>
+                <p className="text-xs text-muted-foreground">
+                  {metrics?.activeProjectsWithCompletion.completionRate || 0}% completion rate
+                </p>
+              </div>
+              <div className="text-2xl">
+                {getTrendIcon(metrics?.activeProjectsWithCompletion.trend || 'stable')}
+              </div>
             </div>
-          </div>
-        </header>
+          </Card>
 
-        {/* Dashboard Content */}
-        <section className="container mx-auto px-4 py-8">
-          <div className="mb-6">
-            <p className="text-muted-foreground">
-              Real-time overview of your websiter.click administration panel
-            </p>
-          </div>
-
-          {error && (
-            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
-              {error}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Revenue This Month</p>
+                <p className="text-2xl font-bold">
+                  ${(metrics?.revenueComparison.thisMonth || 0).toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  vs ${(metrics?.revenueComparison.lastMonth || 0).toLocaleString()} last month
+                </p>
+              </div>
+              <div className="text-2xl">
+                {getTrendIcon(metrics?.revenueComparison.trend || 'stable')}
+              </div>
             </div>
-          )}
+          </Card>
 
-          {/* Top Metrics Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Active Projects</p>
-                  <p className="text-2xl font-bold">{metrics?.activeProjectsWithCompletion.count || 0}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {metrics?.activeProjectsWithCompletion.completionRate || 0}% completion rate
-                  </p>
-                </div>
-                <div className="text-2xl">
-                  {getTrendIcon(metrics?.activeProjectsWithCompletion.trend || 'stable')}
-                </div>
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Outstanding Payments</p>
+                <p className="text-2xl font-bold">{metrics?.outstandingPayments.count || 0}</p>
+                <p className="text-xs text-muted-foreground">
+                  ${(metrics?.outstandingPayments.amount || 0).toLocaleString()}
+                </p>
               </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Revenue This Month</p>
-                  <p className="text-2xl font-bold">
-                    ${(metrics?.revenueComparison.thisMonth || 0).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    vs ${(metrics?.revenueComparison.lastMonth || 0).toLocaleString()} last month
-                  </p>
-                </div>
-                <div className="text-2xl">
-                  {getTrendIcon(metrics?.revenueComparison.trend || 'stable')}
-                </div>
+              <div className="text-2xl">
+                {getTrendIcon(metrics?.outstandingPayments.trend || 'stable')}
               </div>
-            </Card>
+            </div>
+          </Card>
 
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Outstanding Payments</p>
-                  <p className="text-2xl font-bold">{metrics?.outstandingPayments.count || 0}</p>
-                  <p className="text-xs text-muted-foreground">
-                    ${(metrics?.outstandingPayments.amount || 0).toLocaleString()}
-                  </p>
-                </div>
-                <div className="text-2xl">
-                  {getTrendIcon(metrics?.outstandingPayments.trend || 'stable')}
-                </div>
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Support Resolution</p>
+                <p className="text-2xl font-bold">
+                  {metrics?.supportTicketResolution.resolutionRate || 0}%
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {metrics?.supportTicketResolution.resolved || 0} of {metrics?.supportTicketResolution.total || 0} resolved
+                </p>
               </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Support Resolution</p>
-                  <p className="text-2xl font-bold">
-                    {metrics?.supportTicketResolution.resolutionRate || 0}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {metrics?.supportTicketResolution.resolved || 0} of {metrics?.supportTicketResolution.total || 0} resolved
-                  </p>
-                </div>
-                <div className="text-2xl">
-                  {getTrendIcon(metrics?.supportTicketResolution.trend || 'stable')}
-                </div>
+              <div className="text-2xl">
+                {getTrendIcon(metrics?.supportTicketResolution.trend || 'stable')}
               </div>
-            </Card>
-          </div>
+            </div>
+          </Card>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Activity Feed */}
-            <div className="lg:col-span-2">
-              <Card className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">Real-time Activity Feed</h2>
-                  <Badge variant="outline" className="animate-pulse">LIVE</Badge>
-                </div>
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {activityFeed.length > 0 ? (
-                    activityFeed.map((activity) => (
-                      <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg border">
-                        <div className="text-lg">{getActivityIcon(activity.type)}</div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="text-sm font-medium">{activity.clientName}</p>
-                              <p className="text-sm text-muted-foreground">{activity.action}</p>
-                              <p className="text-xs text-muted-foreground mt-1">{activity.description}</p>
-                            </div>
-                            <div className="text-right">
-                              <Badge variant={getPriorityColor(activity.priority || 'normal')} className="text-xs">
-                                {activity.priority || 'normal'}
-                              </Badge>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {new Date(activity.timestamp).toLocaleTimeString()}
-                              </p>
-                            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Activity Feed */}
+          <div className="lg:col-span-2">
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Real-time Activity Feed</h2>
+                <Badge variant="outline" className="animate-pulse">LIVE</Badge>
+              </div>
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {activityFeed.length > 0 ? (
+                  activityFeed.map((activity) => (
+                    <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg border">
+                      <div className="text-lg">{getActivityIcon(activity.type)}</div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-sm font-medium">{activity.clientName}</p>
+                            <p className="text-sm text-muted-foreground">{activity.action}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{activity.description}</p>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant={getPriorityColor(activity.priority || 'normal')} className="text-xs">
+                              {activity.priority || 'normal'}
+                            </Badge>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(activity.timestamp).toLocaleTimeString()}
+                            </p>
                           </div>
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground text-center py-8">No recent activity</p>
-                  )}
-                </div>
-              </Card>
-            </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">No recent activity</p>
+                )}
+              </div>
+            </Card>
+          </div>
 
-            {/* Action Center */}
-            <div>
-              <Card className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">Action Center</h2>
-                  <Badge variant="destructive">{actionItems.length}</Badge>
-                </div>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {actionItems.length > 0 ? (
-                    actionItems.map((action) => (
-                      <div key={action.id} className="p-3 rounded-lg border">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="text-sm font-medium">{action.title}</h3>
-                          <Badge variant={getPriorityColor(action.priority)} className="text-xs">
-                            {action.priority}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground mb-2">{action.description}</p>
-                        <div className="flex justify-between items-center">
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(action.timestamp).toLocaleDateString()}
-                          </p>
-                          <Button size="sm" variant="outline" className="text-xs">
-                            Review
-                          </Button>
-                        </div>
+          {/* Action Center */}
+          <div>
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Action Center</h2>
+                <Badge variant="destructive">{actionItems.length}</Badge>
+              </div>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {actionItems.length > 0 ? (
+                  actionItems.map((action) => (
+                    <div key={action.id} className="p-3 rounded-lg border">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-sm font-medium">{action.title}</h3>
+                        <Badge variant={getPriorityColor(action.priority)} className="text-xs">
+                          {action.priority}
+                        </Badge>
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-muted-foreground text-center py-8">No action items</p>
-                  )}
-                </div>
-              </Card>
-            </div>
-          </div>
-
-          {/* Performance Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-            <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4">Project Status Distribution</h2>
-              {performanceData && (
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Planning</span>
-                    <span className="text-sm font-medium">{performanceData.projectStatusDistribution.planning}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">In Progress</span>
-                    <span className="text-sm font-medium">{performanceData.projectStatusDistribution.in_progress}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Review</span>
-                    <span className="text-sm font-medium">{performanceData.projectStatusDistribution.review}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Completed</span>
-                    <span className="text-sm font-medium">{performanceData.projectStatusDistribution.completed}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">On Hold</span>
-                    <span className="text-sm font-medium">{performanceData.projectStatusDistribution.on_hold}</span>
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4">Revenue Trends</h2>
-              {performanceData && (
-                <div className="space-y-2">
-                  {performanceData.revenueTrends.map((trend, index) => (
-                    <div key={index} className="flex justify-between items-center">
-                      <span className="text-sm">{trend.month}</span>
-                      <span className="text-sm font-medium">${trend.revenue.toLocaleString()}</span>
+                      <p className="text-xs text-muted-foreground mb-2">{action.description}</p>
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(action.timestamp).toLocaleDateString()}
+                        </p>
+                        <Button size="sm" variant="outline" className="text-xs">
+                          Review
+                        </Button>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-
-            <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4">Client Acquisition</h2>
-              {performanceData && (
-                <div className="space-y-2">
-                  {performanceData.clientAcquisition.map((acquisition, index) => (
-                    <div key={index} className="flex justify-between items-center">
-                      <span className="text-sm">{acquisition.month}</span>
-                      <span className="text-sm font-medium">{acquisition.newClients} new</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+                  ))
+                ) : (
+                  <p className="text-muted-foreground text-center py-8">No action items</p>
+                )}
+              </div>
             </Card>
           </div>
-        </section>
-      </main>
-    </div>
+        </div>
+
+        {/* Performance Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+          <Card className="p-6">
+            <h2 className="text-xl font-bold mb-4">Project Status Distribution</h2>
+            {performanceData && (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Planning</span>
+                  <span className="text-sm font-medium">{performanceData.projectStatusDistribution.planning}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">In Progress</span>
+                  <span className="text-sm font-medium">{performanceData.projectStatusDistribution.in_progress}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Review</span>
+                  <span className="text-sm font-medium">{performanceData.projectStatusDistribution.review}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Completed</span>
+                  <span className="text-sm font-medium">{performanceData.projectStatusDistribution.completed}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">On Hold</span>
+                  <span className="text-sm font-medium">{performanceData.projectStatusDistribution.on_hold}</span>
+                </div>
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-xl font-bold mb-4">Revenue Trends</h2>
+            {performanceData && (
+              <div className="space-y-2">
+                {performanceData.revenueTrends.map((trend, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sm">{trend.month}</span>
+                    <span className="text-sm font-medium">${trend.revenue.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="text-xl font-bold mb-4">Client Acquisition</h2>
+            {performanceData && (
+              <div className="space-y-2">
+                {performanceData.clientAcquisition.map((acquisition, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sm">{acquisition.month}</span>
+                    <span className="text-sm font-medium">{acquisition.newClients} new</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+      </section>
+    </AdminLayout>
   );
 }

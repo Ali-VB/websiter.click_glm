@@ -2,16 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Logo } from "@/components/logo";
+import { AdminLayout } from "@/components/admin-layout";
 
 interface ContactSubmission {
   id: string;
@@ -491,405 +489,337 @@ export default function AdminContactsPage() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("supabase.auth.token");
-    router.push("/");
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted flex">
-      {/* Sidebar Navigation */}
-      <aside className="w-64 bg-card border-r min-h-screen p-4">
-        <div className="flex items-center space-x-2 mb-8">
-          <Logo size={32} showText={true} />
+    <AdminLayout 
+      title="Contact Submissions" 
+      showRefresh={true}
+      onRefresh={fetchSubmissions}
+      isLoading={isLoading}
+    >
+      <section className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <p className="text-muted-foreground">
+            Manage contact submissions from the landing page and other sources
+          </p>
         </div>
-        
-        <div className="mb-2">
-          <p className="text-sm font-medium text-muted-foreground mb-2">Admin Portal</p>
-        </div>
-        
-        <nav className="space-y-1">
-          <Link href="/admin" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Dashboard
-          </Link>
-          <Link href="/admin/projects" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Project Management
-          </Link>
-          <Link href="/admin/clients" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Client Management
-          </Link>
-          <Link href="/admin/invoices" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Invoice Management
-          </Link>
-          <Link href="/admin/support" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Support Tickets
-          </Link>
-          <Link href="/admin/contacts" className="flex items-center px-3 py-2 text-sm font-medium rounded-md bg-accent text-accent-foreground">
-            Contact Submissions
-          </Link>
-          <Link href="/admin/notifications" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Broadcast Notifications
-          </Link>
-          <Link href="/admin/system" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            System Administration
-          </Link>
-        </nav>
-        
-        <Separator className="my-6" />
-        
-        <div className="space-y-1">
-          <Button variant="outline" asChild className="w-full justify-start">
-            <Link href="/">Home</Link>
-          </Button>
-          <Button variant="outline" asChild className="w-full justify-start">
-            <Link href="/dashboard">Client Dashboard</Link>
-          </Button>
-          <Button variant="outline" onClick={handleLogout} className="w-full justify-start">
-            Log Out
-          </Button>
-        </div>
-      </aside>
 
-      {/* Main Content */}
-      <main className="flex-1">
-        {/* Header */}
-        <header className="bg-background border-b p-4">
-          <div className="container mx-auto flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Contact Submissions</h1>
-            <div className="flex items-center space-x-4">
-              <Button onClick={fetchSubmissions} disabled={isLoading}>
-                {isLoading ? "Loading..." : "Refresh"}
-              </Button>
+        {error && (
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+            {error}
+          </div>
+        )}
+
+        {/* Filters */}
+        <Card className="p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="search">Search Submissions</Label>
+              <Input
+                id="search"
+                placeholder="Search by name, email, company, or message"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="statusFilter">Filter by Status</Label>
+              <select
+                id="statusFilter"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">All Statuses</option>
+                <option value="new">New</option>
+                <option value="responded">Responded</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            
+            <div>
+              <Label htmlFor="sourceFilter">Filter by Source</Label>
+              <select
+                id="sourceFilter"
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+              >
+                <option value="all">All Sources</option>
+                <option value="contact_form">Contact Form</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+                <option value="other">Other</option>
+              </select>
             </div>
           </div>
-        </header>
+        </Card>
 
-        {/* Admin Contacts Content */}
-        <section className="container mx-auto px-4 py-8">
-          <div className="mb-6">
-            <p className="text-muted-foreground">
-              Manage contact submissions from the landing page and other sources
-            </p>
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
-
-          {error && (
-            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
-              {error}
-            </div>
-          )}
-
-          {/* Filters */}
-          <Card className="p-4 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="search">Search Submissions</Label>
-                <Input
-                  id="search"
-                  placeholder="Search by name, email, company, or message"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="mt-1"
-                />
+        ) : (
+          <>
+            {/* Submissions List */}
+            <Card className="p-6 mb-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">Contact Submissions</h2>
+                <div className="text-sm text-muted-foreground">
+                  Showing {filteredSubmissions.length} of {submissions.length} submissions
+                </div>
               </div>
-              
-              <div>
-                <Label htmlFor="statusFilter">Filter by Status</Label>
-                <select
-                  id="statusFilter"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="new">New</option>
-                  <option value="responded">Responded</option>
-                  <option value="archived">Archived</option>
-                </select>
-              </div>
-              
-              <div>
-                <Label htmlFor="sourceFilter">Filter by Source</Label>
-                <select
-                  id="sourceFilter"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
-                  value={sourceFilter}
-                  onChange={(e) => setSourceFilter(e.target.value)}
-                >
-                  <option value="all">All Sources</option>
-                  <option value="contact_form">Contact Form</option>
-                  <option value="email">Email</option>
-                  <option value="phone">Phone</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-            </div>
-          </Card>
 
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            </div>
-          ) : (
-            <>
-              {/* Submissions List */}
-              <Card className="p-6 mb-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold">Contact Submissions</h2>
-                  <div className="text-sm text-muted-foreground">
-                    Showing {filteredSubmissions.length} of {submissions.length} submissions
+              {filteredSubmissions.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No contact submissions found.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4">ID</th>
+                        <th className="text-left py-3 px-4">Name</th>
+                        <th className="text-left py-3 px-4">Email</th>
+                        <th className="text-left py-3 px-4">Company</th>
+                        <th className="text-left py-3 px-4">Status</th>
+                        <th className="text-left py-3 px-4">Source</th>
+                        <th className="text-left py-3 px-4">Assigned To</th>
+                        <th className="text-left py-3 px-4">Received</th>
+                        <th className="text-left py-3 px-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredSubmissions.map((submission) => (
+                        <tr key={submission.id} className="border-b hover:bg-muted/50">
+                          <td className="py-3 px-4 font-medium">#{submission.id}</td>
+                          <td className="py-3 px-4">{submission.name}</td>
+                          <td className="py-3 px-4">{submission.email}</td>
+                          <td className="py-3 px-4">{submission.company || "-"}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(submission.status)}`}>
+                              {submission.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSourceColor(submission.source)}`}>
+                              {submission.source ? submission.source.replace('_', ' ') : 'Unknown'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">{getAssignedToName(submission.assignedTo)}</td>
+                          <td className="py-3 px-4">{formatDate(submission.createdAt)}</td>
+                          <td className="py-3 px-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedSubmission(submission)}
+                            >
+                              View Details
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+
+            {/* Submission Detail View */}
+            {selectedSubmission && (
+              <Card className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-2">#{selectedSubmission.id} - {selectedSubmission.name}</h2>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <Badge className={getStatusColor(selectedSubmission.status).replace('bg-', 'bg-').replace('text-', 'text-')}>
+                        {selectedSubmission.status}
+                      </Badge>
+                      <Badge className={getSourceColor(selectedSubmission.source).replace('bg-', 'bg-').replace('text-', 'text-')}>
+                        {selectedSubmission.source ? selectedSubmission.source.replace('_', ' ') : 'Unknown'}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground">
+                      From {selectedSubmission.name} ({selectedSubmission.email}) on {formatDateTime(selectedSubmission.createdAt)}
+                    </p>
                   </div>
+                  <Button variant="outline" onClick={() => setSelectedSubmission(null)}>
+                    Close
+                  </Button>
                 </div>
 
-                {filteredSubmissions.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No contact submissions found.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-3 px-4">ID</th>
-                          <th className="text-left py-3 px-4">Name</th>
-                          <th className="text-left py-3 px-4">Email</th>
-                          <th className="text-left py-3 px-4">Company</th>
-                          <th className="text-left py-3 px-4">Status</th>
-                          <th className="text-left py-3 px-4">Source</th>
-                          <th className="text-left py-3 px-4">Assigned To</th>
-                          <th className="text-left py-3 px-4">Received</th>
-                          <th className="text-left py-3 px-4">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredSubmissions.map((submission) => (
-                          <tr key={submission.id} className="border-b hover:bg-muted/50">
-                            <td className="py-3 px-4 font-medium">#{submission.id}</td>
-                            <td className="py-3 px-4">{submission.name}</td>
-                            <td className="py-3 px-4">{submission.email}</td>
-                            <td className="py-3 px-4">{submission.company || "-"}</td>
-                            <td className="py-3 px-4">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(submission.status)}`}>
-                                {submission.status}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSourceColor(submission.source)}`}>
-                                {submission.source ? submission.source.replace('_', ' ') : 'Unknown'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">{getAssignedToName(submission.assignedTo)}</td>
-                            <td className="py-3 px-4">{formatDate(submission.createdAt)}</td>
-                            <td className="py-3 px-4">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setSelectedSubmission(submission)}
-                              >
-                                View Details
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </Card>
-
-              {/* Submission Detail View */}
-              {selectedSubmission && (
-                <Card className="p-6">
-                  <div className="flex justify-between items-start mb-6">
-                    <div>
-                      <h2 className="text-2xl font-bold mb-2">#{selectedSubmission.id} - {selectedSubmission.name}</h2>
-                      <div className="flex flex-wrap gap-2 mb-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Contact Information</h3>
+                    <div className="space-y-2">
+                      <div className="flex">
+                        <span className="w-32 text-muted-foreground">Name:</span>
+                        <span>{selectedSubmission.name}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="w-32 text-muted-foreground">Email:</span>
+                        <span>{selectedSubmission.email}</span>
+                      </div>
+                      {selectedSubmission.phone && (
+                        <div className="flex">
+                          <span className="w-32 text-muted-foreground">Phone:</span>
+                          <span>{selectedSubmission.phone}</span>
+                        </div>
+                      )}
+                      {selectedSubmission.company && (
+                        <div className="flex">
+                          <span className="w-32 text-muted-foreground">Company:</span>
+                          <span>{selectedSubmission.company}</span>
+                        </div>
+                      )}
+                      <div className="flex">
+                        <span className="w-32 text-muted-foreground">Status:</span>
                         <Badge className={getStatusColor(selectedSubmission.status).replace('bg-', 'bg-').replace('text-', 'text-')}>
                           {selectedSubmission.status}
                         </Badge>
+                      </div>
+                      <div className="flex">
+                        <span className="w-32 text-muted-foreground">Source:</span>
                         <Badge className={getSourceColor(selectedSubmission.source).replace('bg-', 'bg-').replace('text-', 'text-')}>
                           {selectedSubmission.source ? selectedSubmission.source.replace('_', ' ') : 'Unknown'}
                         </Badge>
                       </div>
-                      <p className="text-muted-foreground">
-                        From {selectedSubmission.name} ({selectedSubmission.email}) on {formatDateTime(selectedSubmission.createdAt)}
-                      </p>
-                    </div>
-                    <Button variant="outline" onClick={() => setSelectedSubmission(null)}>
-                      Close
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">Contact Information</h3>
-                      <div className="space-y-2">
-                        <div className="flex">
-                          <span className="w-32 text-muted-foreground">Name:</span>
-                          <span>{selectedSubmission.name}</span>
-                        </div>
-                        <div className="flex">
-                          <span className="w-32 text-muted-foreground">Email:</span>
-                          <span>{selectedSubmission.email}</span>
-                        </div>
-                        {selectedSubmission.phone && (
-                          <div className="flex">
-                            <span className="w-32 text-muted-foreground">Phone:</span>
-                            <span>{selectedSubmission.phone}</span>
-                          </div>
-                        )}
-                        {selectedSubmission.company && (
-                          <div className="flex">
-                            <span className="w-32 text-muted-foreground">Company:</span>
-                            <span>{selectedSubmission.company}</span>
-                          </div>
-                        )}
-                        <div className="flex">
-                          <span className="w-32 text-muted-foreground">Status:</span>
-                          <Badge className={getStatusColor(selectedSubmission.status).replace('bg-', 'bg-').replace('text-', 'text-')}>
-                            {selectedSubmission.status}
-                          </Badge>
-                        </div>
-                        <div className="flex">
-                          <span className="w-32 text-muted-foreground">Source:</span>
-                          <Badge className={getSourceColor(selectedSubmission.source).replace('bg-', 'bg-').replace('text-', 'text-')}>
-                            {selectedSubmission.source ? selectedSubmission.source.replace('_', ' ') : 'Unknown'}
-                          </Badge>
-                        </div>
-                        <div className="flex">
-                          <span className="w-32 text-muted-foreground">Received:</span>
-                          <span>{formatDateTime(selectedSubmission.createdAt)}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">Assignment</h3>
-                      <div className="space-y-4">
-                        <div className="flex">
-                          <span className="w-32 text-muted-foreground">Assigned To:</span>
-                          <span>{getAssignedToName(selectedSubmission.assignedTo)}</span>
-                        </div>
-                        <div>
-                          <Label htmlFor="assignTo">Reassign Submission</Label>
-                          <Select onValueChange={setAssignedTo} defaultValue={selectedSubmission.assignedTo || ""}>
-                            <SelectTrigger className="mt-1">
-                              <SelectValue placeholder="Select team member" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="unassigned">Unassigned</SelectItem>
-                              {teamMembers.map((member) => (
-                                <SelectItem key={member.id} value={member.id}>
-                                  {member.name} ({member.role})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <div className="flex justify-end mt-2">
-                            <Button 
-                              onClick={handleUpdateAssignment} 
-                              disabled={isUpdatingAssignment || assignedTo === selectedSubmission.assignedTo}
-                            >
-                              {isUpdatingAssignment ? "Updating..." : "Update Assignment"}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">Update Status</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="status">Change Status</Label>
-                          <Select onValueChange={handleUpdateStatus} defaultValue={selectedSubmission.status}>
-                            <SelectTrigger className="mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="new">New</SelectItem>
-                              <SelectItem value="responded">Responded</SelectItem>
-                              <SelectItem value="archived">Archived</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                      <div className="flex">
+                        <span className="w-32 text-muted-foreground">Received:</span>
+                        <span>{formatDateTime(selectedSubmission.createdAt)}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3">Message</h3>
-                    <p className="bg-muted p-4 rounded">{selectedSubmission.message}</p>
-                  </div>
-
-                  {selectedSubmission.response && (
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold mb-3">Response</h3>
-                      <div className="bg-blue-50 p-4 rounded">
-                        <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                          <span>From {selectedSubmission.response.respondedBy}</span>
-                          <span>{formatDateTime(selectedSubmission.response.respondedAt)}</span>
-                        </div>
-                        <p>{selectedSubmission.response.content}</p>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Assignment</h3>
+                    <div className="space-y-4">
+                      <div className="flex">
+                        <span className="w-32 text-muted-foreground">Assigned To:</span>
+                        <span>{getAssignedToName(selectedSubmission.assignedTo)}</span>
                       </div>
-                    </div>
-                  )}
-
-                  {selectedSubmission.notes && (
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold mb-3">Internal Notes</h3>
-                      <div className="bg-yellow-50 p-4 rounded">
-                        <p>{selectedSubmission.notes}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Add Note Form */}
-                    <div>
-                      <h3 className="text-lg font-semibold mb-3">Add Internal Note</h3>
-                      <div className="p-4 border rounded">
-                        <Textarea
-                          placeholder="Enter your note here..."
-                          value={newNote}
-                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewNote(e.target.value)}
-                          rows={3}
-                          className="mb-2"
-                        />
-                        <div className="flex justify-end">
-                          <Button onClick={handleAddNote} disabled={isAddingNote || !newNote.trim()}>
-                            {isAddingNote ? "Adding..." : "Add Note"}
+                      <div>
+                        <Label htmlFor="assignTo">Reassign Submission</Label>
+                        <Select onValueChange={setAssignedTo} defaultValue={selectedSubmission.assignedTo || ""}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="Select team member" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {teamMembers.map((member) => (
+                              <SelectItem key={member.id} value={member.id}>
+                                {member.name} ({member.role})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex justify-end mt-2">
+                          <Button 
+                            onClick={handleUpdateAssignment} 
+                            disabled={isUpdatingAssignment || assignedTo === selectedSubmission.assignedTo}
+                          >
+                            {isUpdatingAssignment ? "Updating..." : "Update Assignment"}
                           </Button>
                         </div>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Add Response Form */}
-                    {selectedSubmission.status !== "responded" && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Update Status</h3>
+                    <div className="space-y-4">
                       <div>
-                        <h3 className="text-lg font-semibold mb-3">Add Response</h3>
-                        <div className="p-4 border rounded">
-                          <Textarea
-                            placeholder="Enter your response here..."
-                            value={responseContent}
-                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setResponseContent(e.target.value)}
-                            rows={3}
-                            className="mb-2"
-                          />
-                          <div className="flex justify-end">
-                            <Button onClick={handleAddResponse} disabled={isAddingResponse || !responseContent.trim()}>
-                              {isAddingResponse ? "Adding..." : "Send Response"}
-                            </Button>
-                          </div>
+                        <Label htmlFor="status">Change Status</Label>
+                        <Select onValueChange={handleUpdateStatus} defaultValue={selectedSubmission.status}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="new">New</SelectItem>
+                            <SelectItem value="responded">Responded</SelectItem>
+                            <SelectItem value="archived">Archived</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-3">Message</h3>
+                  <p className="bg-muted p-4 rounded">{selectedSubmission.message}</p>
+                </div>
+
+                {selectedSubmission.response && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3">Response</h3>
+                    <div className="bg-blue-50 p-4 rounded">
+                      <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                        <span>From {selectedSubmission.response.respondedBy}</span>
+                        <span>{formatDateTime(selectedSubmission.response.respondedAt)}</span>
+                      </div>
+                      <p>{selectedSubmission.response.content}</p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedSubmission.notes && (
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3">Internal Notes</h3>
+                    <div className="bg-yellow-50 p-4 rounded">
+                      <p>{selectedSubmission.notes}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Add Note Form */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Add Internal Note</h3>
+                    <div className="p-4 border rounded">
+                      <Textarea
+                        placeholder="Enter your note here..."
+                        value={newNote}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewNote(e.target.value)}
+                        rows={3}
+                        className="mb-2"
+                      />
+                      <div className="flex justify-end">
+                        <Button onClick={handleAddNote} disabled={isAddingNote || !newNote.trim()}>
+                          {isAddingNote ? "Adding..." : "Add Note"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Add Response Form */}
+                  {selectedSubmission.status !== "responded" && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3">Add Response</h3>
+                      <div className="p-4 border rounded">
+                        <Textarea
+                          placeholder="Enter your response here..."
+                          value={responseContent}
+                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setResponseContent(e.target.value)}
+                          rows={3}
+                          className="mb-2"
+                        />
+                        <div className="flex justify-end">
+                          <Button onClick={handleAddResponse} disabled={isAddingResponse || !responseContent.trim()}>
+                            {isAddingResponse ? "Adding..." : "Send Response"}
+                          </Button>
                         </div>
                       </div>
-                    )}
-                  </div>
-                </Card>
-              )}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
             </>
           )}
         </section>
-      </main>
-    </div>
+    </AdminLayout>
   );
 }

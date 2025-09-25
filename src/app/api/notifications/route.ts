@@ -1,30 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
+import { realtime } from '@/lib/realtime';
 
 // Define the Notification interfaces
 interface DatabaseNotification {
   id: string;
-  client_id: string;
-  title?: string;
+  recipient_id: string;
+  sender_id?: string;
+  type: string;
+  title: string;
   message: string;
+  data?: Record<string, unknown>;
   is_read: boolean;
-  read?: boolean;
+  is_delivered: boolean;
+  delivery_method: string[];
+  priority?: string;
+  expires_at?: string;
   created_at: string;
-  sent_at?: string;
-  type?: string;
+  updated_at: string;
 }
 
 interface Notification {
   id: string;
+  type: string;
   title: string;
   message: string;
-  sent_at: string;
-  read: boolean;
-  type: "system" | "project" | "invoice" | "support";
+  data?: Record<string, unknown>;
+  is_read: boolean;
+  is_delivered: boolean;
+  priority?: string;
+  created_at: string;
+  expires_at?: string;
 }
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createServerClient();
+    
     // Check if user is authenticated
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -51,6 +63,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
     const unreadOnly = searchParams.get('unreadOnly') === 'true';
+    const type = searchParams.get('type');
+    const priority = searchParams.get('priority');
 
     // Validate limit and offset
     if (isNaN(limit) || limit < 1 || limit > 100) {
@@ -71,12 +85,23 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('notifications')
       .select('*', { count: 'exact' })
-      .eq('client_id', user.id);
+      .eq('recipient_id', user.id);
 
-    // Apply unread filter if requested
+    // Apply filters
     if (unreadOnly) {
       query = query.eq('is_read', false);
     }
+
+    if (type) {
+      query = query.eq('type', type);
+    }
+
+    if (priority) {
+      query = query.eq('priority', priority);
+    }
+
+    // Filter out expired notifications
+    query = query.or('expires_at.is.null,expires_at.gt.' + new Date().toISOString());
 
     // Apply pagination
     query = query.range(offset, offset + limit - 1);
@@ -93,22 +118,29 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to match expected interface
-    const transformedNotifications = (data || []).map((n: DatabaseNotification) => {
-      // Parse the message to extract title and content
-      // Messages are stored as "Title: Content"
-      const messageParts = n.message.split(': ');
-      const title = messageParts.length > 1 ? messageParts[0] : 'System Notification';
-      const message = messageParts.length > 1 ? messageParts.slice(1).join(': ') : n.message;
-      
-      return {
-        id: n.id,
-        title,
-        message,
-        sent_at: n.sent_at || n.created_at,
-        read: n.read || n.is_read,
-        type: 'system' as "system" | "project" | "invoice" | "support"
-      };
-    });
+    const transformedNotifications = (data || []).map((n: DatabaseNotification) => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      message: n.message,
+      data: n.data,
+      is_read: n.is_read,
+      is_delivered: n.is_delivered,
+      priority: n.priority,
+      created_at: n.created_at,
+      expires_at: n.expires_at
+    }));
+
+    // Mark notifications as delivered when fetched
+    if (data && data.length > 0) {
+      const undeliveredNotifications = data.filter(n => !n.is_delivered);
+      if (undeliveredNotifications.length > 0) {
+        await supabase
+          .from('notifications')
+          .update({ is_delivered: true })
+          .in('id', undeliveredNotifications.map(n => n.id));
+      }
+    }
 
     // Prepare the response
     const response: {
@@ -142,6 +174,109 @@ export async function GET(request: NextRequest) {
     console.error('Notifications API error:', error);
     return NextResponse.json(
       { success: false, message: 'An error occurred while retrieving notifications' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createServerClient();
+    
+    // Check if user is authenticated
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+    
+    // Verify the token and get the user
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { recipient_id, type, title, message, data, priority } = body;
+
+    // Validate required fields
+    if (!recipient_id || !type || !title || !message) {
+      return NextResponse.json(
+        { success: false, message: 'Recipient ID, type, title, and message are required' },
+        { status: 400 }
+      );
+    }
+
+    // Check if user has permission to send notifications (admin or sending to self)
+    if (recipient_id !== user.id) {
+      const { data: currentUser } = await supabase
+        .from('clients')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (currentUser?.role !== 'admin') {
+        return NextResponse.json(
+          { success: false, message: 'Permission denied' },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Create the notification
+    const { data: notification, error } = await supabase
+      .from('notifications')
+      .insert([{
+        recipient_id,
+        sender_id: user.id,
+        type,
+        title,
+        message,
+        data: data || {},
+        priority: priority || 'normal',
+        delivery_method: ['in_app'],
+        is_delivered: false
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Notification creation error:', error);
+      return NextResponse.json(
+        { success: false, message: 'Failed to create notification' },
+        { status: 500 }
+      );
+    }
+
+    // Send real-time notification
+    await realtime.sendNotification(recipient_id, {
+      id: notification.id,
+      recipient_id: notification.recipient_id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      is_read: notification.is_read,
+      priority: notification.priority
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Notification created successfully',
+      notification
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error('Notifications API POST error:', error);
+    return NextResponse.json(
+      { success: false, message: 'An error occurred while creating notification' },
       { status: 500 }
     );
   }

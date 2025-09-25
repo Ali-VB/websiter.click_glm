@@ -2,17 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Logo } from "@/components/logo";
+import { AdminLayout } from "@/components/admin-layout";
 
 // Database Inspector Component
 interface DatabaseTable {
@@ -270,9 +268,7 @@ const DatabaseInspector = () => {
         {tables.map((table) => (
           <Card 
             key={table.name} 
-            className={`p-4 cursor-pointer transition-colors ${
-              selectedTable === table.name ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
-            }`}
+            className={`p-4 cursor-pointer transition-colors ${selectedTable === table.name ? 'ring-2 ring-primary' : 'hover:bg-muted/50'}`}
             onClick={() => setSelectedTable(table.name)}
           >
             <div className="flex justify-between items-start mb-2">
@@ -848,439 +844,371 @@ export default function AdminSystemPage() {
     return "text-red-600";
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("auth_token");
-    router.push("/");
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted flex">
-      {/* Sidebar Navigation */}
-      <aside className="w-64 bg-card border-r min-h-screen p-4">
-        <div className="flex items-center space-x-2 mb-8">
-          <Logo size={32} showText={true} />
+    <AdminLayout
+      title="System Administration"
+      showRefresh={true}
+      onRefresh={fetchSystemData}
+      isLoading={isLoading}
+    >
+      <section className="container mx-auto px-4 py-8">
+        <div className="mb-6">
+          <p className="text-muted-foreground">
+            Monitor system performance, configure settings, and manage debug tools
+          </p>
         </div>
-        
-        <div className="mb-2">
-          <p className="text-sm font-medium text-muted-foreground mb-2">Admin Portal</p>
-        </div>
-        
-        <nav className="space-y-1">
-          <Link href="/admin" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Dashboard
-          </Link>
-          <Link href="/admin/projects" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Project Management
-          </Link>
-          <Link href="/admin/clients" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Client Management
-          </Link>
-          <Link href="/admin/invoices" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Invoice Management
-          </Link>
-          <Link href="/admin/support" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Support Tickets
-          </Link>
-          <Link href="/admin/contacts" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Contact Submissions
-          </Link>
-          <Link href="/admin/notifications" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
-            Broadcast Notifications
-          </Link>
-          <Link href="/admin/system" className="flex items-center px-3 py-2 text-sm font-medium rounded-md bg-accent text-accent-foreground">
-            System Administration
-          </Link>
-        </nav>
-        
-        <Separator className="my-6" />
-        
-        <div className="space-y-1">
-          <Button variant="outline" asChild className="w-full justify-start">
-            <Link href="/">Home</Link>
-          </Button>
-          <Button variant="outline" asChild className="w-full justify-start">
-            <Link href="/dashboard">Client Dashboard</Link>
-          </Button>
-          <Button variant="outline" onClick={handleLogout} className="w-full justify-start">
-            Log Out
-          </Button>
-        </div>
-      </aside>
 
-      {/* Main Content */}
-      <main className="flex-1">
-        {/* Header */}
-        <header className="bg-background border-b p-4">
-          <div className="container mx-auto flex justify-between items-center">
-            <h1 className="text-2xl font-bold">System Administration</h1>
-            <div className="flex items-center space-x-4">
-              <Button onClick={fetchSystemData} disabled={isLoading}>
-                {isLoading ? "Loading..." : "Refresh"}
-              </Button>
-            </div>
+        {error && (
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+            {error}
           </div>
-        </header>
+        )}
 
-        {/* Admin System Content */}
-        <section className="container mx-auto px-4 py-8">
-          <div className="mb-6">
-            <p className="text-muted-foreground">
-              Monitor system performance, configure settings, and manage debug tools
-            </p>
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
           </div>
-
-          {error && (
-            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
-              {error}
-            </div>
-          )}
-
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-            </div>
-          ) : (
-            <Tabs defaultValue="stats" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="stats">Statistics</TabsTrigger>
-                <TabsTrigger value="config">Configuration</TabsTrigger>
-                <TabsTrigger value="health">System Health</TabsTrigger>
-                <TabsTrigger value="database">Database Inspector</TabsTrigger>
-                <TabsTrigger value="logs">Debug Logs</TabsTrigger>
-              </TabsList>
-              
-              {/* Statistics Tab */}
-              <TabsContent value="stats" className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <Card className="p-6">
-                    <h3 className="text-lg font-semibold mb-4">Users</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Total Users</span>
-                        <span className="font-medium">{systemStats.totalUsers}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Active Users</span>
-                        <span className="font-medium">{systemStats.activeUsers}</span>
-                      </div>
-                    </div>
-                  </Card>
-                  
-                  <Card className="p-6">
-                    <h3 className="text-lg font-semibold mb-4">Projects</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Total Projects</span>
-                        <span className="font-medium">{systemStats.totalProjects}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Active Projects</span>
-                        <span className="font-medium">{systemStats.activeProjects}</span>
-                      </div>
-                    </div>
-                  </Card>
-                  
-                  <Card className="p-6">
-                    <h3 className="text-lg font-semibold mb-4">Invoices</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Total Invoices</span>
-                        <span className="font-medium">{systemStats.totalInvoices}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Pending Invoices</span>
-                        <span className="font-medium">{systemStats.pendingInvoices}</span>
-                      </div>
-                    </div>
-                  </Card>
-                  
-                  <Card className="p-6">
-                    <h3 className="text-lg font-semibold mb-4">Contacts</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Total Contacts</span>
-                        <span className="font-medium">{systemStats.totalContacts}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>New Contacts</span>
-                        <span className="font-medium">{systemStats.newContacts}</span>
-                      </div>
-                    </div>
-                  </Card>
-                  
-                  <Card className="p-6">
-                    <h3 className="text-lg font-semibold mb-4">Support</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Total Tickets</span>
-                        <span className="font-medium">{systemStats.totalSupportTickets}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Open Tickets</span>
-                        <span className="font-medium">{systemStats.openTickets}</span>
-                      </div>
-                    </div>
-                  </Card>
-                  
-                  <Card className="p-6">
-                    <h3 className="text-lg font-semibold mb-4">System</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Uptime</span>
-                        <span className="font-medium">{systemStats.systemUptime}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span>Last Backup</span>
-                        <span className="font-medium">{formatDate(systemStats.lastBackup)}</span>
-                      </div>
-                      <div className="flex justify-end mt-2">
-                        <Button onClick={handleRunBackup} size="sm">
-                          Run Backup Now
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              </TabsContent>
-              
-              {/* Configuration Tab */}
-              <TabsContent value="config" className="space-y-6">
+        ) : (
+          <Tabs defaultValue="stats" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="stats">Statistics</TabsTrigger>
+              <TabsTrigger value="config">Configuration</TabsTrigger>
+              <TabsTrigger value="health">System Health</TabsTrigger>
+              <TabsTrigger value="database">Database Inspector</TabsTrigger>
+              <TabsTrigger value="logs">Debug Logs</TabsTrigger>
+            </TabsList>
+            
+            {/* Statistics Tab */}
+            <TabsContent value="stats" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <Card className="p-6">
-                  <h2 className="text-2xl font-bold mb-6">System Configuration</h2>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label htmlFor="siteName">Site Name</Label>
-                      <Input
-                        id="siteName"
-                        value={systemConfig.siteName}
-                        onChange={(e) => setSystemConfig({...systemConfig, siteName: e.target.value})}
-                        className="mt-1"
-                      />
+                  <h3 className="text-lg font-semibold mb-4">Users</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Total Users</span>
+                      <span className="font-medium">{systemStats.totalUsers}</span>
                     </div>
-                    
-                    <div>
-                      <Label htmlFor="adminEmail">Admin Email</Label>
-                      <Input
-                        id="adminEmail"
-                        type="email"
-                        value={systemConfig.adminEmail}
-                        onChange={(e) => setSystemConfig({...systemConfig, adminEmail: e.target.value})}
-                        className="mt-1"
-                      />
+                    <div className="flex justify-between">
+                      <span>Active Users</span>
+                      <span className="font-medium">{systemStats.activeUsers}</span>
                     </div>
-                    
-                    <div>
-                      <Label htmlFor="backupFrequency">Backup Frequency</Label>
-                      <Select onValueChange={(value) => setSystemConfig({...systemConfig, backupFrequency: value})} value={systemConfig.backupFrequency}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="hourly">Hourly</SelectItem>
-                          <SelectItem value="daily">Daily</SelectItem>
-                          <SelectItem value="weekly">Weekly</SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="maxUploadSize">Max Upload Size (MB)</Label>
-                      <Input
-                        id="maxUploadSize"
-                        type="number"
-                        value={systemConfig.maxUploadSize}
-                        onChange={(e) => setSystemConfig({...systemConfig, maxUploadSize: parseInt(e.target.value) || 0})}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="maintenanceMode"
-                        checked={systemConfig.maintenanceMode}
-                        onChange={(e) => setSystemConfig({...systemConfig, maintenanceMode: e.target.checked})}
-                        className="rounded"
-                      />
-                      <Label htmlFor="maintenanceMode">Maintenance Mode</Label>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="allowRegistrations"
-                        checked={systemConfig.allowRegistrations}
-                        onChange={(e) => setSystemConfig({...systemConfig, allowRegistrations: e.target.checked})}
-                        className="rounded"
-                      />
-                      <Label htmlFor="allowRegistrations">Allow Registrations</Label>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="emailNotifications"
-                        checked={systemConfig.emailNotifications}
-                        onChange={(e) => setSystemConfig({...systemConfig, emailNotifications: e.target.checked})}
-                        className="rounded"
-                      />
-                      <Label htmlFor="emailNotifications">Email Notifications</Label>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-end mt-6">
-                    <Button onClick={handleSaveConfig} disabled={isSavingConfig}>
-                      {isSavingConfig ? "Saving..." : "Save Configuration"}
-                    </Button>
                   </div>
                 </Card>
-              </TabsContent>
-              
-              {/* System Health Tab */}
-              <TabsContent value="health" className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="p-6">
-                    <h3 className="text-lg font-semibold mb-4">Resource Usage</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span>CPU Usage</span>
-                          <span className={`font-medium ${getHealthStatus(systemHealth.cpu)}`}>{systemHealth.cpu}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full ${systemHealth.cpu < 50 ? 'bg-green-600' : systemHealth.cpu < 80 ? 'bg-yellow-600' : 'bg-red-600'}`}
-                            style={{ width: `${systemHealth.cpu}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span>Memory Usage</span>
-                          <span className={`font-medium ${getHealthStatus(systemHealth.memory)}`}>{systemHealth.memory}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full ${systemHealth.memory < 50 ? 'bg-green-600' : systemHealth.memory < 80 ? 'bg-yellow-600' : 'bg-red-600'}`}
-                            style={{ width: `${systemHealth.memory}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span>Disk Usage</span>
-                          <span className={`font-medium ${getHealthStatus(systemHealth.disk)}`}>{systemHealth.disk}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full ${systemHealth.disk < 50 ? 'bg-green-600' : systemHealth.disk < 80 ? 'bg-yellow-600' : 'bg-red-600'}`}
-                            style={{ width: `${systemHealth.disk}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                  
-                  <Card className="p-6">
-                    <h3 className="text-lg font-semibold mb-4">Service Status</h3>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span>Database</span>
-                        <Badge className={systemHealth.database ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                          {systemHealth.database ? "Online" : "Offline"}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex justify-between items-center">
-                        <span>API</span>
-                        <Badge className={systemHealth.api ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                          {systemHealth.api ? "Online" : "Offline"}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex justify-between items-center">
-                        <span>Email Service</span>
-                        <Badge className={systemHealth.email ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                          {systemHealth.email ? "Online" : "Offline"}
-                        </Badge>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              </TabsContent>
-              
-              {/* Database Inspector Tab */}
-              <TabsContent value="database" className="space-y-6">
-                <DatabaseInspector />
-              </TabsContent>
-              
-              {/* Debug Logs Tab */}
-              <TabsContent value="logs" className="space-y-6">
+                
                 <Card className="p-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold">Debug Logs</h2>
-                    <div className="flex space-x-2">
-                      <select
-                        className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        value={logLevelFilter}
-                        onChange={(e) => setLogLevelFilter(e.target.value)}
-                      >
-                        <option value="all">All Levels</option>
-                        <option value="debug">Debug</option>
-                        <option value="info">Info</option>
-                        <option value="warning">Warning</option>
-                        <option value="error">Error</option>
-                      </select>
-                      <Button variant="outline" onClick={handleClearLogs}>
-                        Clear Logs
+                  <h3 className="text-lg font-semibold mb-4">Projects</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Total Projects</span>
+                      <span className="font-medium">{systemStats.totalProjects}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Active Projects</span>
+                      <span className="font-medium">{systemStats.activeProjects}</span>
+                    </div>
+                  </div>
+                </Card>
+                
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Invoices</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Total Invoices</span>
+                      <span className="font-medium">{systemStats.totalInvoices}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Pending Invoices</span>
+                      <span className="font-medium">{systemStats.pendingInvoices}</span>
+                    </div>
+                  </div>
+                </Card>
+                
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Contacts</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Total Contacts</span>
+                      <span className="font-medium">{systemStats.totalContacts}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>New Contacts</span>
+                      <span className="font-medium">{systemStats.newContacts}</span>
+                    </div>
+                  </div>
+                </Card>
+                
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Support</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Total Tickets</span>
+                      <span className="font-medium">{systemStats.totalSupportTickets}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Open Tickets</span>
+                      <span className="font-medium">{systemStats.openTickets}</span>
+                    </div>
+                  </div>
+                </Card>
+                
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">System</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Uptime</span>
+                      <span className="font-medium">{systemStats.systemUptime}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Last Backup</span>
+                      <span className="font-medium">{formatDate(systemStats.lastBackup)}</span>
+                    </div>
+                    <div className="flex justify-end mt-2">
+                      <Button onClick={handleRunBackup} size="sm">
+                        Run Backup Now
                       </Button>
                     </div>
                   </div>
-                  
-                  {filteredLogs.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground">No logs found.</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-3 px-4">Timestamp</th>
-                            <th className="text-left py-3 px-4">Level</th>
-                            <th className="text-left py-3 px-4">Source</th>
-                            <th className="text-left py-3 px-4">Message</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredLogs.map((log) => (
-                            <tr key={log.id} className="border-b hover:bg-muted/50">
-                              <td className="py-3 px-4">{formatDateTime(log.timestamp)}</td>
-                              <td className="py-3 px-4">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getLogLevelColor(log.level)}`}>
-                                  {log.level}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4">{log.source}</td>
-                              <td className="py-3 px-4">{log.message}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
                 </Card>
-              </TabsContent>
-            </Tabs>
-          )}
-        </section>
-      </main>
-    </div>
+              </div>
+            </TabsContent>
+            
+            {/* Configuration Tab */}
+            <TabsContent value="config" className="space-y-6">
+              <Card className="p-6">
+                <h2 className="text-2xl font-bold mb-6">System Configuration</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="siteName">Site Name</Label>
+                    <Input
+                      id="siteName"
+                      value={systemConfig.siteName}
+                      onChange={(e) => setSystemConfig({...systemConfig, siteName: e.target.value})}
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="adminEmail">Admin Email</Label>
+                    <Input
+                      id="adminEmail"
+                      type="email"
+                      value={systemConfig.adminEmail}
+                      onChange={(e) => setSystemConfig({...systemConfig, adminEmail: e.target.value})}
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="backupFrequency">Backup Frequency</Label>
+                    <Select onValueChange={(value) => setSystemConfig({...systemConfig, backupFrequency: value})} value={systemConfig.backupFrequency}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hourly">Hourly</SelectItem>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="maxUploadSize">Max Upload Size (MB)</Label>
+                    <Input
+                      id="maxUploadSize"
+                      type="number"
+                      value={systemConfig.maxUploadSize}
+                      onChange={(e) => setSystemConfig({...systemConfig, maxUploadSize: parseInt(e.target.value) || 0})}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="maintenanceMode"
+                      checked={systemConfig.maintenanceMode}
+                      onChange={(e) => setSystemConfig({...systemConfig, maintenanceMode: e.target.checked})}
+                      className="rounded"
+                    />
+                    <Label htmlFor="maintenanceMode">Maintenance Mode</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="allowRegistrations"
+                      checked={systemConfig.allowRegistrations}
+                      onChange={(e) => setSystemConfig({...systemConfig, allowRegistrations: e.target.checked})}
+                      className="rounded"
+                    />
+                    <Label htmlFor="allowRegistrations">Allow Registrations</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="emailNotifications"
+                      checked={systemConfig.emailNotifications}
+                      onChange={(e) => setSystemConfig({...systemConfig, emailNotifications: e.target.checked})}
+                      className="rounded"
+                    />
+                    <Label htmlFor="emailNotifications">Email Notifications</Label>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end mt-6">
+                  <Button onClick={handleSaveConfig} disabled={isSavingConfig}>
+                    {isSavingConfig ? "Saving..." : "Save Configuration"}
+                  </Button>
+                </div>
+              </Card>
+            </TabsContent>
+            
+            {/* System Health Tab */}
+            <TabsContent value="health" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Resource Usage</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span>CPU Usage</span>
+                        <span className={`font-medium ${getHealthStatus(systemHealth.cpu)}`}>{systemHealth.cpu}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${systemHealth.cpu < 50 ? 'bg-green-600' : systemHealth.cpu < 80 ? 'bg-yellow-600' : 'bg-red-600'}`}
+                          style={{ width: `${systemHealth.cpu}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span>Memory Usage</span>
+                        <span className={`font-medium ${getHealthStatus(systemHealth.memory)}`}>{systemHealth.memory}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${systemHealth.memory < 50 ? 'bg-green-600' : systemHealth.memory < 80 ? 'bg-yellow-600' : 'bg-red-600'}`}
+                          style={{ width: `${systemHealth.memory}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span>Disk Usage</span>
+                        <span className={`font-medium ${getHealthStatus(systemHealth.disk)}`}>{systemHealth.disk}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${systemHealth.disk < 50 ? 'bg-green-600' : systemHealth.disk < 80 ? 'bg-yellow-600' : 'bg-red-600'}`}
+                          style={{ width: `${systemHealth.disk}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+                
+                <Card className="p-6">
+                  <h3 className="text-lg font-semibold mb-4">Service Status</h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span>Database</span>
+                      <Badge className={systemHealth.database ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                        {systemHealth.database ? "Online" : "Offline"}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span>API</span>
+                      <Badge className={systemHealth.api ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                        {systemHealth.api ? "Online" : "Offline"}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span>Email Service</span>
+                      <Badge className={systemHealth.email ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                        {systemHealth.email ? "Online" : "Offline"}
+                      </Badge>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </TabsContent>
+            
+            {/* Database Inspector Tab */}
+            <TabsContent value="database" className="space-y-6">
+              <DatabaseInspector />
+            </TabsContent>
+            
+            {/* Debug Logs Tab */}
+            <TabsContent value="logs" className="space-y-6">
+              <Card className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold">Debug Logs</h2>
+                  <div className="flex space-x-2">
+                    <select
+                      className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={logLevelFilter}
+                      onChange={(e) => setLogLevelFilter(e.target.value)}
+                    >
+                      <option value="all">All Levels</option>
+                      <option value="debug">Debug</option>
+                      <option value="info">Info</option>
+                      <option value="warning">Warning</option>
+                      <option value="error">Error</option>
+                    </select>
+                    <Button variant="outline" onClick={handleClearLogs}>
+                      Clear Logs
+                    </Button>
+                  </div>
+                </div>
+                
+                {filteredLogs.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No logs found.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-4">Timestamp</th>
+                          <th className="text-left py-3 px-4">Level</th>
+                          <th className="text-left py-3 px-4">Source</th>
+                          <th className="text-left py-3 px-4">Message</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredLogs.map((log) => (
+                          <tr key={log.id} className="border-b hover:bg-muted/50">
+                            <td className="py-3 px-4">{formatDateTime(log.timestamp)}</td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getLogLevelColor(log.level)}`}>
+                                {log.level}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">{log.source}</td>
+                            <td className="py-3 px-4">{log.message}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
+            </TabsContent>
+          </Tabs>
+        )}
+      </section>
+    </AdminLayout>
   );
 }
