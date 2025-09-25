@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/logo";
 
 interface DashboardStats {
@@ -27,22 +28,89 @@ interface DashboardStats {
   };
 }
 
+interface RealtimeMetrics {
+  activeProjectsWithCompletion: {
+    count: number;
+    completionRate: number;
+    trend: 'up' | 'down' | 'stable';
+  };
+  revenueComparison: {
+    thisMonth: number;
+    lastMonth: number;
+    trend: 'up' | 'down' | 'stable';
+  };
+  outstandingPayments: {
+    count: number;
+    amount: number;
+    trend: 'up' | 'down' | 'stable';
+  };
+  supportTicketResolution: {
+    total: number;
+    resolved: number;
+    resolutionRate: number;
+    trend: 'up' | 'down' | 'stable';
+  };
+}
+
+interface ActivityFeedItem {
+  id: string;
+  type: 'project_submission' | 'payment' | 'ticket' | 'asset_upload' | 'status_change';
+  clientId: string;
+  clientName: string;
+  action: string;
+  description: string;
+  timestamp: string;
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+}
+
+interface ActionItem {
+  id: string;
+  type: 'project_approval' | 'invoice_review' | 'contact_submission' | 'urgent_ticket';
+  title: string;
+  description: string;
+  clientId?: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  timestamp: string;
+}
+
+interface PerformanceData {
+  projectStatusDistribution: {
+    planning: number;
+    in_progress: number;
+    review: number;
+    completed: number;
+    on_hold: number;
+  };
+  revenueTrends: Array<{
+    month: string;
+    revenue: number;
+  }>;
+  clientAcquisition: Array<{
+    month: string;
+    newClients: number;
+  }>;
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [metrics, setMetrics] = useState<RealtimeMetrics | null>(null);
+  const [activityFeed, setActivityFeed] = useState<ActivityFeedItem[]>([]);
+  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
+  const [performanceData, setPerformanceData] = useState<PerformanceData | null>(null);
 
   useEffect(() => {
-    fetchDashboardStats();
+    fetchDashboardData();
+    setupRealtimeUpdates();
   }, []);
 
-  const fetchDashboardStats = async () => {
+  const fetchDashboardData = async () => {
     setIsLoading(true);
     setError("");
 
     try {
-      // Get the auth token from localStorage
       const token = localStorage.getItem("supabase.auth.token");
       
       if (!token) {
@@ -51,36 +119,177 @@ export default function AdminDashboardPage() {
         return;
       }
 
-      const response = await fetch("/api/admin/stats", {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${JSON.parse(token).access_token}`,
-        },
-      });
+      const [statsResponse, metricsResponse, activityResponse, actionsResponse, performanceResponse] = await Promise.all([
+        fetch("/api/admin/stats", {
+          headers: { "Authorization": `Bearer ${JSON.parse(token).access_token}` }
+        }),
+        fetch("/api/admin/metrics", {
+          headers: { "Authorization": `Bearer ${JSON.parse(token).access_token}` }
+        }),
+        fetch("/api/admin/activity", {
+          headers: { "Authorization": `Bearer ${JSON.parse(token).access_token}` }
+        }),
+        fetch("/api/admin/actions", {
+          headers: { "Authorization": `Bearer ${JSON.parse(token).access_token}` }
+        }),
+        fetch("/api/admin/performance", {
+          headers: { "Authorization": `Bearer ${JSON.parse(token).access_token}` }
+        })
+      ]);
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setStats(data.stats);
-        } else {
-          setError(data.message || "Failed to fetch dashboard stats");
-        }
-      } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to fetch dashboard stats");
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        if (statsData.success) setStats(statsData.stats);
       }
+
+      if (metricsResponse.ok) {
+        const metricsData = await metricsResponse.json();
+        if (metricsData.success) setMetrics(metricsData.metrics);
+      }
+
+      if (activityResponse.ok) {
+        const activityData = await activityResponse.json();
+        if (activityData.success) setActivityFeed(activityData.activity);
+      }
+
+      if (actionsResponse.ok) {
+        const actionsData = await actionsResponse.json();
+        if (actionsData.success) setActionItems(actionsData.actions);
+      }
+
+      if (performanceResponse.ok) {
+        const performanceData = await performanceResponse.json();
+        if (performanceData.success) setPerformanceData(performanceData.data);
+      }
+
     } catch (err) {
-      setError("An error occurred while loading dashboard stats");
+      setError("An error occurred while loading dashboard data");
       console.error("Admin dashboard error:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const setupRealtimeUpdates = () => {
+    // Setup SSE connection for real-time updates
+    const eventSource = new EventSource('/api/realtime/sse?userId=admin');
+    
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      switch (data.type) {
+        case 'project_update':
+        case 'payment_success':
+        case 'ticket_create':
+        case 'asset_upload':
+          // Refresh activity feed
+          fetchActivityFeed();
+          break;
+        case 'new_action_item':
+          // Refresh action items
+          fetchActionItems();
+          break;
+        case 'metrics_update':
+          // Refresh metrics
+          fetchMetrics();
+          break;
+      }
+    };
+
+    eventSource.onerror = () => {
+      console.error('SSE connection error');
+      eventSource.close();
+    };
+
+    return () => eventSource.close();
+  };
+
+  const fetchActivityFeed = async () => {
+    try {
+      const token = localStorage.getItem("supabase.auth.token");
+      if (!token) return;
+      
+      const response = await fetch("/api/admin/activity", {
+        headers: { "Authorization": `Bearer ${JSON.parse(token).access_token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) setActivityFeed(data.activity);
+      }
+    } catch (err) {
+      console.error("Error fetching activity feed:", err);
+    }
+  };
+
+  const fetchActionItems = async () => {
+    try {
+      const token = localStorage.getItem("supabase.auth.token");
+      if (!token) return;
+      
+      const response = await fetch("/api/admin/actions", {
+        headers: { "Authorization": `Bearer ${JSON.parse(token).access_token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) setActionItems(data.actions);
+      }
+    } catch (err) {
+      console.error("Error fetching action items:", err);
+    }
+  };
+
+  const fetchMetrics = async () => {
+    try {
+      const token = localStorage.getItem("supabase.auth.token");
+      if (!token) return;
+      
+      const response = await fetch("/api/admin/metrics", {
+        headers: { "Authorization": `Bearer ${JSON.parse(token).access_token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) setMetrics(data.metrics);
+      }
+    } catch (err) {
+      console.error("Error fetching metrics:", err);
+    }
+  };
+
   const handleLogout = () => {
-    // Clear any stored auth tokens
     localStorage.removeItem("supabase.auth.token");
     router.push("/");
+  };
+
+  const getTrendIcon = (trend: 'up' | 'down' | 'stable') => {
+    switch (trend) {
+      case 'up': return '📈';
+      case 'down': return '📉';
+      case 'stable': return '➡️';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'destructive';
+      case 'high': return 'destructive';
+      case 'normal': return 'secondary';
+      case 'low': return 'outline';
+      default: return 'outline';
+    }
+  };
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'project_submission': return '🚀';
+      case 'payment': return '💳';
+      case 'ticket': return '🎫';
+      case 'asset_upload': return '📁';
+      case 'status_change': return '📊';
+      default: return '📝';
+    }
   };
 
   if (isLoading) {
@@ -128,17 +337,21 @@ export default function AdminDashboardPage() {
           <Link href="/admin/system" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground">
             System Administration
           </Link>
+          
+          <Separator className="my-4" />
+          
+          {/* Placeholder navigation items */}
+          <Link href="/admin/assets" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">
+            📁 Assets Management
+          </Link>
+          <Link href="/admin/payments" className="flex items-center px-3 py-2 text-sm font-medium rounded-md hover:bg-accent hover:text-accent-foreground text-muted-foreground">
+            💳 Payment Management
+          </Link>
         </nav>
         
         <Separator className="my-6" />
         
         <div className="space-y-1">
-          <Button variant="outline" asChild className="w-full justify-start">
-            <Link href="/">Home</Link>
-          </Button>
-          <Button variant="outline" asChild className="w-full justify-start">
-            <Link href="/dashboard">Client Dashboard</Link>
-          </Button>
           <Button variant="outline" onClick={handleLogout} className="w-full justify-start">
             Log Out
           </Button>
@@ -153,7 +366,7 @@ export default function AdminDashboardPage() {
             <h1 className="text-2xl font-bold">Admin Dashboard</h1>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">Welcome, Admin</span>
-              <Button onClick={fetchDashboardStats} disabled={isLoading} variant="outline" size="sm">
+              <Button onClick={fetchDashboardData} disabled={isLoading} variant="outline" size="sm">
                 {isLoading ? "Loading..." : "Refresh"}
               </Button>
             </div>
@@ -164,7 +377,7 @@ export default function AdminDashboardPage() {
         <section className="container mx-auto px-4 py-8">
           <div className="mb-6">
             <p className="text-muted-foreground">
-              Overview of your websiter.click administration panel
+              Real-time overview of your websiter.click administration panel
             </p>
           </div>
 
@@ -174,156 +387,204 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {/* Quick Stats */}
+          {/* Top Metrics Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Clients</p>
-                  <p className="text-2xl font-bold">{stats?.totalClients || 0}</p>
-                </div>
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 text-sm font-medium">👥</span>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Active Projects</p>
-                  <p className="text-2xl font-bold">{stats?.activeProjects || 0}</p>
+                  <p className="text-2xl font-bold">{metrics?.activeProjectsWithCompletion.count || 0}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {metrics?.activeProjectsWithCompletion.completionRate || 0}% completion rate
+                  </p>
                 </div>
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <span className="text-green-600 text-sm font-medium">🚀</span>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Pending Invoices</p>
-                  <p className="text-2xl font-bold">{stats?.pendingInvoices || 0}</p>
-                </div>
-                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                  <span className="text-yellow-600 text-sm font-medium">📄</span>
+                <div className="text-2xl">
+                  {getTrendIcon(metrics?.activeProjectsWithCompletion.trend || 'stable')}
                 </div>
               </div>
             </Card>
 
             <Card className="p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Support Tickets</p>
-                  <p className="text-2xl font-bold">{stats?.openSupportTickets || 0}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Revenue This Month</p>
+                  <p className="text-2xl font-bold">
+                    ${(metrics?.revenueComparison.thisMonth || 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    vs ${(metrics?.revenueComparison.lastMonth || 0).toLocaleString()} last month
+                  </p>
                 </div>
-                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                  <span className="text-red-600 text-sm font-medium">🎫</span>
+                <div className="text-2xl">
+                  {getTrendIcon(metrics?.revenueComparison.trend || 'stable')}
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Outstanding Payments</p>
+                  <p className="text-2xl font-bold">{metrics?.outstandingPayments.count || 0}</p>
+                  <p className="text-xs text-muted-foreground">
+                    ${(metrics?.outstandingPayments.amount || 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className="text-2xl">
+                  {getTrendIcon(metrics?.outstandingPayments.trend || 'stable')}
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Support Resolution</p>
+                  <p className="text-2xl font-bold">
+                    {metrics?.supportTicketResolution.resolutionRate || 0}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {metrics?.supportTicketResolution.resolved || 0} of {metrics?.supportTicketResolution.total || 0} resolved
+                  </p>
+                </div>
+                <div className="text-2xl">
+                  {getTrendIcon(metrics?.supportTicketResolution.trend || 'stable')}
                 </div>
               </div>
             </Card>
           </div>
 
-          {/* Quick Actions */}
-          <Card className="p-6">
-            <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Button asChild className="h-20 flex-col">
-                <Link href="/admin/clients">
-                  <span className="text-lg mb-1">👥</span>
-                  <span>Manage Clients</span>
-                </Link>
-              </Button>
-              
-              <Button asChild variant="outline" className="h-20 flex-col">
-                <Link href="/admin/projects">
-                  <span className="text-lg mb-1">🚀</span>
-                  <span>View Projects</span>
-                </Link>
-              </Button>
-              
-              <Button asChild variant="outline" className="h-20 flex-col">
-                <Link href="/admin/invoices">
-                  <span className="text-lg mb-1">📄</span>
-                  <span>Invoices</span>
-                </Link>
-              </Button>
-              
-              <Button asChild variant="outline" className="h-20 flex-col">
-                <Link href="/admin/support">
-                  <span className="text-lg mb-1">🎫</span>
-                  <span>Support</span>
-                </Link>
-              </Button>
-            </div>
-          </Card>
-
-          {/* Recent Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-            <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
-              <div className="space-y-4">
-                {stats?.recentActivity && stats.recentActivity.length > 0 ? (
-                  stats.recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-start space-x-3">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                      <div>
-                        <p className="text-sm font-medium">{activity.action}</p>
-                        <p className="text-xs text-muted-foreground">{activity.description}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Activity Feed */}
+            <div className="lg:col-span-2">
+              <Card className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold">Real-time Activity Feed</h2>
+                  <Badge variant="outline" className="animate-pulse">LIVE</Badge>
+                </div>
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {activityFeed.length > 0 ? (
+                    activityFeed.map((activity) => (
+                      <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg border">
+                        <div className="text-lg">{getActivityIcon(activity.type)}</div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-sm font-medium">{activity.clientName}</p>
+                              <p className="text-sm text-muted-foreground">{activity.action}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{activity.description}</p>
+                            </div>
+                            <div className="text-right">
+                              <Badge variant={getPriorityColor(activity.priority || 'normal')} className="text-xs">
+                                {activity.priority || 'normal'}
+                              </Badge>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(activity.timestamp).toLocaleTimeString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground">No recent activity</p>
-                )}
-              </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground text-center py-8">No recent activity</p>
+                  )}
+                </div>
+              </Card>
+            </div>
+
+            {/* Action Center */}
+            <div>
+              <Card className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold">Action Center</h2>
+                  <Badge variant="destructive">{actionItems.length}</Badge>
+                </div>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {actionItems.length > 0 ? (
+                    actionItems.map((action) => (
+                      <div key={action.id} className="p-3 rounded-lg border">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="text-sm font-medium">{action.title}</h3>
+                          <Badge variant={getPriorityColor(action.priority)} className="text-xs">
+                            {action.priority}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2">{action.description}</p>
+                        <div className="flex justify-between items-center">
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(action.timestamp).toLocaleDateString()}
+                          </p>
+                          <Button size="sm" variant="outline" className="text-xs">
+                            Review
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground text-center py-8">No action items</p>
+                  )}
+                </div>
+              </Card>
+            </div>
+          </div>
+
+          {/* Performance Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+            <Card className="p-6">
+              <h2 className="text-xl font-bold mb-4">Project Status Distribution</h2>
+              {performanceData && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Planning</span>
+                    <span className="text-sm font-medium">{performanceData.projectStatusDistribution.planning}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">In Progress</span>
+                    <span className="text-sm font-medium">{performanceData.projectStatusDistribution.in_progress}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Review</span>
+                    <span className="text-sm font-medium">{performanceData.projectStatusDistribution.review}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Completed</span>
+                    <span className="text-sm font-medium">{performanceData.projectStatusDistribution.completed}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">On Hold</span>
+                    <span className="text-sm font-medium">{performanceData.projectStatusDistribution.on_hold}</span>
+                  </div>
+                </div>
+              )}
             </Card>
 
             <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4">System Status</h2>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Database</span>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    stats?.systemStatus.database === 'operational' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {stats?.systemStatus.database || 'Unknown'}
-                  </span>
+              <h2 className="text-xl font-bold mb-4">Revenue Trends</h2>
+              {performanceData && (
+                <div className="space-y-2">
+                  {performanceData.revenueTrends.map((trend, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <span className="text-sm">{trend.month}</span>
+                      <span className="text-sm font-medium">${trend.revenue.toLocaleString()}</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">API Services</span>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    stats?.systemStatus.api === 'operational' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {stats?.systemStatus.api || 'Unknown'}
-                  </span>
+              )}
+            </Card>
+
+            <Card className="p-6">
+              <h2 className="text-xl font-bold mb-4">Client Acquisition</h2>
+              {performanceData && (
+                <div className="space-y-2">
+                  {performanceData.clientAcquisition.map((acquisition, index) => (
+                    <div key={index} className="flex justify-between items-center">
+                      <span className="text-sm">{acquisition.month}</span>
+                      <span className="text-sm font-medium">{acquisition.newClients} new</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Storage</span>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    stats?.systemStatus.storage === 'operational' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {stats?.systemStatus.storage || 'Unknown'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Email Service</span>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    stats?.systemStatus.email === 'operational' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {stats?.systemStatus.email || 'Unknown'}
-                  </span>
-                </div>
-              </div>
+              )}
             </Card>
           </div>
         </section>
