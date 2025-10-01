@@ -3,9 +3,11 @@ import { supabase } from '@/lib/supabase';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     // Check if user is authenticated
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -16,10 +18,10 @@ export async function DELETE(
     }
 
     const token = authHeader.substring(7);
-    
+
     // Verify the token and get the user
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { success: false, message: 'Authentication required' },
@@ -27,7 +29,9 @@ export async function DELETE(
       );
     }
 
-    const notificationId = params.id;
+    const notificationId = id;
+
+    console.log('Dismissing notification:', { notificationId, userId: user.id });
 
     // Delete the notification (only if it belongs to the user)
     const { data, error } = await supabase
@@ -36,6 +40,8 @@ export async function DELETE(
       .eq('id', notificationId)
       .eq('client_id', user.id)
       .select();
+
+    console.log('Delete result:', { data, error });
 
     if (error) {
       console.error('Dismiss notification error:', error);
@@ -46,6 +52,7 @@ export async function DELETE(
     }
 
     if (!data || data.length === 0) {
+      console.log('No notification found or access denied for:', { notificationId, userId: user.id });
       return NextResponse.json(
         { success: false, message: 'Notification not found or access denied' },
         { status: 404 }

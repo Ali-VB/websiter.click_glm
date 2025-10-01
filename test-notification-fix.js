@@ -1,5 +1,5 @@
 // Simple test script to verify notification system fix
-const fetch = require('node-fetch');
+// Using native fetch (Node.js 18+ has built-in fetch)
 
 async function testNotificationFix() {
   console.log('Testing notification system fix...');

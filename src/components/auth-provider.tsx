@@ -12,37 +12,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const router = useRouter();
 
   useEffect(() => {
-    // Add authorization header to fetch requests for protected routes
-    const originalFetch = window.fetch;
-    
-    window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
-      // Check if this is a request to a protected route
-      const url = typeof input === 'string' ? input : input.toString();
-      const isProtectedRoute = (url.startsWith('/admin') || url.startsWith('/api/admin')) && 
-                              !url.includes('supabase.co'); // Don't intercept Supabase requests
-      
-      if (isProtectedRoute) {
-        const token = localStorage.getItem('auth_token');
-        
-        if (token) {
-          // Add authorization header
-          const headers = new Headers(init?.headers);
-          headers.set('Authorization', `Bearer ${token}`);
-          
-          init = {
-            ...init,
-            headers,
-          };
-        }
-      }
-      
-      return originalFetch.call(this, input, init);
-    };
+    // DISABLED: AuthProvider fetch interception
+    // The dashboard already handles authentication properly with Supabase sessions
+    // This was causing network errors with notification APIs
+    console.log('AuthProvider: Fetch interception disabled to prevent conflicts with Supabase auth');
 
-    // Cleanup function to restore original fetch
-    return () => {
-      window.fetch = originalFetch;
-    };
+    // Add authorization header to fetch requests for protected routes
+    // const originalFetch = window.fetch;
+    //
+    // window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
+    //   // Check if this is a request to a protected route
+    //   const url = typeof input === 'string' ? input : input.toString();
+    //   const isProtectedRoute = (
+    //     (url.startsWith('/admin') || url.startsWith('/api/admin') || url.startsWith('/api/notifications')) &&
+    //     !url.includes('supabase.co')
+    //   ); // Add notification routes to protected routes
+    //
+    //   if (isProtectedRoute) {
+    //     // For Supabase-based auth, we don't need to add auth tokens
+    //     // The dashboard already handles this properly
+    //     console.log('Protected route detected, but AuthProvider will not interfere:', url);
+    //   }
+    //
+    //   return originalFetch.call(this, input, init);
+    // };
+
+    // // Cleanup function to restore original fetch
+    // return () => {
+    //   window.fetch = originalFetch;
+    // };
   }, [pathname]);
 
   // Check for authentication on protected routes

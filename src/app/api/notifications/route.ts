@@ -90,6 +90,8 @@ export async function GET(request: NextRequest) {
     // Execute the query
     const { data, error, count } = await query.order('created_at', { ascending: false });
 
+    console.log('Notifications query result:', { data, error, count, userId: user.id });
+
     if (error) {
       console.error('Notifications fetch error:', error);
       return NextResponse.json(
@@ -101,12 +103,12 @@ export async function GET(request: NextRequest) {
     // Transform to match expected interface
     const transformedNotifications = (data || []).map((n: DatabaseNotification) => ({
       id: n.id,
-      title: 'Notification', // Default title since it doesn't exist in DB
-      message: n.message,
-      is_read: n.is_read,
+      title: n.message.split(':')[0] || 'Notification', // Extract title from message
+      message: n.message.includes(':') ? n.message.substring(n.message.indexOf(':') + 1).trim() : n.message,
+      read: n.is_read, // Use read directly for client compatibility
       type: 'system',
       sent_at: n.created_at,
-      read: n.is_read // Map is_read to read for client compatibility
+      is_read: n.is_read // Keep both for compatibility
     }));
 
     // Skip is_delivered logic since it doesn't exist in the current schema

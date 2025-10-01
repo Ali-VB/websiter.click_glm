@@ -136,6 +136,7 @@ export default function DashboardPage() {
   const [paymentError, setPaymentError] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState("");
   const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [isMarkingAllAsRead, setIsMarkingAllAsRead] = useState(false);
 
   // Get active tab from URL params on initial load
   useEffect(() => {
@@ -206,10 +207,20 @@ export default function DashboardPage() {
         },
       });
 
+      console.log('🔄 Page reload: Fetching notifications from API...', {
+        status: notificationsResponse.status,
+        ok: notificationsResponse.ok
+      });
+
       if (notificationsResponse.ok) {
         const notificationsData = await notificationsResponse.json();
+        console.log("📋 Page reload: Notifications API response:", notificationsData);
+        console.log("📋 Page reload: Raw notifications data:", notificationsData.notifications);
+
         setNotifications(notificationsData.notifications || []);
-        setUnreadCount(notificationsData.notifications.filter((n: Notification) => !n.read).length);
+        const unreadCount = notificationsData.notifications.filter((n: Notification) => !n.read).length;
+        console.log("📋 Page reload: Calculated unread count:", unreadCount);
+        setUnreadCount(unreadCount);
       }
 
       // Fetch project assets (only if projects exist)
@@ -259,80 +270,125 @@ export default function DashboardPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         console.log('Setting up real-time notification subscription for user:', session.user.id);
+        console.log('Supabase client available:', !!supabase);
+        console.log('Supabase realtime URL:', supabase.realtimeUrl);
 
         const channelName = `notifications_${session.user.id}_${Date.now()}`;
+        console.log('Channel name:', channelName);
 
-        // Subscribe to real-time notifications
-        const channel = supabase
-          .channel(channelName, {
-            config: {
-              broadcast: { self: true },
-              presence: { key: session.user.id },
-            },
-          })
-          .on('postgres_changes', {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `recipient_id=eq.${session.user.id}` // Correct column name from database schema
-          }, (payload) => {
-            console.log('🔔 New notification received via real-time:', payload);
-            console.log('Notification details:', payload.new);
+        try {
+          // Test realtime connection first
+          console.log('Testing Supabase realtime connection...');
 
-            // Show browser notification if permitted
-            if (Notification.permission === 'granted') {
-              new Notification('New Notification', {
-                body: payload.new?.message || 'You have a new notification',
-                icon: '/logo-black.png'
-              });
-            }
+          // Subscribe to real-time notifications
+          const channel = supabase
+            .channel(channelName)
+            .on('postgres_changes', {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'notifications',
+              filter: `client_id=eq.${session.user.id}` // Use client_id to match database schema
+            }, (payload) => {
+              console.log('🔔 New notification received via real-time:', payload);
+              console.log('Notification details:', payload.new);
 
-            // Refresh notifications when a new one is received
-            fetchDashboardData(session.access_token);
-          })
-          .on('postgres_changes', {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'notifications',
-            filter: `recipient_id=eq.${session.user.id}` // Correct column name from database schema
-          }, (payload) => {
-            console.log('📝 Notification updated via real-time:', payload);
-            // Refresh notifications when an existing one is updated
-            fetchDashboardData(session.access_token);
-          })
-          .subscribe((status, err) => {
-            console.log('Real-time subscription status:', status, err ? `Error: ${err}` : '');
-
-            if (status === 'SUBSCRIBED') {
-              console.log('✅ Successfully subscribed to real-time notifications');
-              setRealtimeStatus('connected');
-              retryCount = 0; // Reset retry count on successful connection
-            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              console.error(`❌ Real-time subscription failed (${status}):`, err);
-              setRealtimeStatus('disconnected');
-
-              // Implement retry logic
-              if (retryCount < maxRetries) {
-                retryCount++;
-                const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Exponential backoff, max 10 seconds
-                console.log(`🔄 Retrying real-time connection in ${retryDelay}ms (attempt ${retryCount}/${maxRetries})`);
-
-                retryTimeout = setTimeout(() => {
-                  setupRealtimeSubscription();
-                }, retryDelay);
-              } else {
-                console.error('❌ Max retry attempts reached for real-time subscription');
+              // Show browser notification if permitted
+              if (typeof window !== 'undefined' && Notification.permission === 'granted') {
+                new Notification('New Notification', {
+                  body: payload.new?.message || 'You have a new notification',
+                  icon: '/logo-black.png'
+                });
               }
-            }
-          });
 
-        return () => {
-          console.log('Cleaning up real-time subscription');
-          if (retryTimeout) {
-            clearTimeout(retryTimeout);
+              // Don't refresh if we're currently marking all as read
+              if (!isMarkingAllAsRead) {
+                // Refresh notifications when a new one is received
+                fetchDashboardData(session.access_token);
+              } else {
+                console.log('⏸️ Skipping refresh - Mark All as Read in progress');
+              }
+            })
+            .on('postgres_changes', {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'notifications',
+              filter: `client_id=eq.${session.user.id}` // Use client_id to match database schema
+            }, (payload) => {
+              console.log('📝 Notification updated via real-time:', payload);
+
+              // Check if this is a "mark as read" update
+              const wasUpdated = payload.old && payload.new && payload.old.is_read !== payload.new.is_read;
+
+              if (wasUpdated && payload.new.is_read) {
+                console.log('📚 Notification marked as read via real-time - skipping refresh to avoid conflicts');
+                return; // Don't refresh on mark as read updates
+              }
+
+              // Don't refresh if we're currently marking all as read
+              if (!isMarkingAllAsRead) {
+                // Refresh notifications when an existing one is updated
+                fetchDashboardData(session.access_token);
+              } else {
+                console.log('⏸️ Skipping refresh - Mark All as Read in progress');
+              }
+            })
+            .subscribe((status, err) => {
+              console.log('Real-time subscription status:', status);
+              if (err) {
+                console.error('Real-time subscription error details:', err);
+              }
+
+              if (status === 'SUBSCRIBED') {
+                console.log('✅ Successfully subscribed to real-time notifications');
+                setRealtimeStatus('connected');
+                retryCount = 0; // Reset retry count on successful connection
+              } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                console.error(`❌ Real-time subscription failed (${status})`, err);
+                setRealtimeStatus('disconnected');
+
+                // Implement retry logic
+                if (retryCount < maxRetries) {
+                  retryCount++;
+                  const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Exponential backoff, max 10 seconds
+                  console.log(`🔄 Retrying real-time connection in ${retryDelay}ms (attempt ${retryCount}/${maxRetries})`);
+
+                  retryTimeout = setTimeout(() => {
+                    setupRealtimeSubscription();
+                  }, retryDelay);
+                } else {
+                  console.error('❌ Max retry attempts reached for real-time subscription');
+                }
+              } else if (status === 'CLOSED') {
+                console.log('🔌 Real-time connection closed');
+                setRealtimeStatus('disconnected');
+              }
+            });
+
+          return () => {
+            console.log('Cleaning up real-time subscription');
+            if (retryTimeout) {
+              clearTimeout(retryTimeout);
+            }
+            supabase.removeChannel(channel);
+          };
+
+        } catch (error) {
+          console.error('❌ Error setting up real-time subscription:', error);
+          setRealtimeStatus('disconnected');
+
+          // Implement retry logic on setup error
+          if (retryCount < maxRetries) {
+            retryCount++;
+            const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+            console.log(`🔄 Retrying setup in ${retryDelay}ms (attempt ${retryCount}/${maxRetries})`);
+
+            retryTimeout = setTimeout(() => {
+              setupRealtimeSubscription();
+            }, retryDelay);
+          } else {
+            console.error('❌ Max setup retry attempts reached');
           }
-          supabase.removeChannel(channel);
-        };
+        }
       } else {
         console.log('No session found, skipping real-time subscription');
         setRealtimeStatus('disconnected');
@@ -347,7 +403,7 @@ export default function DashboardPage() {
         clearTimeout(retryTimeout);
       }
     };
-  }, [fetchDashboardData]);
+  }, [fetchDashboardData, isMarkingAllAsRead]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -425,13 +481,33 @@ export default function DashboardPage() {
       });
 
       if (response.ok) {
-        setNotifications(notifications.map(n => 
+        setNotifications(notifications.map(n =>
           n.id === id ? { ...n, read: true } : n
         ));
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (err) {
       console.error("Error marking notification as read:", err);
+    }
+  };
+
+  const markNotificationAsUnread = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${id}/unread`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        setNotifications(notifications.map(n =>
+          n.id === id ? { ...n, read: false } : n
+        ));
+        setUnreadCount(prev => prev + 1);
+      }
+    } catch (err) {
+      console.error("Error marking notification as unread:", err);
     }
   };
 
@@ -458,19 +534,154 @@ export default function DashboardPage() {
 
   const markAllNotificationsAsRead = async () => {
     try {
-      const response = await fetch("/api/notifications/read-all", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-        },
+      console.log('🔥 Mark All as Read clicked - Starting process...');
+      console.log('Current notifications count:', notifications.length);
+      console.log('Current unread count:', unreadCount);
+
+      // Set flag to prevent real-time interference
+      setIsMarkingAllAsRead(true);
+      console.log('🚩 Set Mark All as Read flag to prevent real-time interference');
+
+      // Get session once
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('No session found');
+        setIsMarkingAllAsRead(false);
+        return;
+      }
+
+      console.log('Session available, user ID:', session.user?.id);
+
+      // Use Supabase client directly instead of fetch to avoid AuthProvider interference
+      const { data: updateData, error: updateError } = await supabase
+        .from('notifications')
+        .update({
+          is_read: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('client_id', session.user.id)
+        .eq('is_read', false)
+        .select();
+
+      console.log('🔥 Direct Supabase update result:', { updateData, updateError });
+
+      if (updateError) {
+        console.error('❌ Update failed:', updateError);
+        return;
+      }
+
+      // Verify the update worked by checking database immediately
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('notifications')
+        .select('id, is_read, client_id')
+        .eq('client_id', session.user.id)
+        .eq('is_read', false);
+
+      console.log('🔍 Verification check (unread should be 0):', {
+        unreadCount: verifyData?.length,
+        verifyError
       });
 
+      // Also check read notifications
+      const { data: readData, error: readError } = await supabase
+        .from('notifications')
+        .select('id, is_read, client_id')
+        .eq('client_id', session.user.id)
+        .eq('is_read', true);
+
+      console.log('🔍 Verification check (read should be all):', {
+        readCount: readData?.length,
+        readError
+      });
+
+      if (updateError) {
+        console.error('Supabase update error:', updateError);
+        return;
+      }
+
+      // Create a mock response object to match the existing code structure
+      const mockResponse = {
+        ok: !updateError,
+        status: updateError ? 500 : 200,
+        json: async () => ({
+          success: true,
+          message: 'All notifications marked as read successfully',
+          count: updateData?.length || 0,
+          notifications: updateData || []
+        })
+      };
+
+      const response = mockResponse;
+
+      console.log('API response status:', response.status);
+      console.log('API response ok:', response.ok);
+
       if (response.ok) {
-        setNotifications(notifications.map(n => ({ ...n, read: true })));
+        const data = await response.json();
+        console.log('Mark all as read response:', data);
+
+        // Update local state immediately for better UX
+        console.log('Updating local state to mark all as read...');
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
         setUnreadCount(0);
+
+        // Wait a bit longer for database to be fully updated and real-time events to settle
+        setTimeout(async () => {
+          try {
+            console.log('🔍 Checking final state after Mark All as Read...');
+
+            // Use Supabase client directly for notifications
+            const { data: notificationsData, error: notificationsError } = await supabase
+              .from('notifications')
+              .select('*')
+              .eq('client_id', session.user.id)
+              .order('created_at', { ascending: false });
+
+            if (notificationsError) {
+              console.error('Error fetching final notifications:', notificationsError);
+            } else {
+              console.log('✅ Final server notifications:', notificationsData);
+
+              // Transform to match expected format
+              const transformedNotifications = notificationsData.map((n: any) => ({
+                id: n.id,
+                title: n.message.split(':')[0] || 'Notification',
+                message: n.message.includes(':') ? n.message.substring(n.message.indexOf(':') + 1).trim() : n.message,
+                read: n.is_read,
+                type: n.type || 'system',
+                sent_at: n.created_at
+              }));
+
+              setNotifications(transformedNotifications || []);
+              const actualUnreadCount = transformedNotifications.filter((n: any) => !n.read).length;
+              setUnreadCount(actualUnreadCount);
+              console.log('🎯 Final unread count from server:', actualUnreadCount);
+            }
+
+            // Clear the flag after a short delay
+            setTimeout(() => {
+              console.log('🚩 Clearing Mark All as Read flag');
+              setIsMarkingAllAsRead(false);
+            }, 1000);
+
+          } catch (refreshError) {
+            console.error('Error refreshing notifications:', refreshError);
+            setIsMarkingAllAsRead(false);
+          }
+        }, 1500); // Longer delay to ensure everything settles
+
+      } else {
+        const errorText = await response.text();
+        console.error('Mark all as read failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        setIsMarkingAllAsRead(false);
       }
     } catch (err) {
       console.error("Error marking all notifications as read:", err);
+      setIsMarkingAllAsRead(false);
     }
   };
 
@@ -750,6 +961,7 @@ export default function DashboardPage() {
           onThemeToggle={handleThemeToggle}
           unreadNotifications={unreadCount}
           onLogout={handleLogout}
+          onNavigateToNotifications={() => setActiveTab('notifications')}
         />
 
         {/* Dashboard Content */}
@@ -1575,13 +1787,7 @@ export default function DashboardPage() {
                                       <span>Sent: {formatDate(notification.sent_at)}</span>
                                     </div>
                                   </div>
-                                  <div className="flex items-center space-x-2">
-                                    {!notification.read && (
-                                      <Button variant="outline" size="sm" onClick={() => markNotificationAsRead(notification.id)}>Mark as Read</Button>
-                                    )}
-                                    <Button variant="outline" size="sm" onClick={() => dismissNotification(notification.id)}>Dismiss</Button>
-                                  </div>
-                                </div>
+                                                                  </div>
                               </CardContent>
                             </Card>
                           ))
