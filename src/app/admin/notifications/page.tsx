@@ -144,7 +144,9 @@ export default function AdminNotificationsPage() {
 
       if (notificationsResponse.ok) {
         const notificationsData = await notificationsResponse.json();
+        console.log("Notifications API response:", notificationsData);
         if (notificationsData.success) {
+          console.log("Setting notifications:", notificationsData.notifications || []);
           setNotifications(notificationsData.notifications || []);
         } else {
           setError(notificationsData.message || "Failed to fetch notifications");
@@ -237,8 +239,17 @@ export default function AdminNotificationsPage() {
           setError(data.message || "Failed to send notification");
         }
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || "Failed to send notification");
+        // Handle non-JSON error responses (like 404 HTML pages)
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          setError(errorData.message || `Failed to send notification (${response.status})`);
+        } else {
+          // Response is not JSON (likely HTML error page)
+          const errorText = await response.text();
+          console.error("Non-JSON error response:", errorText.substring(0, 200));
+          setError(`Failed to send notification: ${response.status} ${response.statusText}`);
+        }
       }
       
     } catch (err) {
@@ -454,9 +465,12 @@ export default function AdminNotificationsPage() {
                         </p>
                         <div className="flex justify-between text-xs text-muted-foreground">
                           <span>
-                            {notification.recipientType === "all" 
-                              ? "All clients" 
-                              : `${notification.recipients.length} client${notification.recipients.length !== 1 ? 's' : ''}`}
+                            {notification.recipientType === "all"
+                              ? "All clients"
+                              : notification.client
+                                ? `To: ${notification.client.name}`
+                                : `${notification.recipients.length} client${notification.recipients.length !== 1 ? 's' : ''}`
+                            }
                           </span>
                           <span>{formatDateTime(notification.sentAt)}</span>
                         </div>

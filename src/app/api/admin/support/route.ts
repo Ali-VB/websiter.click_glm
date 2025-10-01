@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       .from("support_tickets")
       .select(`
         *,
-        client:clients(id, name, email),
+        client:clients!fk_support_tickets_client_id(id, name, email),
         project:projects(id, name),
         replies:support_ticket_replies(
           id,

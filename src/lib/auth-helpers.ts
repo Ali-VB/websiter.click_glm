@@ -71,35 +71,36 @@ export function requireAuthenticatedUser(request: NextRequest) {
  * This is useful for cases where middleware might not have run
  */
 export async function getUserFromToken(request: NextRequest) {
-  const supabase = createServerClient();
-  
   // Get the authorization header
   const authHeader = request.headers.get('authorization');
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
-  
+
   const token = authHeader.substring(7);
-  
+
+  // Create Supabase client with bearer token
+  const supabase = createServerClient(token);
+
   // Verify the token and get the user
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  
+  const { data: { user }, error } = await supabase.auth.getUser();
+
   if (error || !user) {
     return null;
   }
-  
+
   // Get the user's role from the clients table
   const { data: client, error: clientError } = await supabase
     .from('clients')
     .select('role')
     .eq('id', user.id)
     .single();
-  
+
   if (clientError || !client) {
     return null;
   }
-  
+
   return {
     id: user.id,
     email: user.email,

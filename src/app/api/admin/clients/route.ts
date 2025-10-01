@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       .from('clients')
       .select(`
         *,
-        projects (
+        projects!fk_projects_client_id (
           id,
           name,
           status

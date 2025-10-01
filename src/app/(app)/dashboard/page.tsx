@@ -251,19 +251,30 @@ export default function DashboardPage() {
 
   // Set up real-time notification subscription
   useEffect(() => {
+    let retryTimeout: NodeJS.Timeout;
+    let retryCount = 0;
+    const maxRetries = 3;
+
     const setupRealtimeSubscription = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         console.log('Setting up real-time notification subscription for user:', session.user.id);
-        
+
+        const channelName = `notifications_${session.user.id}_${Date.now()}`;
+
         // Subscribe to real-time notifications
         const channel = supabase
-          .channel('notifications')
+          .channel(channelName, {
+            config: {
+              broadcast: { self: true },
+              presence: { key: session.user.id },
+            },
+          })
           .on('postgres_changes', {
             event: 'INSERT',
             schema: 'public',
             table: 'notifications',
-            filter: `client_id=eq.${session.user.id}` // Correct column name from database schema
+            filter: `recipient_id=eq.${session.user.id}` // Correct column name from database schema
           }, (payload) => {
             console.log('🔔 New notification received via real-time:', payload);
             console.log('Notification details:', payload.new);
@@ -283,36 +294,59 @@ export default function DashboardPage() {
             event: 'UPDATE',
             schema: 'public',
             table: 'notifications',
-            filter: `client_id=eq.${session.user.id}` // Correct column name from database schema
+            filter: `recipient_id=eq.${session.user.id}` // Correct column name from database schema
           }, (payload) => {
             console.log('📝 Notification updated via real-time:', payload);
             // Refresh notifications when an existing one is updated
             fetchDashboardData(session.access_token);
           })
-          .subscribe((status) => {
-            console.log('Real-time subscription status:', status);
+          .subscribe((status, err) => {
+            console.log('Real-time subscription status:', status, err ? `Error: ${err}` : '');
+
             if (status === 'SUBSCRIBED') {
               console.log('✅ Successfully subscribed to real-time notifications');
               setRealtimeStatus('connected');
-            } else if (status === 'CHANNEL_ERROR') {
-              console.error('❌ Failed to subscribe to real-time notifications');
+              retryCount = 0; // Reset retry count on successful connection
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              console.error(`❌ Real-time subscription failed (${status}):`, err);
               setRealtimeStatus('disconnected');
-            } else if (status === 'TIMED_OUT') {
-              console.warn('⚠️ Real-time subscription timed out');
-              setRealtimeStatus('disconnected');
+
+              // Implement retry logic
+              if (retryCount < maxRetries) {
+                retryCount++;
+                const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Exponential backoff, max 10 seconds
+                console.log(`🔄 Retrying real-time connection in ${retryDelay}ms (attempt ${retryCount}/${maxRetries})`);
+
+                retryTimeout = setTimeout(() => {
+                  setupRealtimeSubscription();
+                }, retryDelay);
+              } else {
+                console.error('❌ Max retry attempts reached for real-time subscription');
+              }
             }
           });
 
         return () => {
           console.log('Cleaning up real-time subscription');
+          if (retryTimeout) {
+            clearTimeout(retryTimeout);
+          }
           supabase.removeChannel(channel);
         };
       } else {
         console.log('No session found, skipping real-time subscription');
+        setRealtimeStatus('disconnected');
       }
     };
 
     setupRealtimeSubscription();
+
+    // Cleanup function
+    return () => {
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
+    };
   }, [fetchDashboardData]);
 
   const getStatusColor = (status: string) => {

@@ -18,7 +18,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
       // Check if this is a request to a protected route
       const url = typeof input === 'string' ? input : input.toString();
-      const isProtectedRoute = url.startsWith('/admin') || url.startsWith('/api/admin');
+      const isProtectedRoute = (url.startsWith('/admin') || url.startsWith('/api/admin')) && 
+                              !url.includes('supabase.co'); // Don't intercept Supabase requests
       
       if (isProtectedRoute) {
         const token = localStorage.getItem('auth_token');

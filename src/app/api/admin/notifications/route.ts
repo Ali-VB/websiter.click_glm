@@ -2,13 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, createServiceRoleClient } from '@/lib/supabase';
 import { requireAdminFromToken } from '@/lib/auth-helpers';
 
-// Define the Notification interface based on actual database schema
+// Define the Notification interface based on current database schema (before migration 013)
 interface DatabaseNotification {
   id: string;
-  client_id: string;
+  client_id: string; // Current database uses client_id, not recipient_id
   message: string;
-  is_read: boolean;
+  is_read: boolean; // Current database uses is_read, not is_delivered
   created_at: string;
+  // These columns might not exist yet in current database
+  sender_id?: string | null;
+  type?: string;
+  title?: string;
+  data?: Record<string, any> | null;
+  priority?: string;
+  expires_at?: string | null;
+  updated_at?: string;
 }
 
 interface Client {
@@ -78,57 +86,88 @@ export async function GET(request: NextRequest) {
 
     // Build the query to get all notifications with client info
     const supabase = createServerClient();
-    let query = supabase
+
+    // First, get the notifications with count
+    const { data: notificationsData, error: notificationsError, count } = await supabase
       .from('notifications')
-      .select(`
-        *,
-        clients!fk_notifications_client_id(id, name, email, status)
-      `, { count: 'exact' });
+      .select('*', { count: 'exact' })
+      .range(offset, offset + limit - 1)
+      .order('created_at', { ascending: false });
 
-    // Apply pagination
-    query = query.range(offset, offset + limit - 1);
-
-    // Execute the query
-    const { data, error, count } = await query.order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Admin notifications fetch error:', error);
+    if (notificationsError) {
+      console.error('Admin notifications fetch error:', notificationsError);
       return NextResponse.json(
         { success: false, message: 'An error occurred while retrieving notifications' },
         { status: 500 }
       );
     }
 
-    // Define the type for the joined data
+    // If we have notifications, fetch the related client information
+    let data = notificationsData;
+    if (notificationsData && notificationsData.length > 0) {
+      // Get all unique client IDs (current database uses client_id)
+      const clientIds = [...new Set(notificationsData.map(n => n.client_id).filter(Boolean))];
+
+      // Fetch client information
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('id, name, email, status')
+        .in('id', clientIds);
+
+      // Combine the data - map client_id to client info
+      data = notificationsData.map(notification => ({
+        ...notification,
+        clients: clientsData?.find(c => c.id === notification.client_id) || null,
+        senders: null // No sender info in current database schema
+      }));
+    }
+
+  
+    // Define the type for the joined data (current database schema)
     interface NotificationWithClient {
       id: string;
-      client_id: string;
+      client_id: string; // Current database uses client_id
       message: string;
-      is_read: boolean;
+      is_read: boolean; // Current database uses is_read
       created_at: string;
-      updated_at: string;
+      // These might be null or undefined in current database
+      sender_id?: string | null;
+      type?: string;
+      title?: string;
+      data?: Record<string, any> | null;
+      priority?: string;
+      expires_at?: string | null;
+      updated_at?: string;
       clients: {
         id: string;
         name: string;
         email: string;
         status: "active" | "inactive" | "prospect";
       };
+      senders: null; // No sender info in current database schema
     }
 
     // Transform the data to match expected format
     const transformedNotifications = (data || []).map((item: NotificationWithClient) => {
+      // Extract title from message if title field doesn't exist
+      const title = item.title || item.message.split(':')[0] || 'Notification';
+      const message = item.title && item.message.includes(':')
+        ? item.message.substring(item.message.indexOf(':') + 1).trim()
+        : item.message;
+
       return {
         id: item.id,
-        title: 'Notification', // Default title since it doesn't exist in DB
-        message: item.message,
+        title: title,
+        message: message,
         recipientType: 'specific', // All notifications are client-specific
-        recipients: [item.client_id],
+        recipients: [item.client_id], // Use client_id for current database schema
         sentAt: item.created_at,
-        sentBy: 'System', // Default since sender_id doesn't exist
-        status: item.is_read ? 'read' : 'sent',
-        type: 'system', // Default type since it doesn't exist in DB
-        priority: 'normal', // Default priority since it doesn't exist in DB
-        client: item.clients
+        sentBy: 'System', // No sender info in current database schema
+        status: item.is_read ? 'read' : 'sent', // Use is_read instead of is_delivered
+        type: item.type || 'system', // Default to system if type doesn't exist
+        priority: item.priority || 'normal', // Default to normal if priority doesn't exist
+        client: item.clients,
+        sender: null // No sender info in current database schema
       };
     });
 
@@ -210,13 +249,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get the current admin user ID to use as sender_id
+    const senderId = user.id;
+
     // Create notifications for each client
+    // Use current database schema (client_id, is_read) for compatibility
     const notifications = client_ids.map((client_id: string) => ({
-      client_id: client_id, // Use client_id as per actual database schema
+      client_id: client_id, // Current database uses client_id
       message: `${title}: ${message}`, // Combine title and message since only message field exists
-      is_read: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      is_read: false, // Current database uses is_read
+      created_at: new Date().toISOString()
     }));
 
     // Insert notifications using service role to bypass RLS
@@ -240,8 +282,8 @@ export async function POST(request: NextRequest) {
       try {
         await realtime.sendNotification(client_id, {
           id: data?.find(n => n.client_id === client_id)?.id || '',
-          recipient_id: client_id,
-          type: 'system',
+          recipient_id: client_id, // Use client_id for current database schema
+          type: type,
           title: title,
           message: message,
           is_read: false,

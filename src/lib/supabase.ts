@@ -17,9 +17,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 })
 
 // Server client for API routes and middleware
-export function createServerClient(request?: NextRequest) {
-  if (request) {
-    // For middleware usage with request context
+export function createServerClient(tokenOrRequest?: NextRequest | string) {
+  if (!tokenOrRequest) {
+    // For API routes usage without auth context
+    return createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+
+  // Support bearer token strings
+  if (typeof tokenOrRequest === 'string') {
     return createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: false,
@@ -27,15 +37,48 @@ export function createServerClient(request?: NextRequest) {
       },
       global: {
         headers: {
-          // Forward cookies from the request to the server client
-          cookie: request.headers.get('cookie') || '',
+          Authorization: `Bearer ${tokenOrRequest}`,
         },
       },
     });
   }
-  
-  // For API routes usage
+
+  // For middleware usage with request context (NextRequest object)
+  const authHeader = tokenOrRequest.headers.get('authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    // Use bearer token if present
+    const token = authHeader.substring(7);
+    return createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    });
+  }
+
+  // Fall back to cookie-based auth
   return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    global: {
+      headers: {
+        // Forward cookies from the request to the server client
+        cookie: tokenOrRequest.headers.get('cookie') || '',
+      },
+    },
+  });
+}
+
+// Service role client for admin operations that need to bypass RLS
+export function createServiceRoleClient() {
+  return createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
