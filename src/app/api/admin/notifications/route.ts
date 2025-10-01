@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase';
+import { requireAdminFromToken } from '@/lib/auth-helpers';
 
-// Define the Notification interface
+// Define the Notification interface based on actual database schema
 interface DatabaseNotification {
   id: string;
   client_id: string;
-  title?: string;
   message: string;
   is_read: boolean;
-  read?: boolean;
   created_at: string;
-  sent_at?: string;
-  type?: string;
 }
 
 interface Client {
@@ -33,10 +30,11 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    
-    // Verify the token and get the user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+
+    // Create Supabase client with bearer token
+    const supabaseClient = createServerClient(token);
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+
     if (authError || !user) {
       return NextResponse.json(
         { success: false, message: 'Authentication required' },
@@ -45,7 +43,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is an admin
-    const { data: clientData, error: clientError } = await supabase
+    const { data: clientData, error: clientError } = await supabaseClient
       .from('clients')
       .select('role')
       .eq('id', user.id)
@@ -79,16 +77,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Build the query to get all notifications with client info
+    const supabase = createServerClient();
     let query = supabase
       .from('notifications')
       .select(`
         *,
-        clients (
-          id,
-          name,
-          email,
-          status
-        )
+        clients!fk_notifications_client_id(id, name, email, status)
       `, { count: 'exact' });
 
     // Apply pagination
@@ -109,12 +103,10 @@ export async function GET(request: NextRequest) {
     interface NotificationWithClient {
       id: string;
       client_id: string;
-      title?: string;
       message: string;
       is_read: boolean;
       created_at: string;
-      sent_at?: string;
-      type?: string;
+      updated_at: string;
       clients: {
         id: string;
         name: string;
@@ -125,21 +117,17 @@ export async function GET(request: NextRequest) {
 
     // Transform the data to match expected format
     const transformedNotifications = (data || []).map((item: NotificationWithClient) => {
-      // Parse the message to extract title and content
-      // Messages are stored as "Title: Content"
-      const messageParts = item.message.split(': ');
-      const title = messageParts.length > 1 ? messageParts[0] : 'System Notification';
-      const message = messageParts.length > 1 ? messageParts.slice(1).join(': ') : item.message;
-      
       return {
         id: item.id,
-        title,
-        message,
+        title: 'Notification', // Default title since it doesn't exist in DB
+        message: item.message,
         recipientType: 'specific', // All notifications are client-specific
         recipients: [item.client_id],
-        sentAt: item.sent_at || item.created_at,
-        sentBy: 'System',
+        sentAt: item.created_at,
+        sentBy: 'System', // Default since sender_id doesn't exist
         status: item.is_read ? 'read' : 'sent',
+        type: 'system', // Default type since it doesn't exist in DB
+        priority: 'normal', // Default priority since it doesn't exist in DB
         client: item.clients
       };
     });
@@ -177,10 +165,11 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    
-    // Verify the token and get the user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+
+    // Create Supabase client with bearer token
+    const supabaseClient = createServerClient(token);
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+
     if (authError || !user) {
       return NextResponse.json(
         { success: false, message: 'Authentication required' },
@@ -189,7 +178,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is an admin
-    const { data: clientData, error: clientError } = await supabase
+    const { data: clientData, error: clientError } = await supabaseClient
       .from('clients')
       .select('role')
       .eq('id', user.id)
@@ -223,14 +212,16 @@ export async function POST(request: NextRequest) {
 
     // Create notifications for each client
     const notifications = client_ids.map((client_id: string) => ({
-      client_id,
-      message: `${title}: ${message}`, // Include title in the message since we don't have a title column
+      client_id: client_id, // Use client_id as per actual database schema
+      message: `${title}: ${message}`, // Combine title and message since only message field exists
       is_read: false,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }));
 
-    // Insert notifications
-    const { data, error } = await supabase
+    // Insert notifications using service role to bypass RLS
+    const serviceSupabase = createServiceRoleClient();
+    const { data, error } = await serviceSupabase
       .from('notifications')
       .insert(notifications)
       .select();
@@ -241,6 +232,24 @@ export async function POST(request: NextRequest) {
         { success: false, message: 'An error occurred while creating notifications' },
         { status: 500 }
       );
+    }
+
+    // Send real-time notifications to each client
+    const { realtime } = await import('@/lib/realtime');
+    for (const client_id of client_ids) {
+      try {
+        await realtime.sendNotification(client_id, {
+          id: data?.find(n => n.client_id === client_id)?.id || '',
+          recipient_id: client_id,
+          type: 'system',
+          title: title,
+          message: message,
+          is_read: false,
+          priority: 'normal'
+        });
+      } catch (error) {
+        console.error(`Failed to send real-time notification to ${client_id}:`, error);
+      }
     }
 
     return NextResponse.json({

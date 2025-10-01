@@ -1,42 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase';
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase';
 import { realtime } from '@/lib/realtime';
 
-// Define the Notification interfaces
+// Define the Notification interfaces based on actual database schema
 interface DatabaseNotification {
   id: string;
-  recipient_id: string;
-  sender_id?: string;
-  type: string;
-  title: string;
+  client_id: string;
   message: string;
-  data?: Record<string, unknown>;
   is_read: boolean;
-  is_delivered: boolean;
-  delivery_method: string[];
-  priority?: string;
-  expires_at?: string;
   created_at: string;
   updated_at: string;
 }
 
 interface Notification {
   id: string;
-  type: string;
   title: string;
   message: string;
-  data?: Record<string, unknown>;
   is_read: boolean;
-  is_delivered: boolean;
-  priority?: string;
-  created_at: string;
-  expires_at?: string;
+  type: string;
+  sent_at: string;
+  read: boolean;
 }
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient();
-    
     // Check if user is authenticated
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -47,10 +34,11 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    
-    // Verify the token and get the user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
+
+    // Create Supabase client and verify token
+    const authSupabase = createServerClient();
+    const { data: { user }, error: authError } = await authSupabase.auth.getUser(token);
+
     if (authError || !user) {
       return NextResponse.json(
         { success: false, message: 'Authentication required' },
@@ -81,27 +69,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Use service role client to bypass RLS for this query
+    // We've already authenticated the user above
+    const supabase = createServiceRoleClient();
+
     // Build the query
     let query = supabase
       .from('notifications')
       .select('*', { count: 'exact' })
-      .eq('recipient_id', user.id);
+      .eq('client_id', user.id);
 
     // Apply filters
     if (unreadOnly) {
       query = query.eq('is_read', false);
     }
-
-    if (type) {
-      query = query.eq('type', type);
-    }
-
-    if (priority) {
-      query = query.eq('priority', priority);
-    }
-
-    // Filter out expired notifications
-    query = query.or('expires_at.is.null,expires_at.gt.' + new Date().toISOString());
 
     // Apply pagination
     query = query.range(offset, offset + limit - 1);
@@ -120,27 +101,15 @@ export async function GET(request: NextRequest) {
     // Transform to match expected interface
     const transformedNotifications = (data || []).map((n: DatabaseNotification) => ({
       id: n.id,
-      type: n.type,
-      title: n.title,
+      title: 'Notification', // Default title since it doesn't exist in DB
       message: n.message,
-      data: n.data,
       is_read: n.is_read,
-      is_delivered: n.is_delivered,
-      priority: n.priority,
-      created_at: n.created_at,
-      expires_at: n.expires_at
+      type: 'system',
+      sent_at: n.created_at,
+      read: n.is_read // Map is_read to read for client compatibility
     }));
 
-    // Mark notifications as delivered when fetched
-    if (data && data.length > 0) {
-      const undeliveredNotifications = data.filter(n => !n.is_delivered);
-      if (undeliveredNotifications.length > 0) {
-        await supabase
-          .from('notifications')
-          .update({ is_delivered: true })
-          .in('id', undeliveredNotifications.map(n => n.id));
-      }
-    }
+    // Skip is_delivered logic since it doesn't exist in the current schema
 
     // Prepare the response
     const response: {
@@ -181,8 +150,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerClient();
-    
     // Check if user is authenticated
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -193,9 +160,10 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    
-    // Verify the token and get the user
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    // Create Supabase client and verify token
+    const authSupabase = createServerClient();
+    const { data: { user }, error: authError } = await authSupabase.auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -205,18 +173,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { recipient_id, type, title, message, data, priority } = body;
+    const { client_id, message } = body;
 
     // Validate required fields
-    if (!recipient_id || !type || !title || !message) {
+    if (!client_id || !message) {
       return NextResponse.json(
-        { success: false, message: 'Recipient ID, type, title, and message are required' },
+        { success: false, message: 'Client ID and message are required' },
         { status: 400 }
       );
     }
 
+    // Use service role client for database operations
+    const supabase = createServiceRoleClient();
+
     // Check if user has permission to send notifications (admin or sending to self)
-    if (recipient_id !== user.id) {
+    if (client_id !== user.id) {
       const { data: currentUser } = await supabase
         .from('clients')
         .select('role')
@@ -235,15 +206,11 @@ export async function POST(request: NextRequest) {
     const { data: notification, error } = await supabase
       .from('notifications')
       .insert([{
-        recipient_id,
-        sender_id: user.id,
-        type,
-        title,
-        message,
-        data: data || {},
-        priority: priority || 'normal',
-        delivery_method: ['in_app'],
-        is_delivered: false
+        client_id: client_id,
+        message: message,
+        is_read: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }])
       .select()
       .single();
@@ -257,14 +224,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Send real-time notification
-    await realtime.sendNotification(recipient_id, {
+    await realtime.sendNotification(client_id, {
       id: notification.id,
-      recipient_id: notification.recipient_id,
-      type: notification.type,
-      title: notification.title,
+      recipient_id: notification.client_id,
+      type: 'system',
+      title: 'Notification',
       message: notification.message,
       is_read: notification.is_read,
-      priority: notification.priority
+      priority: 'normal'
     });
 
     return NextResponse.json({

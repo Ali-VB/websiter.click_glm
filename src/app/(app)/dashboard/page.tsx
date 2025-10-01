@@ -1,7 +1,9 @@
 'use client';
 
+
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect, useCallback } from "react";
+import { realtime } from '@/lib/realtime';
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -133,6 +135,7 @@ export default function DashboardPage() {
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState("");
+  const [realtimeStatus, setRealtimeStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
 
   // Get active tab from URL params on initial load
   useEffect(() => {
@@ -245,6 +248,72 @@ export default function DashboardPage() {
       subscription?.unsubscribe();
     };
   }, [router, fetchDashboardData]);
+
+  // Set up real-time notification subscription
+  useEffect(() => {
+    const setupRealtimeSubscription = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log('Setting up real-time notification subscription for user:', session.user.id);
+        
+        // Subscribe to real-time notifications
+        const channel = supabase
+          .channel('notifications')
+          .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `client_id=eq.${session.user.id}` // Correct column name from database schema
+          }, (payload) => {
+            console.log('🔔 New notification received via real-time:', payload);
+            console.log('Notification details:', payload.new);
+
+            // Show browser notification if permitted
+            if (Notification.permission === 'granted') {
+              new Notification('New Notification', {
+                body: payload.new?.message || 'You have a new notification',
+                icon: '/logo-black.png'
+              });
+            }
+
+            // Refresh notifications when a new one is received
+            fetchDashboardData(session.access_token);
+          })
+          .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `client_id=eq.${session.user.id}` // Correct column name from database schema
+          }, (payload) => {
+            console.log('📝 Notification updated via real-time:', payload);
+            // Refresh notifications when an existing one is updated
+            fetchDashboardData(session.access_token);
+          })
+          .subscribe((status) => {
+            console.log('Real-time subscription status:', status);
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Successfully subscribed to real-time notifications');
+              setRealtimeStatus('connected');
+            } else if (status === 'CHANNEL_ERROR') {
+              console.error('❌ Failed to subscribe to real-time notifications');
+              setRealtimeStatus('disconnected');
+            } else if (status === 'TIMED_OUT') {
+              console.warn('⚠️ Real-time subscription timed out');
+              setRealtimeStatus('disconnected');
+            }
+          });
+
+        return () => {
+          console.log('Cleaning up real-time subscription');
+          supabase.removeChannel(channel);
+        };
+      } else {
+        console.log('No session found, skipping real-time subscription');
+      }
+    };
+
+    setupRealtimeSubscription();
+  }, [fetchDashboardData]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -670,10 +739,25 @@ export default function DashboardPage() {
             <div className="space-y-8">
               {/* Page Title */}
               <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-2">Client Dashboard</h1>
-                <p className="text-muted-foreground">
-                  Manage your projects and invoices
-                </p>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h1 className="text-3xl font-bold mb-2">Client Dashboard</h1>
+                    <p className="text-muted-foreground">
+                      Manage your projects and invoices
+                    </p>
+                  </div>
+                  {/* Real-time Connection Status */}
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      realtimeStatus === 'connected' ? 'bg-green-500' : 
+                      realtimeStatus === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}></div>
+                    <span className="text-sm text-muted-foreground">
+                      {realtimeStatus === 'connected' ? 'Real-time connected' : 
+                       realtimeStatus === 'connecting' ? 'Connecting...' : 'Real-time disconnected'}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* Dashboard Overview Cards */}

@@ -386,7 +386,7 @@ export class SSEManager {
 
   closeAll() {
     for (const [connectionId, stream] of this.connections.entries()) {
-      const heartbeat = (stream as any)._heartbeat;
+      const heartbeat = (stream as NodeJS.WritableStream & { _heartbeat?: NodeJS.Timeout })._heartbeat;
       if (heartbeat) {
         clearInterval(heartbeat);
       }
@@ -417,18 +417,15 @@ export const realtime = {
     // Send via SSE
     const sseSent = sseManager.sendToUser(userId, event);
 
-    // Store notification in database
-    const supabase = createServerClient();
-    await supabase.from('notifications').insert([{
-      recipient_id: userId,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      data: notification as Record<string, unknown>,
-      priority: notification.priority
-    }]);
+    // Log delivery status
+    console.log(`Notification sent to user ${userId}: WebSocket=${wsSent}, SSE=${sseSent}`);
 
-    return { wsSent, sseSent };
+    return { 
+      wsSent, 
+      sseSent,
+      totalSent: wsSent + sseSent,
+      success: wsSent > 0 || sseSent > 0
+    };
   },
 
   // Send project update to client
