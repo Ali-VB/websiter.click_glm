@@ -33,13 +33,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch support tickets" }, { status: 500 });
     }
 
-    // Fetch team members (for assignment)
+    // Fetch team members (for assignment) - use admin clients instead of separate team_members table
     const { data: teamMembers, error: teamError } = await supabase
-      .from("team_members")
-      .select("*");
+      .from("clients")
+      .select("id, name, email, role")
+      .eq("role", "admin");
 
     if (teamError) {
-      console.error("Error fetching team members:", error);
+      console.error("Error fetching team members:", teamError);
       return NextResponse.json({ error: "Failed to fetch team members" }, { status: 500 });
     }
 

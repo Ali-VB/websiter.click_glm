@@ -45,7 +45,6 @@ interface SupportTicket {
   subject: string;
   status: "open" | "in_progress" | "resolved" | "closed";
   priority: "low" | "medium" | "high" | "urgent";
-  category: string;
   created_at: string;
   updated_at: string;
   replies: Array<{
@@ -57,6 +56,10 @@ interface SupportTicket {
       email: string;
     };
   }>;
+  project?: {
+    id: string;
+    name: string;
+  };
 }
 
 interface Notification {
@@ -2088,11 +2091,7 @@ export default function DashboardPage() {
                         {selectedTicket.priority}
                       </Badge>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Category:</span>
-                      <span>{selectedTicket.category}</span>
-                    </div>
-                    <div className="flex justify-between">
+                                        <div className="flex justify-between">
                       <span className="text-muted-foreground">Created:</span>
                       <span>{formatDate(selectedTicket.created_at)}</span>
                     </div>
@@ -2106,77 +2105,78 @@ export default function DashboardPage() {
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Related Project</h3>
                   <div className="bg-muted/50 p-4 rounded-md">
-                    {(() => {
-                      // Note: The SupportTicket interface doesn't include project_id
-                      // This is a placeholder for future functionality
-                      // For now, we'll show a message that no project is associated
-                      const project = projects.length > 0 ? projects[0] : null;
-                      return project ? (
-                        <>
-                          <p className="font-medium">{project.name}</p>
-                          <p className="text-sm text-muted-foreground">{project.description}</p>
-                          <div className="mt-2">
-                            <Badge variant="outline" className={getStatusColor(project.status)}>
-                              {project.status.replace("_", " ")}
-                            </Badge>
-                          </div>
-                        </>
-                      ) : (
-                        <p className="text-muted-foreground">No specific project associated</p>
-                      );
-                    })()}
+                    {selectedTicket.project ? (
+                      <>
+                        <p className="font-medium">{selectedTicket.project.name}</p>
+                        <div className="mt-2">
+                          <Badge variant="outline">Associated Project</Badge>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">No specific project associated</p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Question and Answer */}
+              {/* Conversation */}
               <div>
-                <h3 className="text-lg font-semibold mb-4">Question & Answer</h3>
+                <h3 className="text-lg font-semibold mb-4">Conversation</h3>
                 <div className="space-y-6">
-                  {/* Original Question */}
+                  {/* Original Ticket Subject */}
                   <div className="border border-input rounded-md p-4 bg-muted/30">
                     <div className="flex items-center space-x-2 mb-2">
                       <Avatar className="w-8 h-8">
                         <AvatarFallback>Y</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">Your Question</p>
+                        <p className="font-medium">You</p>
                         <p className="text-xs text-muted-foreground">
                           {formatDate(selectedTicket.created_at)}
                         </p>
                       </div>
                     </div>
                     <div className="mt-3">
-                      <p className="text-sm">{selectedTicket.replies && selectedTicket.replies.length > 0 ? selectedTicket.replies[0].message : "No description provided"}</p>
+                      <p className="font-medium text-sm mb-2">{selectedTicket.subject}</p>
+                      {selectedTicket.replies && selectedTicket.replies.length > 0 ? (
+                        <p className="text-sm">{selectedTicket.replies[0].message}</p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No additional description provided</p>
+                      )}
+                    </div>
+                  </div>
                     </div>
                   </div>
 
-                  {/* Support Answer */}
+                  {/* Admin/Support Responses */}
                   {selectedTicket.replies && selectedTicket.replies.length > 1 ? (
-                    <div className="border border-input rounded-md p-4 bg-blue-50 dark:bg-blue-950/20">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback>S</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">Support Team</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDate(selectedTicket.replies[1].created_at)}
-                          </p>
+                    selectedTicket.replies.slice(1).map((reply, index) => (
+                      <div key={reply.id} className="border border-input rounded-md p-4 bg-blue-50 dark:bg-blue-950/20">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Avatar className="w-8 h-8">
+                            <AvatarFallback>S</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">
+                              {reply.author?.email?.includes('admin') || reply.author?.email?.includes('websiter') ? 'Support Team' : reply.author?.name || 'Support Team'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDate(reply.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          <p className="text-sm">{reply.message}</p>
                         </div>
                       </div>
-                      <div className="mt-3">
-                        <p className="text-sm">{selectedTicket.replies[1].message}</p>
-                      </div>
-                    </div>
+                    ))
                   ) : (
-                            <div className="text-center py-8 text-muted-foreground border border-input rounded-md">
-                              <p>Awaiting response from our support team.</p>
-                              <p className="text-sm mt-2">We'll get back to you as soon as possible.</p>
-                            </div>
+                    <div className="text-center py-8 text-muted-foreground border border-input rounded-md">
+                      <p>Awaiting response from our support team.</p>
+                      <p className="text-sm mt-2">We'll get back to you as soon as possible.</p>
+                    </div>
                   )}
-                </div>
-              </div>
+                {/* </div> */}
 
               {/* Actions */}
               <div className="flex justify-between pt-4 border-t border-input">

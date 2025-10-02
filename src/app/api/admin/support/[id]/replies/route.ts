@@ -3,11 +3,12 @@ import { createServerClient } from "@/lib/supabase";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createServerClient();
-    
+    const resolvedParams = await params;
+
     // Get the auth token from the request headers
     const authHeader = request.headers.get("authorization");
     if (!authHeader) {
@@ -15,10 +16,10 @@ export async function POST(
     }
 
     const token = authHeader.replace("Bearer ", "");
-    
+
     // Verify the token and get the user
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    
+
     if (userError || !user) {
       return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
     }
@@ -34,21 +35,20 @@ export async function POST(
     const { data: ticket, error: ticketError } = await supabase
       .from("support_tickets")
       .select("id")
-      .eq("id", params.id)
+      .eq("id", resolvedParams.id)
       .single();
 
     if (ticketError || !ticket) {
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
     }
 
-    // Add the reply
+    // Add the reply (remove is_internal column since it doesn't exist in schema)
     const { data: reply, error } = await supabase
       .from("support_ticket_replies")
       .insert({
-        ticket_id: params.id,
+        ticket_id: resolvedParams.id,
         author_id: user.id,
-        message,
-        is_internal: isInternal || false
+        message
       })
       .select()
       .single();
@@ -58,20 +58,17 @@ export async function POST(
       return NextResponse.json({ error: "Failed to add reply" }, { status: 500 });
     }
 
-    // If this is not an internal reply, update the ticket status to "in_progress"
-    if (!isInternal) {
-      const { error: updateError } = await supabase
-        .from("support_tickets")
-        .update({
-          status: "in_progress",
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", params.id);
+    // Update the ticket status to "in_progress"
+    const { error: updateError } = await supabase
+      .from("support_tickets")
+      .update({
+        status: "in_progress"
+      })
+      .eq("id", resolvedParams.id);
 
-      if (updateError) {
-        console.error("Error updating ticket status:", updateError);
-        // We don't return an error here since the reply was added successfully
-      }
+    if (updateError) {
+      console.error("Error updating ticket status:", updateError);
+      // We don't return an error here since the reply was added successfully
     }
 
     return NextResponse.json({ reply });

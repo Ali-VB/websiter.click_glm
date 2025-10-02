@@ -32,15 +32,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    // Fetch support tickets for this client
+    // Fetch support tickets for this client (simplified query to avoid foreign key issues)
     const { data: tickets, error } = await supabase
       .from("support_tickets")
       .select(`
         *,
         project:projects(id, name),
         replies:support_ticket_replies(
-          *,
-          author:clients(id, name, email)
+          id,
+          message,
+          created_at,
+          author_id
         )
       `)
       .eq("client_id", client.id)
@@ -48,10 +50,24 @@ export async function GET(request: Request) {
 
     if (error) {
       console.error("Error fetching support tickets:", error);
-      console.error("DEBUG: The API is trying to access author:clients(id, name, email) but there's no foreign key relationship");
-      console.error("DEBUG: support_ticket_replies.author_id should reference clients.id but the foreign key constraint is missing");
-      console.error("DEBUG: Current support_ticket_replies schema has author_id without a foreign key to clients table");
       return NextResponse.json({ error: "Failed to fetch support tickets" }, { status: 500 });
+    }
+
+    // Manually fetch author details for replies
+    if (tickets) {
+      for (const ticket of tickets) {
+        if (ticket.replies) {
+          for (const reply of ticket.replies) {
+            const { data: author } = await supabase
+              .from("clients")
+              .select("id, name, email")
+              .eq("id", reply.author_id)
+              .single();
+
+            reply.author = author;
+          }
+        }
+      }
     }
 
     return NextResponse.json({ tickets: tickets || [] });
@@ -98,11 +114,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    console.log("🎫 Creating support ticket with data:", {
+        client_id: client.id,
+        project_id: projectId || null,
+        status: "open",
+        priority,
+        category,
+        subject
+      });
+
     // Create the support ticket
     const { data: ticket, error } = await supabase
       .from("support_tickets")
       .insert({
-        client_id: client.id,
+        client_id: client.id, // Use client ID to match foreign key constraint
         project_id: projectId || null,
         status: "open",
         priority,
@@ -112,9 +137,11 @@ export async function POST(request: Request) {
       .select()
       .single();
 
+    console.log("🎫 Ticket creation result:", { ticket, error });
+
     if (error) {
       console.error("Error creating support ticket:", error);
-      return NextResponse.json({ error: "Failed to create support ticket" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to create support ticket", details: error.message }, { status: 500 });
     }
 
     // Add the initial message as a reply

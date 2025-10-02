@@ -32,25 +32,25 @@ export default function SupportTicketModal({ isOpen, onClose, projects, onSucces
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
-  const [category, setCategory] = useState("");
+  // const [category, setCategory] = useState("");
 
-  const categories = [
-    "Technical Issue",
-    "Feature Request", 
-    "Billing Question",
-    "Account Management",
-    "Project Inquiry",
-    "General Support",
-    "Bug Report",
-    "Other"
-  ];
+  // // const categories = [
+//   "Technical Issue",
+//   "Feature Request",
+//   "Billing Question",
+//   "Account Management",
+//   "Project Inquiry",
+//   "General Support",
+//   "Bug Report",
+//   "Other"
+// ];
 
   const resetForm = () => {
     setProjectId("");
     setSubject("");
     setDescription("");
     setPriority("medium");
-    setCategory("");
+    // setCategory("");
     setError("");
     setSuccess("");
   };
@@ -81,41 +81,83 @@ export default function SupportTicketModal({ isOpen, onClose, projects, onSucces
         return;
       }
 
-      if (!category) {
+     /* if (!category) {
         setError("Category is required");
         setIsLoading(false);
         return;
-      }
+      }*/
 
       // Get the current session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+      let session, sessionError;
+      try {
+        const result = await supabase.auth.getSession();
+        session = result.data.session;
+        sessionError = result.error;
+      } catch (authError) {
+        console.error('❌ Session retrieval error:', authError);
+        sessionError = authError;
+      }
+
       if (sessionError || !session) {
         setError("Authentication error. Please log in again.");
         setIsLoading(false);
         return;
       }
 
-      // Create the support ticket
-      const response = await fetch("/api/support", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          projectId: projectId,
-          subject: subject.trim(),
-          description: description.trim(),
-          priority,
-          category,
-        }),
+      // Create the support ticket using the API endpoint
+      console.log('🎫 Creating ticket with data:', {
+        projectId: projectId || null,
+        subject: subject.trim(),
+        description: description.trim(),
+        priority: priority || 'medium',
+        category: 'General Support'
       });
 
-      const data = await response.json();
+      console.log('🚀 Making API request to /api/support');
+      console.log('📤 Request payload:', {
+        projectId: projectId || null,
+        subject: subject.trim(),
+        description: description.trim(),
+        priority: priority || 'medium',
+        category: 'General Support'
+      });
+      console.log('🔑 Using auth token:', session.access_token ? 'Token exists' : 'No token');
+
+      const response = await fetch('/api/support', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          projectId: projectId || null,
+          subject: subject.trim(),
+          description: description.trim(),
+          priority: priority || 'medium',
+          category: 'General Support'
+        })
+      });
+
+      console.log('📥 Raw response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        const text = await response.text();
+        console.log('📄 Response text (JSON parse failed):', text);
+        data = { error: 'Failed to parse response', text };
+      }
+      console.log('🎫 API response data:', data);
 
       if (!response.ok) {
-        setError(data.error || "Failed to create support ticket");
+        console.error('❌ Ticket creation failed:', data);
+        setError(data.error || `Failed to create support ticket (${response.status})`);
         setIsLoading(false);
         return;
       }
@@ -240,25 +282,7 @@ export default function SupportTicketModal({ isOpen, onClose, projects, onSucces
               </p>
             </div>
 
-            {/* Category */}
-            <div className="space-y-2">
-              <Label htmlFor="category">Category *</Label>
-              <Select value={category} onValueChange={setCategory} disabled={isLoading} required>
-                <SelectTrigger id="category" aria-describedby="category-help">
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p id="category-help" className="text-xs text-muted-foreground">
-                Choose the category that best describes your issue
-              </p>
-            </div>
+                      {/* Category removed - not needed for support tickets */}
 
             {/* Priority */}
             <div className="space-y-2">
