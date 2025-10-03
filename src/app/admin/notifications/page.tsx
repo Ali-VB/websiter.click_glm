@@ -50,6 +50,8 @@ export default function AdminNotificationsPage() {
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState<boolean>(false);
+  const [selectedClientFilter, setSelectedClientFilter] = useState<string>("all");
+  const [isDeletingClientNotifications, setIsDeletingClientNotifications] = useState<boolean>(false);
 
   // Mock data for development
   const mockClients: Client[] = [
@@ -141,8 +143,12 @@ export default function AdminNotificationsPage() {
         setError(errorData.message || "Failed to fetch clients");
       }
 
-      // Fetch notifications from API
-      const notificationsResponse = await fetch("/api/admin/notifications", {
+      // Fetch notifications from API with optional client filter
+      const notificationsUrl = selectedClientFilter === "all" 
+        ? "/api/admin/notifications"
+        : `/api/admin/notifications?clientId=${selectedClientFilter}`;
+      
+      const notificationsResponse = await fetch(notificationsUrl, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -173,7 +179,7 @@ export default function AdminNotificationsPage() {
 
   useEffect(() => {
     fetchClients();
-  }, [fetchClients]);
+  }, [fetchClients, selectedClientFilter]);
 
   const handleClientSelection = (clientId: string, isSelected: boolean) => {
     if (isSelected) {
@@ -336,6 +342,61 @@ export default function AdminNotificationsPage() {
     }
   };
 
+  const handleDeleteClientNotifications = async () => {
+    if (!selectedClientFilter || selectedClientFilter === "all") {
+      setError("Please select a specific client to delete their notifications");
+      return;
+    }
+
+    const client = clients.find(c => c.id === selectedClientFilter);
+    const clientName = client ? client.name : "this client";
+
+    if (!confirm(`Are you sure you want to delete all notifications for ${clientName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeletingClientNotifications(true);
+    setError("");
+
+    try {
+      // Get the auth token from localStorage
+      const token = localStorage.getItem("auth_token");
+      
+      if (!token) {
+        setError("You must be logged in to delete notifications");
+        return;
+      }
+
+      // Delete client notifications via API
+      const response = await fetch(`/api/admin/notifications/client/${selectedClientFilter}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Refresh the notifications list
+          await fetchClients();
+          return;
+        } else {
+          setError(data.message || "Failed to delete client notifications");
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to delete client notifications");
+      }
+      
+    } catch (err) {
+      setError("An error occurred while deleting client notifications");
+      console.error("Delete client notifications error:", err);
+    } finally {
+      setIsDeletingClientNotifications(false);
+    }
+  };
+
   return (
     <AdminLayout
       title="Broadcast Notifications"
@@ -492,18 +553,46 @@ export default function AdminNotificationsPage() {
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">Notification History</h2>
                   <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <Label htmlFor="clientFilter" className="text-sm">Filter by client:</Label>
+                      <Select value={selectedClientFilter} onValueChange={setSelectedClientFilter}>
+                        <SelectTrigger className="w-48">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Clients</SelectItem>
+                          {clients.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="text-sm text-muted-foreground">
-                      {notifications.length} notifications sent
+                      {notifications.length} notifications
                     </div>
                     {notifications.length > 0 && (
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={handleDeleteAllNotifications}
-                        disabled={isDeletingAll}
-                      >
-                        {isDeletingAll ? "Deleting..." : "Delete All"}
-                      </Button>
+                      <div className="flex space-x-2">
+                        {selectedClientFilter !== "all" && (
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={handleDeleteClientNotifications}
+                            disabled={isDeletingClientNotifications}
+                          >
+                            {isDeletingClientNotifications ? "Deleting..." : "Delete Client's"}
+                          </Button>
+                        )}
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={handleDeleteAllNotifications}
+                          disabled={isDeletingAll}
+                        >
+                          {isDeletingAll ? "Deleting..." : "Delete All"}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>

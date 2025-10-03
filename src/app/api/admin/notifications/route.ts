@@ -13,7 +13,7 @@ interface DatabaseNotification {
   sender_id?: string | null;
   type?: string;
   title?: string;
-  data?: Record<string, any> | null;
+  data?: Record<string, unknown> | null;
   priority?: string;
   expires_at?: string | null;
   updated_at?: string;
@@ -68,6 +68,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
+    const clientId = searchParams.get('clientId'); // Optional client filter
 
     // Validate limit and offset
     if (isNaN(limit) || limit < 1 || limit > 100) {
@@ -88,10 +89,18 @@ export async function GET(request: NextRequest) {
     // Use service role client to bypass RLS for admin view of all notifications
     const supabase = createServiceRoleClient();
 
-    // First, get the notifications with count
-    const { data: notificationsData, error: notificationsError, count } = await supabase
+    // Build the base query
+    let query = supabase
       .from('notifications')
-      .select('*', { count: 'exact' })
+      .select('*', { count: 'exact' });
+
+    // Add client filter if specified
+    if (clientId) {
+      query = query.eq('client_id', clientId);
+    }
+
+    // Execute the query with pagination and ordering
+    const { data: notificationsData, error: notificationsError, count } = await query
       .range(offset, offset + limit - 1)
       .order('created_at', { ascending: false });
 
