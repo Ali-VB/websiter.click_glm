@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
 
 export async function DELETE(
   request: NextRequest,
@@ -19,6 +19,9 @@ export async function DELETE(
 
     const token = authHeader.substring(7);
 
+    // Create authenticated server client
+    const supabase = createServerClient(token);
+
     // Verify the token and get the user
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
@@ -33,28 +36,11 @@ export async function DELETE(
 
     console.log('Deleting notification:', { notificationId, userId: user.id });
 
-    // First, check if the notification exists and belongs to the user
-    const { data: notificationData, error: fetchError } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('id', notificationId)
-      .eq('client_id', user.id)
-      .single();
-
-    if (fetchError || !notificationData) {
-      console.log('Notification not found or access denied');
-      return NextResponse.json(
-        { success: false, message: 'Notification not found or access denied' },
-        { status: 404 }
-      );
-    }
-
-    // Delete the notification
+    // Delete the notification (RLS policy will ensure user can only delete their own)
     const { error } = await supabase
       .from('notifications')
       .delete()
-      .eq('id', notificationId)
-      .eq('client_id', user.id);
+      .eq('id', notificationId);
 
     if (error) {
       console.error('Delete notification error:', error);

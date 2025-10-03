@@ -64,6 +64,9 @@ export default function NotificationsPage() {
         setNotifications(validNotifications);
         const unreadCount = validNotifications.filter((n: Notification) => !n.is_read).length;
         setUnreadNotifications(unreadCount);
+      } else {
+        const errorData = await notificationsResponse.json();
+        setError(errorData.message || 'Failed to load notifications');
       }
 
       // Fetch user profile
@@ -143,7 +146,6 @@ export default function NotificationsPage() {
         });
 
         if (response.ok) {
-          // Update local state
           setNotifications(prev => 
             prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
           );
@@ -169,11 +171,13 @@ export default function NotificationsPage() {
         });
 
         if (response.ok) {
-          // Update local state
           setNotifications(prev => 
             prev.map(n => ({ ...n, is_read: true }))
           );
           setUnreadNotifications(0);
+        } else {
+          const errorData = await response.json();
+          setError(errorData.message || 'Failed to mark all as read');
         }
       }
     } catch (err) {
@@ -196,16 +200,46 @@ export default function NotificationsPage() {
         });
 
         if (response.ok) {
-          // Update local state
           const notification = notifications.find(n => n.id === notificationId);
           setNotifications(prev => prev.filter(n => n.id !== notificationId));
           if (notification && !notification.is_read) {
             setUnreadNotifications(prev => Math.max(0, prev - 1));
           }
+        } else {
+          const errorData = await response.json();
+          setError(errorData.message || 'Failed to delete notification');
         }
       }
     } catch (err) {
       console.error("Error deleting notification:", err);
+    }
+  };
+
+  const deleteAllNotifications = async () => {
+    setIsUpdating(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const response = await fetch("/api/notifications/delete-all", {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (response.ok) {
+          setNotifications([]);
+          setUnreadNotifications(0);
+        } else {
+          const errorData = await response.json();
+          setError(errorData.message || "Failed to delete all notifications");
+        }
+      }
+    } catch (err) {
+      setError("Failed to delete all notifications");
+      console.error("Error deleting all notifications:", err);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -225,7 +259,6 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar */}
       <ClientSidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
@@ -236,9 +269,7 @@ export default function NotificationsPage() {
         invoicesCount={0}
       />
 
-      {/* Main Content */}
       <div className="lg:pl-64">
-        {/* Header */}
         <ClientHeader
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
           isDarkMode={isDark}
@@ -247,7 +278,6 @@ export default function NotificationsPage() {
           onLogout={handleLogout}
         />
 
-        {/* Notifications Content */}
         <main className="p-6">
           {error && (
             <div
@@ -266,7 +296,6 @@ export default function NotificationsPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Page Header */}
               <div className="flex justify-between items-start">
                 <div>
                   <h1 className="text-3xl font-bold mb-2">Notifications</h1>
@@ -274,15 +303,26 @@ export default function NotificationsPage() {
                     Stay updated with your latest notifications and announcements
                   </p>
                 </div>
-                {unreadNotifications > 0 && (
-                  <Button 
-                    variant="outline" 
-                    onClick={markAllAsRead}
-                    disabled={isUpdating}
-                  >
-                    {isUpdating ? 'Marking...' : 'Mark All as Read'}
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {unreadNotifications > 0 && (
+                    <Button 
+                      variant="outline" 
+                      onClick={markAllAsRead}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? 'Marking...' : 'Mark All as Read'}
+                    </Button>
+                  )}
+                  {notifications.length > 0 && (
+                    <Button 
+                      variant="destructive" 
+                      onClick={deleteAllNotifications}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? 'Deleting...' : 'Delete All'}
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Notification Statistics */}

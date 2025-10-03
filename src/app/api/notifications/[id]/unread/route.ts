@@ -8,9 +8,20 @@ export async function POST(
   try {
     const { id } = await params;
 
-    // Create authenticated Supabase client
-    const supabase = createServerClient(request);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // Check if user is authenticated
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+
+    // Create authenticated server client
+    const supabase = createServerClient(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
       return NextResponse.json(
@@ -21,7 +32,7 @@ export async function POST(
 
     console.log('Marking notification as unread:', { id, userId: user.id });
 
-    // Update notification to mark as unread
+    // Update notification to mark as unread (RLS policy will ensure user can only update their own)
     const { data, error } = await supabase
       .from('notifications')
       .update({
@@ -29,7 +40,6 @@ export async function POST(
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
-      .eq('client_id', user.id)
       .select();
 
     console.log('Update result:', { data, error });

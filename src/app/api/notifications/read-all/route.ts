@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +19,9 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.substring(7);
     console.log('Token extracted successfully');
+
+    // Create authenticated server client
+    const supabase = createServerClient(token);
 
     // Verify the token and get the user
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);

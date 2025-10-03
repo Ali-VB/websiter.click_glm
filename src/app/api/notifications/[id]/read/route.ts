@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
 
 export async function POST(
   request: NextRequest,
@@ -19,6 +19,9 @@ export async function POST(
 
     const token = authHeader.substring(7);
 
+    // Create authenticated server client
+    const supabase = createServerClient(token);
+
     // Verify the token and get the user
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
@@ -33,35 +36,11 @@ export async function POST(
 
     console.log('Marking notification as read:', { notificationId, userId: user.id });
 
-    // First, let's check what's actually in the notification
-    const { data: notificationData, error: fetchError } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('id', notificationId)
-      .single();
-
-    console.log('Notification data from DB:', { notificationData, fetchError });
-
-    if (fetchError || !notificationData) {
-      console.log('Notification not found in database');
-      return NextResponse.json(
-        { success: false, message: 'Notification not found' },
-        { status: 404 }
-      );
-    }
-
-    console.log('User ID comparison:', {
-      notificationClientId: notificationData.client_id,
-      currentUserId: user.id,
-      match: notificationData.client_id === user.id
-    });
-
-    // Update the notification to mark it as read
+    // Update the notification to mark it as read (RLS policy will ensure user can only update their own)
     const { data, error } = await supabase
       .from('notifications')
       .update({ is_read: true, updated_at: new Date().toISOString() })
       .eq('id', notificationId)
-      .eq('client_id', user.id)
       .select();
 
     console.log('Update result:', { data, error });

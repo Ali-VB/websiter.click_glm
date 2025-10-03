@@ -35,9 +35,9 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.substring(7);
 
-    // Create Supabase client and verify token
-    const authSupabase = createServerClient();
-    const { data: { user }, error: authError } = await authSupabase.auth.getUser(token);
+    // Create authenticated server client
+    const supabase = createServerClient(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
       return NextResponse.json(
@@ -69,9 +69,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Use service role client to bypass RLS for this query
-    // We've already authenticated the user above
-    const supabase = createServiceRoleClient();
+    // Use the authenticated client (RLS policies will ensure user can only access their own notifications)
 
     // Build the query
     let query = supabase
@@ -163,9 +161,9 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.substring(7);
 
-    // Create Supabase client and verify token
-    const authSupabase = createServerClient();
-    const { data: { user }, error: authError } = await authSupabase.auth.getUser(token);
+    // Create authenticated server client
+    const supabase = createServerClient(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
     if (authError || !user) {
       return NextResponse.json(
@@ -185,8 +183,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use service role client for database operations
-    const supabase = createServiceRoleClient();
+    // Use the authenticated client (RLS policies will ensure proper access control)
 
     // Check if user has permission to send notifications (admin or sending to self)
     if (client_id !== user.id) {

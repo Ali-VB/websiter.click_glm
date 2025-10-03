@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase';
 
 export async function DELETE(
   request: NextRequest,
@@ -19,6 +19,9 @@ export async function DELETE(
 
     const token = authHeader.substring(7);
 
+    // Create authenticated server client
+    const supabase = createServerClient(token);
+
     // Verify the token and get the user
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
@@ -33,12 +36,11 @@ export async function DELETE(
 
     console.log('Dismissing notification:', { notificationId, userId: user.id });
 
-    // Delete the notification (only if it belongs to the user)
+    // Delete the notification (RLS policy will ensure user can only delete their own)
     const { data, error } = await supabase
       .from('notifications')
       .delete()
       .eq('id', notificationId)
-      .eq('client_id', user.id)
       .select();
 
     console.log('Delete result:', { data, error });
