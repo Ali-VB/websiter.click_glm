@@ -36,6 +36,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields: file, projectId, or assetType' }, { status: 400 });
     }
 
+    console.log("📤 Starting asset upload:", {
+      projectId,
+      fileName: file.name,
+      fileSize: file.size,
+      assetType,
+      description,
+      userId: user.id
+    });
+
     const result = await AssetStorage.uploadAsset(
       {
         projectId,
@@ -47,7 +56,10 @@ export async function POST(request: NextRequest) {
       userSupabase
     );
 
+    console.log("📤 Asset upload result:", result);
+
     if (!result.success) {
+      console.error("❌ Asset upload failed:", result.error);
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
@@ -85,11 +97,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
 
-    if (!projectId) {
-      return NextResponse.json({ error: 'Missing projectId parameter' }, { status: 400 });
+    let result;
+    if (projectId) {
+      // Get assets for specific project
+      result = await AssetStorage.getProjectAssets(projectId, userSupabase);
+    } else {
+      // Get all assets for the user
+      result = await AssetStorage.getUserAssets(user.id, userSupabase);
     }
-
-    const result = await AssetStorage.getProjectAssets(projectId, userSupabase);
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 500 });

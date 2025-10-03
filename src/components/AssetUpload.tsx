@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { supabase } from '@/lib/supabase';
 
 interface Asset {
   id: string;
@@ -41,6 +42,7 @@ interface AssetUploadProps {
 }
 
 export default function AssetUpload({ projects }: AssetUploadProps) {
+    const [session, setSession] = useState<any>(null);
     const [selectedProject, setSelectedProject] = useState("");
     const [selectedAssetType, setSelectedAssetType] = useState("");
     const [isUploading, setIsUploading] = useState(false);
@@ -52,6 +54,22 @@ export default function AssetUpload({ projects }: AssetUploadProps) {
     const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Get current session
+    useEffect(() => {
+        const getSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setSession(session);
+        };
+        getSession();
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
     const assetTypes = [
         { id: 'images', name: 'Images', icon: '🖼️' },
         { id: 'documents', name: 'Documents', icon: '📄' },
@@ -59,24 +77,45 @@ export default function AssetUpload({ projects }: AssetUploadProps) {
         { id: 'content', name: 'Content', icon: '📝' },
     ];
 
-    // Fetch assets when project is selected
+    // Fetch all user assets on component mount and when project is selected
     useEffect(() => {
-        if (selectedProject) {
-            fetchAssets();
-        } else {
-            setUploadedFiles([]);
+        if (session?.access_token) {
+            if (selectedProject) {
+                fetchAssets();
+            } else {
+                fetchAllAssets();
+            }
         }
-    }, [selectedProject]);
+    }, [selectedProject, session]);
+
+    const fetchAllAssets = async () => {
+        try {
+            if (!session?.access_token) return;
+
+            const response = await fetch(`/api/assets`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${session.access_token}`,
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setUploadedFiles(data.assets || []);
+            }
+        } catch (error) {
+            console.error("Error fetching all assets:", error);
+        }
+    };
 
     const fetchAssets = async () => {
         try {
-            const token = localStorage.getItem("supabase.auth.token");
-            if (!token) return;
+            if (!session?.access_token) return;
 
             const response = await fetch(`/api/assets?projectId=${selectedProject}`, {
                 method: "GET",
                 headers: {
-                    "Authorization": `Bearer ${JSON.parse(token).access_token}`,
+                    "Authorization": `Bearer ${session.access_token}`,
                 },
             });
 
@@ -119,8 +158,7 @@ export default function AssetUpload({ projects }: AssetUploadProps) {
         setUploadStatus({ type: 'idle', message: '' });
 
         try {
-            const token = localStorage.getItem("supabase.auth.token");
-            if (!token) {
+            if (!session?.access_token) {
                 setUploadStatus({
                     type: 'error',
                     message: 'You must be logged in to upload files'
@@ -139,7 +177,7 @@ export default function AssetUpload({ projects }: AssetUploadProps) {
                 const response = await fetch('/api/assets', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${JSON.parse(token).access_token}`,
+                        'Authorization': `Bearer ${session.access_token}`,
                     },
                     body: formData,
                 });
@@ -165,7 +203,11 @@ export default function AssetUpload({ projects }: AssetUploadProps) {
                 }
 
                 // Refresh assets list
-                fetchAssets();
+                if (selectedProject) {
+                    fetchAssets();
+                } else {
+                    fetchAllAssets();
+                }
             } else {
                 setUploadStatus({
                     type: 'error',
@@ -314,29 +356,15 @@ export default function AssetUpload({ projects }: AssetUploadProps) {
                     <div className="border border-input rounded-md">
                         {uploadedFiles.map((asset) => (
                             <div key={asset.id} className="p-4 border-b border-input last:border-b-0">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="w-10 h-10 bg-blue-100 rounded-md flex items-center justify-center">
-                                            <span className="text-blue-800">{getAssetIcon(asset.asset_type)}</span>
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">{asset.file_name}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {asset.asset_type} • Uploaded {formatDate(asset.created_at)}
-                                            </p>
-                                        </div>
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-blue-100 rounded-md flex items-center justify-center">
+                                        <span className="text-blue-800">{getAssetIcon(asset.asset_type)}</span>
                                     </div>
-                                    <div className="flex space-x-2">
-                                        <Button variant="outline" size="sm" asChild>
-                                            <a href={asset.file_url} target="_blank" rel="noopener noreferrer">
-                                                View
-                                            </a>
-                                        </Button>
-                                        <Button variant="outline" size="sm" asChild>
-                                            <a href={asset.file_url} download={asset.file_name}>
-                                                Download
-                                            </a>
-                                        </Button>
+                                    <div>
+                                        <p className="font-medium">{asset.file_name}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {asset.asset_type} • Uploaded {formatDate(asset.created_at)}
+                                        </p>
                                     </div>
                                 </div>
                             </div>

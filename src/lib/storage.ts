@@ -267,6 +267,30 @@ export class AssetStorage {
   }
 
   /**
+   * Get all assets for a specific user across all projects
+   */
+  static async getUserAssets(userId: string, supabaseClient?: SupabaseClient) {
+    const supabase = supabaseClient || globalSupabase;
+    try {
+      const { data: assets, error } = await supabase
+        .from('project_assets')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching user assets:', error);
+        return { success: false, error: 'Failed to fetch user assets' };
+      }
+
+      return { success: true, assets };
+    } catch (error) {
+      console.error('Unexpected error in user asset fetch:', error);
+      return { success: false, error: `An unexpected error occurred: ${error instanceof Error ? error.message : 'Unknown error'}` };
+    }
+  }
+
+  /**
    * Get a signed URL for temporary access to a private asset
    */
   static async getSignedUrl(filePath: string, expiresIn = 60, supabaseClient?: SupabaseClient) {

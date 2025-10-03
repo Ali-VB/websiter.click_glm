@@ -226,20 +226,18 @@ export default function DashboardPage() {
         setUnreadCount(unreadCount);
       }
 
-      // Fetch project assets (only if projects exist)
-      if (projects.length > 0) {
-        const assetsResponse = await fetch(`/api/assets?projectId=${projects[0].id}`, {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-        });
+      // Fetch all user assets
+      const assetsResponse = await fetch(`/api/assets`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
 
-        if (assetsResponse.ok) {
-          const assetsData = await assetsResponse.json();
-          // Store assets in state if needed for dashboard display
-          console.log("Assets loaded:", assetsData.assets?.length || 0);
-        }
+      if (assetsResponse.ok) {
+        const assetsData = await assetsResponse.json();
+        // Store assets in state if needed for dashboard display
+        console.log("All user assets loaded:", assetsData.assets?.length || 0);
       }
     } catch (err) {
       setError("An error occurred while loading your dashboard");

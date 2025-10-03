@@ -662,29 +662,15 @@ export default function ProjectDetailPage() {
                 ) : (
                   <div className="space-y-3">
                     {assets.slice(0, 5).map((asset) => (
-                      <div key={asset.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
-                            <FileText className="w-4 h-4 text-blue-800" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{asset.file_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {asset.asset_type} • {formatDate(asset.created_at)}
-                            </p>
-                          </div>
+                      <div key={asset.id} className="flex items-center space-x-3 p-3 bg-muted/50 rounded-md">
+                        <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
+                          <FileText className="w-4 h-4 text-blue-800" />
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Button variant="ghost" size="sm" asChild>
-                            <a href={asset.file_url} target="_blank" rel="noopener noreferrer">
-                              <Eye className="w-4 h-4" />
-                            </a>
-                          </Button>
-                          <Button variant="ghost" size="sm" asChild>
-                            <a href={asset.file_url} download={asset.file_name}>
-                              <Download className="w-4 h-4" />
-                            </a>
-                          </Button>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{asset.file_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {asset.asset_type} • {formatDate(asset.created_at)}
+                          </p>
                         </div>
                       </div>
                     ))}
