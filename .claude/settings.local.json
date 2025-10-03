@@ -10,7 +10,8 @@
       "Bash(git push:*)",
       "Bash(npm uninstall:*)",
       "Bash(git add:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

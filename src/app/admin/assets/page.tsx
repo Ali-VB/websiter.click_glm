@@ -103,7 +103,6 @@ export default function AdminAssetsPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedAsset, setSelectedAsset] = useState<ClientAsset | null>(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -243,18 +242,84 @@ export default function AdminAssetsPage() {
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    
+    if (bytes === null || bytes === undefined || isNaN(bytes) || bytes < 0) {
+      return "N/A";
+    }
+    if (bytes === 0) {
+      return "0 Bytes";
+    }
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
 
-  const handleViewAssetDetails = (asset: ClientAsset) => {
-    setSelectedAsset(asset);
-    setIsDetailsModalOpen(true);
+  const handleDownloadAsset = async (asset: ClientAsset) => {
+    try {
+      const token = localStorage.getItem("supabase.auth.token");
+
+      if (!token) {
+        setError("You must be logged in to download assets");
+        return;
+      }
+
+      const response = await fetch(`/api/admin/assets?action=download&assetId=${asset.id}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${JSON.parse(token).access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.downloadUrl) {
+          // If it's a proxy URL (starts with /api), use direct navigation
+          if (data.downloadUrl.startsWith('/api/')) {
+            const link = document.createElement('a');
+            link.href = data.downloadUrl;
+            link.setAttribute('download', data.fileName || asset.file_name || 'download');
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } else {
+            // For signed URLs, fetch the file first then download
+            fetch(data.downloadUrl)
+              .then(response => response.blob())
+              .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', data.fileName || asset.file_name || 'download');
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+              })
+              .catch(err => {
+                console.error('Download failed:', err);
+                setError("Failed to download file");
+              });
+          }
+        } else {
+          setError("Failed to get download URL");
+        }
+      } else {
+        const errorText = await response.text();
+        console.error('Download API error response:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText };
+        }
+        setError(errorData.error || "Failed to download asset");
+      }
+    } catch (err) {
+      setError("An error occurred while downloading the asset");
+      console.error("Download asset error:", err);
+    }
   };
 
   const handleOptimizeAsset = async (assetId: string, recommendationId: string) => {
@@ -304,13 +369,13 @@ export default function AdminAssetsPage() {
 
     try {
       const token = localStorage.getItem("supabase.auth.token");
-      
+
       if (!token) {
         setError("You must be logged in to delete assets");
         return;
       }
 
-      const response = await fetch(`/api/admin/assets/${assetId}`, {
+      const response = await fetch(`/api/admin/assets?id=${assetId}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${JSON.parse(token).access_token}`,
@@ -319,11 +384,10 @@ export default function AdminAssetsPage() {
 
       if (response.ok) {
         await fetchAssets();
-        setIsDetailsModalOpen(false);
         setSelectedAsset(null);
       } else {
         const errorData = await response.json();
-        setError(errorData.message || "Failed to delete asset");
+        setError(errorData.error || "Failed to delete asset");
       }
     } catch (err) {
       setError("An error occurred while deleting the asset");
@@ -480,7 +544,6 @@ export default function AdminAssetsPage() {
                         <th className="text-left py-3 px-4">Project</th>
                         <th className="text-left py-3 px-4">Type</th>
                         <th className="text-left py-3 px-4">Size</th>
-                        <th className="text-left py-3 px-4">Folder</th>
                         <th className="text-left py-3 px-4">Created</th>
                         <th className="text-left py-3 px-4">Actions</th>
                       </tr>
@@ -516,30 +579,24 @@ export default function AdminAssetsPage() {
                             <td className="py-3 px-4">
                               <div className="font-medium">{formatFileSize(asset.file_size)}</div>
                             </td>
-                            <td className="py-3 px-4">
-                              {asset.folder_name && (
-                                <div className="text-sm">{asset.folder_name}</div>
-                              )}
-                            </td>
                             <td className="py-3 px-4">{formatDate(asset.created_at)}</td>
                             <td className="py-3 px-4">
                               <div className="flex flex-wrap gap-1">
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleViewAssetDetails(asset)}
+                                  onClick={() => handleDownloadAsset(asset)}
                                 >
-                                  Details
+                                  Download
                                 </Button>
-                                {asset.public_url && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => window.open(asset.public_url, '_blank')}
-                                  >
-                                    View
-                                  </Button>
-                                )}
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDeleteAsset(asset.id)}
+                                  disabled={isProcessing}
+                                >
+                                  Delete
+                                </Button>
                                 {assetRecommendations.length > 0 && (
                                   <Button
                                     variant="outline"
@@ -682,7 +739,7 @@ export default function AdminAssetsPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleOptimizeAsset(recommendation.asset_id, recommendation.id)}
+                                  onClick={() => handleOptimizeAsset(recommendation.asset_id!, recommendation.id)}
                                   disabled={isProcessing}
                                 >
                                   Apply
@@ -700,133 +757,6 @@ export default function AdminAssetsPage() {
           </>
         )}
       </section>
-
-      {/* Asset Details Modal */}
-      {isDetailsModalOpen && selectedAsset && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-background rounded-lg border max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-xl font-bold">Asset Details</h3>
-                <p className="text-sm text-muted-foreground">
-                  {selectedAsset.file_name} - {formatFileSize(selectedAsset.file_size)}
-                </p>
-              </div>
-              <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)}>
-                Close
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">File Name</Label>
-                  <div className="mt-1 font-medium">{selectedAsset.file_name}</div>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">File Type</Label>
-                  <div className="mt-1">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium inline-block ${getFileTypeColor(selectedAsset.file_type)}`}>
-                      {selectedAsset.file_type.charAt(0).toUpperCase() + selectedAsset.file_type.slice(1)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Client</Label>
-                  <div className="mt-1">
-                    <div className="font-medium">{selectedAsset.client_name}</div>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Size</Label>
-                  <div className="mt-1 font-medium">{formatFileSize(selectedAsset.file_size)}</div>
-                </div>
-              </div>
-
-              {selectedAsset.project_name && (
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Project</Label>
-                  <div className="mt-1 font-medium">{selectedAsset.project_name}</div>
-                </div>
-              )}
-
-              {selectedAsset.folder_name && (
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Folder</Label>
-                  <div className="mt-1 font-medium">{selectedAsset.folder_name}</div>
-                </div>
-              )}
-
-              {selectedAsset.description && (
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Description</Label>
-                  <div className="mt-1">{selectedAsset.description}</div>
-                </div>
-              )}
-
-              {selectedAsset.tags && selectedAsset.tags.length > 0 && (
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Tags</Label>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {selectedAsset.tags.map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Created</Label>
-                  <div className="mt-1">{formatDateTime(selectedAsset.created_at)}</div>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Updated</Label>
-                  <div className="mt-1">{formatDateTime(selectedAsset.updated_at)}</div>
-                </div>
-              </div>
-
-              {selectedAsset.public_url && (
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Public URL</Label>
-                  <div className="mt-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(selectedAsset.public_url, '_blank')}
-                    >
-                      Open in New Tab
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-2">
-                {selectedAsset.public_url && (
-                  <Button
-                    variant="outline"
-                    onClick={() => window.open(selectedAsset.public_url, '_blank')}
-                  >
-                    View Asset
-                  </Button>
-                )}
-                <Button
-                  variant="destructive"
-                  onClick={() => handleDeleteAsset(selectedAsset.id)}
-                  disabled={isProcessing}
-                >
-                  {isProcessing ? "Deleting..." : "Delete Asset"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Optimization Modal */}
       {isOptimizationModalOpen && selectedAsset && (
