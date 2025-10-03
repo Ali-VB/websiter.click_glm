@@ -53,37 +53,37 @@ const navigationItems = [
   },
   {
     name: "Projects",
-    href: "/dashboard?tab=projects",
+    href: "/dashboard/projects",
     icon: FolderOpen,
   },
   {
     name: "Assets",
-    href: "/dashboard?tab=assets",
+    href: "/dashboard/assets",
     icon: Upload,
   },
   {
     name: "Payments",
-    href: "/dashboard?tab=payments",
+    href: "/dashboard/payments",
     icon: CreditCard,
   },
   {
     name: "Support",
-    href: "/dashboard?tab=support", 
+    href: "/dashboard/support", 
     icon: HelpCircle,
   },
   {
     name: "Account",
-    href: "/dashboard?tab=account",
+    href: "/dashboard/account",
     icon: User,
   },
   {
     name: "Invoices", 
-    href: "/dashboard?tab=invoices",
+    href: "/dashboard/invoices",
     icon: FileText,
   },
   {
     name: "Notifications",
-    href: "/dashboard?tab=notifications",
+    href: "/dashboard/notifications",
     icon: Bell,
   },
 ];
@@ -138,23 +138,8 @@ export function ClientSidebar({
   };
 
   const handleNavigation = (href: string) => {
-    // For tab navigation, update the URL and notify parent component
-    if (href.includes('?tab=')) {
-      const tab = href.split('=')[1];
-      const url = new URL(href, window.location.origin);
-      window.history.pushState({}, '', url);
-      
-      // Notify parent component about navigation change
-      if (onNavigate) {
-        onNavigate(tab);
-      }
-      
-      // Trigger a re-render by updating the search params
-      window.dispatchEvent(new Event('popstate'));
-    } else {
-      // For regular navigation (like Dashboard)
-      window.location.href = href;
-    }
+    // Use Next.js router for navigation
+    window.location.href = href;
     
     // Close sidebar on mobile after navigation
     if (window.innerWidth < 1024) {
@@ -227,8 +212,7 @@ export function ClientSidebar({
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1">
             {navigationItems.map((item) => {
-              const isActive = pathname === item.href || 
-                (item.href.includes("?tab") && activeTab === item.href.split('=')[1]);
+              const isActive = pathname === item.href;
               
               return (
                 <button
