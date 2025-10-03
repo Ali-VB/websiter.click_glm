@@ -28,6 +28,12 @@ interface Notification {
   sentBy: string;
   status: "draft" | "sent" | "scheduled";
   scheduledFor?: string;
+  client?: {
+    id: string;
+    name: string;
+    email: string;
+    status: "active" | "inactive" | "prospect";
+  };
 }
 
 export default function AdminNotificationsPage() {
@@ -43,6 +49,7 @@ export default function AdminNotificationsPage() {
   const [isSending, setIsSending] = useState<boolean>(false);
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [isDeletingAll, setIsDeletingAll] = useState<boolean>(false);
 
   // Mock data for development
   const mockClients: Client[] = [
@@ -282,6 +289,53 @@ export default function AdminNotificationsPage() {
     return client ? client.name : "Unknown";
   };
 
+  const handleDeleteAllNotifications = async () => {
+    if (!confirm("Are you sure you want to delete all notifications? This action cannot be undone.")) {
+      return;
+    }
+
+    setIsDeletingAll(true);
+    setError("");
+
+    try {
+      // Get the auth token from localStorage
+      const token = localStorage.getItem("auth_token");
+      
+      if (!token) {
+        setError("You must be logged in to delete notifications");
+        return;
+      }
+
+      // Delete all notifications via API
+      const response = await fetch("/api/admin/notifications", {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Refresh the notifications list
+          await fetchClients();
+          return;
+        } else {
+          setError(data.message || "Failed to delete notifications");
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to delete notifications");
+      }
+      
+    } catch (err) {
+      setError("An error occurred while deleting notifications");
+      console.error("Delete all notifications error:", err);
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
   return (
     <AdminLayout
       title="Broadcast Notifications"
@@ -437,8 +491,20 @@ export default function AdminNotificationsPage() {
               <Card className="p-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold">Notification History</h2>
-                  <div className="text-sm text-muted-foreground">
-                    {notifications.length} notifications sent
+                  <div className="flex items-center space-x-4">
+                    <div className="text-sm text-muted-foreground">
+                      {notifications.length} notifications sent
+                    </div>
+                    {notifications.length > 0 && (
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={handleDeleteAllNotifications}
+                        disabled={isDeletingAll}
+                      >
+                        {isDeletingAll ? "Deleting..." : "Delete All"}
+                      </Button>
+                    )}
                   </div>
                 </div>
 

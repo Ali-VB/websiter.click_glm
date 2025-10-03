@@ -85,7 +85,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Build the query to get all notifications with client info
-    const supabase = createServerClient();
+    // Use service role client to bypass RLS for admin view of all notifications
+    const supabase = createServiceRoleClient();
 
     // First, get the notifications with count
     const { data: notificationsData, error: notificationsError, count } = await supabase
@@ -187,6 +188,75 @@ export async function GET(request: NextRequest) {
     console.error('Admin notifications API error:', error);
     return NextResponse.json(
       { success: false, message: 'An error occurred while retrieving notifications' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    // Check if user is authenticated and is an admin
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.substring(7);
+
+    // Create Supabase client with bearer token
+    const supabaseClient = createServerClient(token);
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user is an admin
+    const { data: clientData, error: clientError } = await supabaseClient
+      .from('clients')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (clientError || !clientData || clientData.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, message: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
+    // Use service role client to bypass RLS for admin operations
+    const serviceSupabase = createServiceRoleClient();
+
+    // Delete all notifications
+    const { error } = await serviceSupabase
+      .from('notifications')
+      .delete()
+      .gte('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows (gte with minimum UUID matches all)
+
+    if (error) {
+      console.error('Delete all notifications error:', error);
+      return NextResponse.json(
+        { success: false, message: 'An error occurred while deleting notifications' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'All notifications deleted successfully',
+    }, { status: 200 });
+
+  } catch (error) {
+    console.error('Delete all notifications API error:', error);
+    return NextResponse.json(
+      { success: false, message: 'An error occurred while deleting notifications' },
       { status: 500 }
     );
   }
