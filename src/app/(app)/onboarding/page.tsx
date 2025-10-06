@@ -337,7 +337,11 @@ export default function OnboardingPage() {
       const token = localStorage.getItem("supabase.auth.token");
       const isAuthenticated = !!token;
       
+      console.log("DEBUG: Authentication status:", isAuthenticated);
+      console.log("DEBUG: Token exists:", !!token);
+      
       if (!isAuthenticated) {
+        console.log("DEBUG: Attempting to call signup API...");
         // User is a guest and needs to create an account
         // Call signup API with form data
         const response = await fetch("/api/auth/signup", {
@@ -363,7 +367,10 @@ export default function OnboardingPage() {
           }),
         });
 
+        console.log("DEBUG: Signup API response status:", response.status);
+        
         const data = await response.json();
+        console.log("DEBUG: Signup API response data:", data);
 
         if (data.success) {
           // Clear temporary data
@@ -381,6 +388,9 @@ export default function OnboardingPage() {
           setError(data.message || "An error occurred during account creation");
         }
       } else {
+        console.log("DEBUG: Attempting to call onboarding API...");
+        console.log("DEBUG: Form data being sent:", formData);
+        
         // User is already authenticated, create project with existing account
         const response = await fetch("/api/onboarding", {
           method: "POST",
@@ -391,7 +401,10 @@ export default function OnboardingPage() {
           body: JSON.stringify(formData),
         });
 
+        console.log("DEBUG: Onboarding API response status:", response.status);
+
         const data = await response.json();
+        console.log("DEBUG: Onboarding API response data:", data);
 
         if (data.success) {
           // Clear temporary data
@@ -404,6 +417,7 @@ export default function OnboardingPage() {
         }
       }
     } catch (err) {
+      console.error("DEBUG: Network/Request error details:", err);
       setError("An error occurred during project creation");
       console.error("Onboarding error:", err);
     } finally {
@@ -602,24 +616,20 @@ export default function OnboardingPage() {
                     }}
                   >
                     <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-medium">{addOn.label}</h3>
-                      </div>
-                      <div className="font-semibold">
-                        CAD ${addOn.price}
-                      </div>
+                      <span className="font-medium">{addOn.label}</span>
+                      <span className="font-semibold">CAD ${addOn.price}</span>
                     </div>
                   </div>
                 ))}
-                
-                <div className="pt-2 border-t">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-sm">Estimated Total Cost:</span>
-                    <span className="text-lg font-bold text-primary">
-                      CAD ${totalCost.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
+              </div>
+            </div>
+            
+            <div className="pt-2 border-t">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold text-sm">Estimated Total Cost:</span>
+                <span className="text-lg font-bold text-primary">
+                  CAD ${totalCost.toLocaleString()}
+                </span>
               </div>
             </div>
           </div>
@@ -628,16 +638,16 @@ export default function OnboardingPage() {
       case 3:
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Website Inspiration</h2>
+            <h2 className="text-2xl font-bold">Design Preferences</h2>
             <p className="text-muted-foreground">
-              Tell us about your design preferences.
+              Tell us about your design preferences and style.
             </p>
             
             <div>
               <label className="block text-sm font-medium mb-2">
                 Design Style <span className="text-destructive">*</span>
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {DESIGN_STYLES.map((style) => (
                   <div
                     key={style.id}
@@ -757,15 +767,15 @@ export default function OnboardingPage() {
                     {layout.label}
                   </div>
                 ))}
-                
-                <div className="pt-2 border-t">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-sm">Estimated Total Cost:</span>
-                    <span className="text-lg font-bold text-primary">
-                      CAD ${totalCost.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
+              </div>
+            </div>
+            
+            <div className="pt-2 border-t">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold text-sm">Estimated Total Cost:</span>
+                <span className="text-lg font-bold text-primary">
+                  CAD ${totalCost.toLocaleString()}
+                </span>
               </div>
             </div>
           </div>

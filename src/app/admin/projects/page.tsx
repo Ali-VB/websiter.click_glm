@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AdminLayout } from "@/components/admin-layout";
 import AssetUpload from "@/components/AssetUpload";
+import ModernProjectWorkspace from "@/components/modern-project-workspace";
 
 interface TeamMember {
   id: string;
@@ -63,6 +64,8 @@ interface Project {
   deadline?: string;
   progressPercentage: number;
   lastActivityAt: string;
+  isApproved: boolean;
+  invoices: any[];
   teamMembers: TeamMember[];
   milestones: ProjectMilestone[];
   assets: ProjectAsset[];
@@ -76,6 +79,7 @@ interface Project {
     domain: string;
     hosting: string;
     maintenance: string;
+    referenceWebsites: string;
   };
 }
 
@@ -107,6 +111,8 @@ export default function AdminProjectsPage() {
       deadline: "2023-07-30T23:59:59Z",
       progressPercentage: 65,
       lastActivityAt: "2023-06-20T14:45:00Z",
+      isApproved: true,
+      invoices: [],
       teamMembers: [
         { id: "1", name: "Alex Johnson", email: "alex@websiter.click", role: "Project Manager", avatar: "/avatars/alex.jpg" },
         { id: "2", name: "Sarah Chen", email: "sarah@websiter.click", role: "Developer", avatar: "/avatars/sarah.jpg" },
@@ -136,7 +142,8 @@ export default function AdminProjectsPage() {
         layoutPreference: "Multi-section",
         domain: "abccorp.com",
         hosting: "Basic Hosting",
-        maintenance: "Basic Plan"
+        maintenance: "Basic Plan",
+        referenceWebsites: "https://www.example.com, https://www.another.com"
       }
     },
     {
@@ -152,6 +159,8 @@ export default function AdminProjectsPage() {
       deadline: "2023-07-15T23:59:59Z",
       progressPercentage: 85,
       lastActivityAt: "2023-06-15T16:30:00Z",
+      isApproved: false,
+      invoices: [],
       teamMembers: [
         { id: "2", name: "Sarah Chen", email: "sarah@websiter.click", role: "Developer", avatar: "/avatars/sarah.jpg" },
         { id: "4", name: "Emma Davis", email: "emma@websiter.click", role: "UI/UX Designer", avatar: "/avatars/emma.jpg" }
@@ -177,7 +186,8 @@ export default function AdminProjectsPage() {
         layoutPreference: "Grid-based",
         domain: "janedoe.com",
         hosting: "Basic Hosting",
-        maintenance: "Basic Plan"
+        maintenance: "Basic Plan",
+        referenceWebsites: "https://www.example.com, https://www.another.com"
       }
     },
     {
@@ -193,6 +203,8 @@ export default function AdminProjectsPage() {
       deadline: "2023-08-30T23:59:59Z",
       progressPercentage: 10,
       lastActivityAt: "2023-06-25T09:15:00Z",
+      isApproved: false,
+      invoices: [],
       teamMembers: [
         { id: "1", name: "Alex Johnson", email: "alex@websiter.click", role: "Project Manager", avatar: "/avatars/alex.jpg" },
         { id: "5", name: "David Brown", email: "david@websiter.click", role: "E-commerce Developer", avatar: "/avatars/david.jpg" }
@@ -213,7 +225,8 @@ export default function AdminProjectsPage() {
         layoutPreference: "Multi-section",
         domain: "xyzstore.com",
         hosting: "E-commerce Hosting",
-        maintenance: "Growth Plan"
+        maintenance: "Growth Plan",
+        referenceWebsites: "https://www.example.com, https://www.another.com"
       }
     }
   ];
@@ -450,39 +463,41 @@ export default function AdminProjectsPage() {
           </div>
         )}
 
-        {/* Filters */}
-        <Card className="p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="statusFilter">Filter by Status</Label>
-              <select
-                id="statusFilter"
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">All Statuses</option>
-                <option value="submitted">Submitted</option>
-                <option value="awaiting_invoice">Awaiting Invoice</option>
-                <option value="approved">Approved</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="on_hold">On Hold</option>
-              </select>
+        {!selectedProject && (
+          /* Filters */
+          <Card className="p-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="statusFilter">Filter by Status</Label>
+                <select
+                  id="statusFilter"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="awaiting_invoice">Awaiting Invoice</option>
+                  <option value="approved">Approved</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="on_hold">On Hold</option>
+                </select>
+              </div>
+              
+              <div>
+                <Label htmlFor="clientFilter">Filter by Client</Label>
+                <Input
+                  id="clientFilter"
+                  placeholder="Search by name or email"
+                  value={clientFilter}
+                  onChange={(e) => setClientFilter(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
             </div>
-            
-            <div>
-              <Label htmlFor="clientFilter">Filter by Client</Label>
-              <Input
-                id="clientFilter"
-                placeholder="Search by name or email"
-                value={clientFilter}
-                onChange={(e) => setClientFilter(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-12">
@@ -596,356 +611,22 @@ export default function AdminProjectsPage() {
               </Card>
             )}
 
-            {/* Project Workspace */}
+            {/* Modern Project Workspace */}
             {selectedProject && (
-              <div className="space-y-6">
-                {/* Workspace Header */}
-                <Card className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h2 className="text-2xl font-bold mb-2">{selectedProject.name}</h2>
-                      <p className="text-muted-foreground">{selectedProject.description}</p>
-                    </div>
-                    <Button variant="outline" onClick={() => setSelectedProject(null)}>
-                      Back to Projects
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="text-center p-4 border rounded">
-                      <div className="text-2xl font-bold text-primary">{selectedProject.progressPercentage}%</div>
-                      <div className="text-sm text-muted-foreground">Complete</div>
-                    </div>
-                    <div className="text-center p-4 border rounded">
-                      <div className="text-2xl font-bold">
-                        {getDaysUntilDeadline(selectedProject.deadline) ?? 'N/A'}
-                      </div>
-                      <div className="text-sm text-muted-foreground">Days Until Deadline</div>
-                    </div>
-                    <div className="text-center p-4 border rounded">
-                      <div className="text-2xl font-bold">{selectedProject.teamMembers?.length || 0}</div>
-                      <div className="text-sm text-muted-foreground">Team Members</div>
-                    </div>
-                    <div className="text-center p-4 border rounded">
-                      <div className="text-2xl font-bold">{selectedProject.assets.length}</div>
-                      <div className="text-sm text-muted-foreground">Assets</div>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Workspace Tabs */}
-                <Tabs value={activeWorkspaceTab} onValueChange={setActiveWorkspaceTab}>
-                  <TabsList className="grid w-full grid-cols-7">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="progress">Progress</TabsTrigger>
-                    <TabsTrigger value="team">Team</TabsTrigger>
-                    <TabsTrigger value="assets">Assets</TabsTrigger>
-                    <TabsTrigger value="communication">Communication</TabsTrigger>
-                    <TabsTrigger value="invoices">Invoices</TabsTrigger>
-                    <TabsTrigger value="analytics">Analytics</TabsTrigger>
-                  </TabsList>
-
-                  {/* Overview Tab */}
-                  <TabsContent value="overview" className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Card className="p-6">
-                        <h3 className="text-lg font-semibold mb-4">Project Information</h3>
-                        <div className="space-y-3">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Client:</span>
-                            <span>{selectedProject.clientName}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Email:</span>
-                            <span>{selectedProject.clientEmail}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Status:</span>
-                            <Badge className={getStatusColor(selectedProject.status).replace('bg-', 'bg-').replace('text-', 'text-')}>
-                              {selectedProject.status.replace('_', ' ')}
-                            </Badge>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Created:</span>
-                            <span>{formatDate(selectedProject.createdAt)}</span>
-                          </div>
-                          {selectedProject.deadline && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Deadline:</span>
-                              <span>{formatDate(selectedProject.deadline)}</span>
-                            </div>
-                          )}
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Last Activity:</span>
-                            <span>{formatDateTime(selectedProject.lastActivityAt)}</span>
-                          </div>
-                        </div>
-                      </Card>
-
-                      <Card className="p-6">
-                        <h3 className="text-lg font-semibold mb-4">Requirements</h3>
-                        <div className="space-y-3">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Base Package:</span>
-                            <span>{selectedProject.requirements.basePackage}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Add-ons:</span>
-                            <div className="mt-1">
-                              {selectedProject.requirements.addons.map((addon, index) => (
-                                <Badge key={index} variant="outline" className="mr-1 mb-1">
-                                  {addon}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Design Style:</span>
-                            <span>{selectedProject.requirements.designStyle}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Color Scheme:</span>
-                            <span>{selectedProject.requirements.colorScheme}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Domain:</span>
-                            <span>{selectedProject.requirements.domain}</span>
-                          </div>
-                        </div>
-                      </Card>
-                    </div>
-                  </TabsContent>
-
-                  {/* Progress Tab */}
-                  <TabsContent value="progress" className="space-y-6">
-                    <Card className="p-6">
-                      <h3 className="text-lg font-semibold mb-4">Overall Progress</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <span className="text-sm font-medium">Project Completion</span>
-                            <span className="text-sm text-muted-foreground">{selectedProject.progressPercentage}%</span>
-                          </div>
-                          <Progress value={selectedProject.progressPercentage} className="h-3" />
-                        </div>
-                      </div>
-                    </Card>
-
-                    <Card className="p-6">
-                      <h3 className="text-lg font-semibold mb-4">Milestones</h3>
-                      <div className="space-y-4">
-                        {selectedProject.milestones?.map((milestone) => (
-                          <div key={milestone.id} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <h4 className="font-medium">{milestone.title}</h4>
-                                <p className="text-sm text-muted-foreground">{milestone.description}</p>
-                              </div>
-                              <Badge className={getMilestoneStatusColor(milestone.status).replace('bg-', 'bg-').replace('text-', 'text-')}>
-                                {milestone.status.replace('_', ' ')}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between text-sm text-muted-foreground">
-                              <span>Due: {formatDate(milestone.dueDate)}</span>
-                              {milestone.completedAt && (
-                                <span>Completed: {formatDate(milestone.completedAt)}</span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Team Tab */}
-                  <TabsContent value="team" className="space-y-6">
-                    <Card className="p-6">
-                      <h3 className="text-lg font-semibold mb-4">Team Members</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {selectedProject.teamMembers?.map((member) => (
-                          <div key={member.id} className="border rounded-lg p-4">
-                            <div className="flex items-center space-x-3 mb-3">
-                              <Avatar>
-                                <AvatarImage src={member.avatar} alt={member.name} />
-                                <AvatarFallback>
-                                  {member.name.split(' ').map(n => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <h4 className="font-medium">{member.name}</h4>
-                                <p className="text-sm text-muted-foreground">{member.role}</p>
-                              </div>
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {member.email}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Assets Tab */}
-                  <TabsContent value="assets" className="space-y-6">
-                    <Card className="p-6">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold">Project Assets</h3>
-                        <div className="border-2 border-dashed border-input rounded-md p-8 text-center">
-                          <div className="text-3xl mb-2">📁</div>
-                          <p className="text-lg font-medium mb-2">Upload Project Assets</p>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            Drag & drop files here or click to browse
-                          </p>
-                          <Button>Choose Files</Button>
-                        </div>
-                      </div>
-                      
-                      {selectedProject.assets.length === 0 ? (
-                        <div className="text-center py-8">
-                          <p className="text-muted-foreground">No assets uploaded yet.</p>
-                        </div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full">
-                            <thead>
-                              <tr className="border-b">
-                                <th className="text-left py-3 px-4">Name</th>
-                                <th className="text-left py-3 px-4">Type</th>
-                                <th className="text-left py-3 px-4">Size</th>
-                                <th className="text-left py-3 px-4">Uploaded By</th>
-                                <th className="text-left py-3 px-4">Uploaded</th>
-                                <th className="text-left py-3 px-4">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {selectedProject.assets.map((asset) => (
-                                <tr key={asset.id} className="border-b hover:bg-muted/50">
-                                  <td className="py-3 px-4">{asset.name}</td>
-                                  <td className="py-3 px-4">
-                                    <Badge variant="outline">{asset.type}</Badge>
-                                  </td>
-                                  <td className="py-3 px-4">{formatFileSize(asset.size)}</td>
-                                  <td className="py-3 px-4">{asset.uploadedBy}</td>
-                                  <td className="py-3 px-4">{formatDateTime(asset.uploadedAt)}</td>
-                                  <td className="py-3 px-4">
-                                    <div className="flex space-x-2">
-                                      <Button variant="outline" size="sm">
-                                        Download
-                                      </Button>
-                                      <Button variant="outline" size="sm">
-                                        View
-                                      </Button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </Card>
-                  </TabsContent>
-
-                  {/* Communication Tab */}
-                  <TabsContent value="communication" className="space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <Card className="p-6">
-                        <h3 className="text-lg font-semibold mb-4">Internal Notes</h3>
-                        <div className="space-y-4 mb-4">
-                          {selectedProject.communications?.filter(comm => comm.isInternal)
-                            .map((comm) => (
-                              <div key={comm.id} className="border rounded p-3">
-                                <div className="flex justify-between text-sm text-muted-foreground mb-1">
-                                  <span>{comm.sender}</span>
-                                  <span>{formatDateTime(comm.timestamp)}</span>
-                                </div>
-                                <p>{comm.message}</p>
-                              </div>
-                            ))}
-                        </div>
-                        <div className="space-y-2">
-                          <Textarea
-                            placeholder="Add internal note..."
-                            value={newInternalNote}
-                            onChange={(e) => setNewInternalNote(e.target.value)}
-                            rows={3}
-                          />
-                          <Button onClick={handleAddInternalNote} disabled={!newInternalNote.trim()}>
-                            Add Note
-                          </Button>
-                        </div>
-                      </Card>
-
-                      <Card className="p-6">
-                        <h3 className="text-lg font-semibold mb-4">Client Communication</h3>
-                        <div className="space-y-4 mb-4">
-                          {selectedProject.communications?.filter(comm => !comm.isInternal)
-                            .map((comm) => (
-                              <div key={comm.id} className="border rounded p-3">
-                                <div className="flex justify-between text-sm text-muted-foreground mb-1">
-                                  <span>{comm.sender}</span>
-                                  <span>{formatDateTime(comm.timestamp)}</span>
-                                </div>
-                                <p>{comm.message}</p>
-                              </div>
-                            ))}
-                        </div>
-                        <div className="space-y-2">
-                          <Textarea
-                            placeholder="Send message to client..."
-                            value={newClientMessage}
-                            onChange={(e) => setNewClientMessage(e.target.value)}
-                            rows={3}
-                          />
-                          <Button onClick={handleSendClientMessage} disabled={!newClientMessage.trim()}>
-                            Send Message
-                          </Button>
-                        </div>
-                      </Card>
-                    </div>
-                  </TabsContent>
-
-                  {/* Invoices Tab */}
-                  <TabsContent value="invoices" className="space-y-6">
-                    <Card className="p-6">
-                      <h3 className="text-lg font-semibold mb-4">Invoice Management</h3>
-                      <div className="text-center py-8">
-                        <p className="text-muted-foreground mb-4">No invoices created for this project yet.</p>
-                        <Button>Create Invoice</Button>
-                      </div>
-                    </Card>
-                  </TabsContent>
-
-                  {/* Analytics Tab */}
-                  <TabsContent value="analytics" className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      <Card className="p-6">
-                        <h3 className="text-lg font-semibold mb-4">Time Tracking</h3>
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-primary">0h</div>
-                          <div className="text-sm text-muted-foreground">Time Spent</div>
-                        </div>
-                      </Card>
-
-                      <Card className="p-6">
-                        <h3 className="text-lg font-semibold mb-4">Budget Utilization</h3>
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-primary">0%</div>
-                          <div className="text-sm text-muted-foreground">Budget Used</div>
-                        </div>
-                      </Card>
-
-                      <Card className="p-6">
-                        <h3 className="text-lg font-semibold mb-4">Team Productivity</h3>
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-primary">100%</div>
-                          <div className="text-sm text-muted-foreground">Efficiency Rate</div>
-                        </div>
-                      </Card>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
+              <ModernProjectWorkspace
+                project={selectedProject}
+                onBack={() => setSelectedProject(null)}
+                onProjectUpdate={(updatedProject) => {
+                  // Update the project in the projects list
+                  setProjects(prev => 
+                    prev.map(p => p.id === updatedProject.id ? updatedProject : p)
+                  );
+                  setFilteredProjects(prev => 
+                    prev.map(p => p.id === updatedProject.id ? updatedProject : p)
+                  );
+                  setSelectedProject(updatedProject);
+                }}
+              />
             )}
           </>
         )}

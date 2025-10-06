@@ -71,8 +71,12 @@ const VALID_MAINTENANCE_PLANS = [
 ];
 
 export async function POST(request: NextRequest) {
+  console.log("DEBUG: Onboarding API called");
+  
   try {
     const body = await request.json();
+    console.log("DEBUG: Request body received:", body);
+    
     const {
       selectedPackage,
       addOns,
@@ -210,6 +214,7 @@ export async function POST(request: NextRequest) {
       userId = existingUser.id;
     } else {
       // Create new user in Supabase Auth with email confirmation
+      console.log("DEBUG: Attempting to create user with email:", email);
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -221,9 +226,13 @@ export async function POST(request: NextRequest) {
         }
       });
 
+      console.log("DEBUG: Auth response - authData:", authData);
+      console.log("DEBUG: Auth response - authError:", authError);
+
       if (authError) {
+        console.error("DEBUG: Auth error details:", authError);
         return NextResponse.json(
-          { success: false, message: 'An error occurred during signup' },
+          { success: false, message: `Auth error: ${authError.message}` },
           { status: 500 }
         );
       }
@@ -262,34 +271,41 @@ export async function POST(request: NextRequest) {
     }
 
     // Create project in Supabase with "ongoing" status
+    console.log("DEBUG: Creating project with userId:", userId);
+    const projectDataToInsert = {
+      client_id: userId,
+      name: `Project ${selectedPackage}`, // Add required name field
+      status: 'pending', // Changed from 'ongoing' to 'pending'
+      website_type: selectedPackage,
+      design_preferences: {
+        designStyle,
+        referenceWebsites,
+        colorScheme,
+        layoutPreferences
+      },
+      add_ons: addOns || [],
+      domain_info: {
+        domainOption,
+        hostingOption
+      },
+      maintenance_plan: maintenancePlan
+    };
+    
+    console.log("DEBUG: Project data to insert:", projectDataToInsert);
+    
     const { data: projectData, error: projectError } = await supabase
       .from('projects')
-      .insert([
-        {
-          client_id: userId,
-          status: 'ongoing', // Changed from 'pending' to 'ongoing'
-          website_type: selectedPackage,
-          design_preferences: {
-            designStyle,
-            referenceWebsites,
-            colorScheme,
-            layoutPreferences
-          },
-          add_ons: addOns || [],
-          domain_info: {
-            domainOption,
-            hostingOption
-          },
-          maintenance_plan: maintenancePlan
-        },
-      ])
+      .insert([projectDataToInsert])
       .select()
       .single();
 
+    console.log("DEBUG: Project creation response - projectData:", projectData);
+    console.log("DEBUG: Project creation response - projectError:", projectError);
+
     if (projectError) {
-      console.error('Project creation error:', projectError);
+      console.error('Project creation error details:', projectError);
       return NextResponse.json(
-        { success: false, message: 'An error occurred during project creation' },
+        { success: false, message: `Project creation error: ${projectError.message}` },
         { status: 500 }
       );
     }
@@ -318,10 +334,41 @@ export async function POST(request: NextRequest) {
       },
       requiresEmailVerification: isNewUser,
     }, { status: 201 });
-  } catch (error) {
-    console.error('Onboarding error:', error);
+    } catch (error) {
+    console.error('DEBUG: Onboarding API error details:', error);
+    console.error('DEBUG: Error type:', typeof error);
+    console.error('DEBUG: Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    // More specific error handling
+    if (error instanceof Error) {
+      console.error('DEBUG: Error message:', error.message);
+      console.error('DEBUG: Error name:', error.name);
+      
+      // Check for specific Supabase errors
+      if (error.message.includes('duplicate key')) {
+        return NextResponse.json(
+          { success: false, message: 'Email already registered' },
+          { status: 409 }
+        );
+      }
+      
+      if (error.message.includes('Invalid login')) {
+        return NextResponse.json(
+          { success: false, message: 'Invalid authentication credentials' },
+          { status: 401 }
+        );
+      }
+      
+      if (error.message.includes('network')) {
+        return NextResponse.json(
+          { success: false, message: 'Network connection error. Please try again.' },
+          { status: 503 }
+        );
+      }
+    }
+    
     return NextResponse.json(
-      { success: false, message: 'An error occurred during project creation' },
+      { success: false, message: `An error occurred during project creation: ${error instanceof Error ? error.message : 'Unknown error'}` },
       { status: 500 }
     );
   }

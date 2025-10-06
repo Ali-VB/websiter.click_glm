@@ -20,11 +20,12 @@ const supabase = createClient(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Extract the invoice ID from the params
-    const invoiceId = params.id;
+    const { id } = await params;
+    const invoiceId = id;
     
     // Check authentication (simplified for test)
     const authHeader = request.headers.get('authorization');

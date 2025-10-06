@@ -43,7 +43,11 @@ export async function GET(request: NextRequest) {
     request.signal.addEventListener('abort', () => {
       sseManager.removeConnection(connectionId);
       (customStream as NodeJS.WritableStream & { destroyed?: boolean }).destroyed = true;
-      writer.close();
+      try {
+        writer.close();
+      } catch (e) {
+        // Ignore errors, stream is likely already closed
+      }
     });
     
     // Set up heartbeat

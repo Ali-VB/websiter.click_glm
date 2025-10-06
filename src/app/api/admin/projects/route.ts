@@ -11,6 +11,7 @@ interface ProjectRequirement {
   domain: string;
   hosting: string;
   maintenance: string;
+  referenceWebsites?: string;
 }
 
 interface TeamMember {
@@ -187,15 +188,31 @@ export async function GET(request: NextRequest) {
     // Transform the data to match the expected format
     const transformedProjects = projects.map(project => {
       const client = project.clients as { id: string; name: string; email: string } | null;
-      const requirements = project.requirements as ProjectRequirement || {
-        basePackage: '',
-        addons: [],
-        designStyle: '',
-        colorScheme: '',
-        layoutPreference: '',
-        domain: '',
-        hosting: '',
-        maintenance: ''
+      
+      const designPreferences = project.design_preferences as {
+        designStyle?: string;
+        colorScheme?: string;
+        layoutPreference?: string;
+        referenceWebsites?: string;
+      } || {};
+
+      const domainInfo = project.domain_info as {
+        domain?: string;
+        hosting?: string;
+      } || {};
+
+      const addons = (project.add_ons as string[]) || [];
+
+      const requirements: ProjectRequirement = {
+        basePackage: project.website_type || '',
+        addons: addons,
+        designStyle: designPreferences.designStyle || '',
+        colorScheme: designPreferences.colorScheme || '',
+        layoutPreference: designPreferences.layoutPreference || '',
+        referenceWebsites: designPreferences.referenceWebsites || '',
+        domain: domainInfo.domain || '',
+        hosting: domainInfo.hosting || '',
+        maintenance: project.maintenance_plan || ''
       };
 
       const projectMilestones = milestonesByProject.get(project.id) || [];

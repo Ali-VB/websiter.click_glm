@@ -701,9 +701,17 @@ export default function ProjectDetailPage() {
               </CardHeader>
               <CardContent>
                 {invoices.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No invoices yet
-                  </p>
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      No invoices yet
+                    </p>
+                    {project?.status === 'completed' && (
+                      <Button variant="outline" size="sm" onClick={() => window.location.href = '/dashboard/invoices'}>
+                        <FileText className="w-4 h-4 mr-2" />
+                        Request Invoice
+                      </Button>
+                    )}
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {invoices.map((invoice) => (
@@ -729,6 +737,12 @@ export default function ProjectDetailPage() {
                         </div>
                       </div>
                     ))}
+                    <div className="pt-2">
+                      <Button variant="outline" size="sm" className="w-full" onClick={() => window.location.href = '/dashboard/invoices'}>
+                        <FileText className="w-4 h-4 mr-2" />
+                        View All Invoices
+                      </Button>
+                    </div>
                   </div>
                 )}
               </CardContent>

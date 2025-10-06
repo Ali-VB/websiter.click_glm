@@ -3,9 +3,10 @@ import { createServerClient } from "@/lib/supabase";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServerClient();
     
     // Get the auth token from the request headers
@@ -45,7 +46,7 @@ export async function POST(
     const { data: ticket, error: ticketError } = await supabase
       .from("support_tickets")
       .select("id, client_id")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (ticketError || !ticket) {
@@ -60,7 +61,7 @@ export async function POST(
     const { data: reply, error } = await supabase
       .from("support_ticket_replies")
       .insert({
-        ticket_id: params.id,
+        ticket_id: id,
         author_id: client.id,
         message,
         is_internal: false // Clients can only create public replies
@@ -80,7 +81,7 @@ export async function POST(
         status: "in_progress",
         updated_at: new Date().toISOString()
       })
-      .eq("id", params.id);
+      .eq("id", id);
 
     if (updateError) {
       console.error("Error updating ticket status:", updateError);

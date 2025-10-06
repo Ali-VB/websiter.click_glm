@@ -19,7 +19,7 @@ interface Project {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check if user is authenticated
@@ -43,7 +43,8 @@ export async function GET(
       );
     }
 
-    const projectId = params.id;
+    const { id } = await params;
+    const projectId = id;
 
     // Fetch the project
     const { data: project, error } = await supabase

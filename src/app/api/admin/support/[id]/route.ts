@@ -3,9 +3,10 @@ import { createServerClient } from "@/lib/supabase";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServerClient();
     
     // Get the auth token from the request headers
@@ -35,7 +36,7 @@ export async function GET(
           author:clients(id, name, email)
         )
       `)
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (error) {
@@ -56,9 +57,10 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServerClient();
     
     // Get the auth token from the request headers
@@ -86,7 +88,7 @@ export async function PUT(
         status: status || undefined,
         updated_at: new Date().toISOString()
       })
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -102,7 +104,7 @@ export async function PUT(
       const { error: assignmentError } = await supabase
         .from("ticket_assignments")
         .upsert({
-          ticket_id: params.id,
+          ticket_id: id,
           assigned_to: assignedTo,
           assigned_by: user.id,
           assigned_at: new Date().toISOString()
