@@ -3,74 +3,33 @@
 ```yaml
 - generic [ref=e2]:
   - banner [ref=e3]:
-    - generic [ref=e6]: websiter.click
-    - navigation "Main navigation" [ref=e7]:
-      - link "Features" [ref=e8]:
-        - /url: "#features"
-      - link "How It Works" [ref=e9]:
-        - /url: "#how-it-works"
-      - link "Pricing" [ref=e10]:
-        - /url: "#pricing"
-      - link "Contact" [ref=e11]:
-        - /url: /contact
-    - group "Account actions" [ref=e12]:
-      - link "Log in to your account" [ref=e13]:
-        - /url: /login
-        - text: Log In
-      - link "Sign up for a new account" [ref=e14]:
-        - /url: /onboarding
-        - text: Sign Up
-  - generic [ref=e15]:
-    - heading "Website, Simplified" [level=1] [ref=e16]:
-      - text: Website,
-      - generic [ref=e17]: Simplified
-    - paragraph [ref=e18]: "Order your professional website like you'd order anything online: simple, transparent, and entirely on your terms."
-    - generic [ref=e19]:
-      - link "Get Started" [ref=e20]:
-        - /url: /onboarding
-      - link "Learn More" [ref=e21]:
-        - /url: "#features"
-  - generic [ref=e22]:
-    - heading "Everything You Need for a Professional Website" [level=2] [ref=e23]
-    - generic [ref=e24]:
-      - generic [ref=e25]:
-        - img [ref=e27]
-        - heading "Simple Onboarding" [level=3] [ref=e29]
-        - paragraph [ref=e30]: Our guided wizard makes it easy to specify your requirements without technical jargon.
-      - generic [ref=e31]:
-        - img [ref=e33]
-        - heading "Transparent Pricing" [level=3] [ref=e35]
-        - paragraph [ref=e36]: Choose from predefined packages and add-ons with clear, upfront pricing in CAD.
-      - generic [ref=e37]:
-        - img [ref=e39]
-        - heading "Fast Turnaround" [level=3] [ref=e41]
-        - paragraph [ref=e42]: Get your professional website up and running quickly with our streamlined process.
-  - generic [ref=e43]:
-    - heading "How It Works" [level=2] [ref=e44]
-    - generic [ref=e45]:
-      - generic [ref=e46]:
-        - generic [ref=e48]: "1"
-        - heading "Choose Package" [level=3] [ref=e49]
-        - paragraph [ref=e50]: Select a website package that fits your needs.
-      - generic [ref=e51]:
-        - generic [ref=e53]: "2"
-        - heading "Customize" [level=3] [ref=e54]
-        - paragraph [ref=e55]: Add features and provide design preferences.
-      - generic [ref=e56]:
-        - generic [ref=e58]: "3"
-        - heading "Review & Approve" [level=3] [ref=e59]
-        - paragraph [ref=e60]: We'll review your request and send a draft invoice for approval.
-      - generic [ref=e61]:
-        - generic [ref=e63]: "4"
-        - heading "Launch" [level=3] [ref=e64]
-        - paragraph [ref=e65]: Once approved, we'll get to work on your new website.
-  - generic [ref=e67]:
-    - heading "Ready to Get Started?" [level=2] [ref=e68]
-    - paragraph [ref=e69]: Join hundreds of satisfied customers who have ordered their professional website through websiter.click.
-    - link "Start Your Project Now" [ref=e70]:
-      - /url: /onboarding
-  - contentinfo [ref=e71]:
-    - generic [ref=e72]:
-      - generic [ref=e75]: websiter.click
-      - paragraph [ref=e77]: © 2025 websiter.click. All rights reserved.
+    - generic [ref=e4]:
+      - img "Websiter.click logo" [ref=e5]
+      - generic [ref=e7]: websiter.click
+    - navigation "Page navigation" [ref=e8]:
+      - link "Return to home page" [ref=e9]:
+        - /url: /
+        - text: Back to Home
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - heading "Welcome Back" [level=1] [ref=e13]
+      - paragraph [ref=e14]: Sign in to your websiter.click account
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: Email Address
+        - textbox "Email Address" [active] [ref=e18]
+      - generic [ref=e19]:
+        - generic [ref=e20]: Password
+        - textbox "Password" [ref=e21]
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - checkbox "Remember me" [ref=e24]
+          - generic [ref=e25]: Remember me
+        - link "Forgot your password?" [ref=e27]:
+          - /url: /forgot-password
+      - button "Sign in to your account" [ref=e28]: Sign In
+    - paragraph [ref=e30]:
+      - text: Don't have an account?
+      - link "Sign up" [ref=e31]:
+        - /url: /signup
 ```

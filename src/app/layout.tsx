@@ -24,6 +24,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Add global error handling for unhandled promise rejections
+  if (typeof window !== 'undefined') {
+    window.addEventListener('unhandledrejection', (event) => {
+      // Filter out specific SSE errors that we know are safe to ignore
+      if (event.reason && typeof event.reason === 'object' && event.reason.code === 'ERR_INVALID_STATE') {
+        console.warn('Ignoring SSE stream closure error:', event.reason.message);
+        event.preventDefault();
+        return;
+      }
+      
+      // Log other unhandled rejections
+      console.error('Unhandled promise rejection:', event.reason);
+    });
+  }
+
   return (
     <html lang="en">
       <body

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// Define the Project interface
+// Define the Project interface with new unified stage system
 interface Project {
   id: string;
   name: string;
   description: string;
-  status: "pending" | "in_progress" | "completed" | "cancelled";
+  status: "submitted" | "reviewing" | "invoice_sent" | "payment_pending" | "in_progress" | "review_needed" | "completed";
   client_id: string;
   website_type: string;
   design_preferences: Record<string, unknown>;

@@ -23,13 +23,21 @@ import {
   Eye,
   MapPin
 } from 'lucide-react';
+import { 
+  ProjectStage, 
+  getStageColor, 
+  getStageProgress, 
+  getStageInfo,
+  clientStageInfo,
+  mapLegacyStatus
+} from '@/lib/project-stages';
 import Link from 'next/link';
 
 interface Project {
   id: string;
   name: string;
   description: string;
-  status: "pending" | "in_progress" | "completed" | "cancelled";
+  status: ProjectStage;
   website_type: string;
   design_preferences: Record<string, unknown>;
   add_ons: Record<string, unknown>;
@@ -187,16 +195,16 @@ export default function ProjectDetailPage() {
         id: '2',
         title: 'Design Phase',
         description: 'Website design and mockups creation',
-        status: project.status === 'pending' ? 'pending' : 'completed',
+        status: project.status === 'submitted' || project.status === 'reviewing' ? 'pending' : 'completed',
         due_date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-        completed_at: project.status !== 'pending' ? new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() : undefined,
+        completed_at: project.status !== 'submitted' && project.status !== 'reviewing' ? new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() : undefined,
       },
       {
         id: '3',
         title: 'Development',
         description: 'Website development and implementation',
         status: project.status === 'in_progress' ? 'in_progress' : 
-                project.status === 'completed' ? 'completed' : 'pending',
+                project.status === 'completed' || project.status === 'review_needed' ? 'completed' : 'pending',
         due_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
         completed_at: project.status === 'completed' ? new Date().toISOString() : undefined,
       },

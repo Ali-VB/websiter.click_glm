@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { AdminLayout } from "@/components/admin-layout";
 import { 
   ArrowLeft, 
@@ -23,7 +25,9 @@ import {
   Eye,
   MapPin,
   Upload,
-  Ticket
+  Ticket,
+  Save,
+  Edit2
 } from "lucide-react";
 
 // Types for the workspace
@@ -136,6 +140,8 @@ export default function AdminProjectWorkspace({
     const [newClientMessage, setNewClientMessage] = useState("");
     const [showInvoiceCreator, setShowInvoiceCreator] = useState(false);
     const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
+    const [isEditingDeadline, setIsEditingDeadline] = useState(false);
+    const [newDeadline, setNewDeadline] = useState("");
 
     // Update local project state when prop changes
     useEffect(() => {
@@ -394,6 +400,92 @@ export default function AdminProjectWorkspace({
         } catch (err) {
             setError("Failed to send message to client");
         }
+    };
+
+    const handleUpdateDeadline = async () => {
+        if (!newDeadline.trim()) return;
+
+        try {
+            // Get auth token from localStorage
+            const token = localStorage.getItem('admin_token');
+            if (!token) {
+                setError("Authentication required");
+                return;
+            }
+
+            // Convert date string to ISO format (handle timezone properly)
+            // Create date at noon UTC to avoid timezone issues
+            const [year, month, day] = newDeadline.split('-').map(Number);
+            const deadlineDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+            
+            if (isNaN(deadlineDate.getTime())) {
+                setError("Invalid date format");
+                return;
+            }
+
+            const response = await fetch(`/api/admin/projects/${project.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    deadline: deadlineDate.toISOString()
+                })
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                setError(data.message || "Failed to update deadline");
+                return;
+            }
+
+            const updatedProject = {
+                ...project,
+                deadline: deadlineDate.toISOString(),
+                updatedAt: new Date().toISOString(),
+                lastActivityAt: new Date().toISOString()
+            };
+
+            setProject(updatedProject);
+            onProjectUpdate(updatedProject);
+            setIsEditingDeadline(false);
+            setNewDeadline("");
+
+            // Add to activity feed
+            const newActivity: ActivityItem = {
+                id: Date.now().toString(),
+                type: "project_update",
+                description: `Project deadline updated to ${formatDate(deadlineDate.toISOString())}`,
+                timestamp: new Date().toISOString(),
+                user: "Admin"
+            };
+            setActivityFeed(prev => [newActivity, ...prev]);
+
+        } catch (err) {
+            setError("Failed to update deadline");
+        }
+    };
+
+    const handleStartEditDeadline = () => {
+        setIsEditingDeadline(true);
+        // Set current deadline as default value if it exists
+        if (project.deadline) {
+            // Parse the UTC date and format it as YYYY-MM-DD in local timezone
+            const utcDate = new Date(project.deadline);
+            const year = utcDate.getUTCFullYear();
+            const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(utcDate.getUTCDate()).padStart(2, '0');
+            setNewDeadline(`${year}-${month}-${day}`);
+        } else {
+            setNewDeadline("");
+        }
+    };
+
+    const handleCancelEditDeadline = () => {
+        setIsEditingDeadline(false);
+        setNewDeadline("");
     };
 
     const getActivityIcon = (type: string) => {
@@ -1269,17 +1361,66 @@ export default function AdminProjectWorkspace({
                                         </Badge>
                                     </div>
                                 </div>
-                                {project.deadline && (
-                                    <div className="text-sm">
-                                        <div className="flex justify-between">
-                                            <span>Deadline:</span>
-                                            <span className={getDeadlineStatus(project.deadline) === "overdue" ? 'text-red-600' : 
-                                                          getDeadlineStatus(project.deadline) === "due-soon" ? 'text-yellow-600' : 'text-green-600'}>
-                                                {formatDate(project.deadline)}
-                                            </span>
-                                        </div>
+                                
+                                {/* Deadline Section */}
+                                <div className="text-sm">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span>Deadline:</span>
+                                        {!isEditingDeadline && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={handleStartEditDeadline}
+                                                className="h-6 w-6 p-0"
+                                            >
+                                                <Edit2 className="h-3 w-3" />
+                                            </Button>
+                                        )}
                                     </div>
-                                )}
+                                    
+                                    {isEditingDeadline ? (
+                                        <div className="space-y-2">
+                                            <div className="flex space-x-2">
+                                                <Input
+                                                    type="date"
+                                                    value={newDeadline}
+                                                    onChange={(e) => setNewDeadline(e.target.value)}
+                                                    className="flex-1 h-8 text-xs"
+                                                />
+                                            </div>
+                                            <div className="flex space-x-2">
+                                                <Button
+                                                    size="sm"
+                                                    onClick={handleUpdateDeadline}
+                                                    disabled={!newDeadline.trim()}
+                                                    className="h-7 text-xs"
+                                                >
+                                                    <Save className="h-3 w-3 mr-1" />
+                                                    Save
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handleCancelEditDeadline}
+                                                    className="h-7 text-xs"
+                                                >
+                                                    Cancel
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            {project.deadline ? (
+                                                <span className={getDeadlineStatus(project.deadline) === "overdue" ? 'text-red-600' : 
+                                                              getDeadlineStatus(project.deadline) === "due-soon" ? 'text-yellow-600' : 'text-green-600'}>
+                                                    {formatDate(project.deadline)}
+                                                </span>
+                                            ) : (
+                                                <span className="text-muted-foreground italic">No deadline set</span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </Card>
                     </div>

@@ -43,21 +43,42 @@ export async function GET(request: NextRequest) {
     request.signal.addEventListener('abort', () => {
       sseManager.removeConnection(connectionId);
       (customStream as NodeJS.WritableStream & { destroyed?: boolean }).destroyed = true;
+      
+      // Clear heartbeat
+      const heartbeat = (customStream as NodeJS.WritableStream & { _heartbeat?: NodeJS.Timeout })._heartbeat;
+      if (heartbeat) {
+        clearInterval(heartbeat);
+      }
+      
+      // Close writer safely
       try {
-        writer.close();
+        if (writer && writer.ready) {
+          writer.ready.then(() => {
+            writer.close().catch(() => {
+              // Ignore close errors
+            });
+          }).catch(() => {
+            // Ignore ready state errors
+          });
+        }
       } catch (e) {
-        // Ignore errors, stream is likely already closed
+        // Ignore all errors during cleanup
       }
     });
     
     // Set up heartbeat
     const heartbeat = setInterval(() => {
       try {
-        customStream.write(`data: ${JSON.stringify({
-          type: 'heartbeat',
-          data: { timestamp: new Date().toISOString() },
-          timestamp: new Date().toISOString()
-        })}\n\n`);
+        if (!(customStream as NodeJS.WritableStream & { destroyed?: boolean }).destroyed) {
+          customStream.write(`data: ${JSON.stringify({
+            type: 'heartbeat',
+            data: { timestamp: new Date().toISOString() },
+            timestamp: new Date().toISOString()
+          })}\n\n`);
+        } else {
+          clearInterval(heartbeat);
+          sseManager.removeConnection(connectionId);
+        }
       } catch (error) {
         clearInterval(heartbeat);
         sseManager.removeConnection(connectionId);

@@ -14,6 +14,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AdminLayout } from "@/components/admin-layout";
 import AssetUpload from "@/components/AssetUpload";
 import ModernProjectWorkspace from "@/components/modern-project-workspace";
+import { 
+  ProjectStage, 
+  getStageColor, 
+  getStageProgress, 
+  getAllStages,
+  getStageInfo,
+  adminStageInfo,
+  mapLegacyStatus
+} from "@/lib/project-stages";
 
 interface TeamMember {
   id: string;
@@ -57,7 +66,7 @@ interface Project {
   description: string;
   clientName: string;
   clientEmail: string;
-  status: "submitted" | "awaiting_invoice" | "approved" | "in_progress" | "completed" | "on_hold";
+  status: ProjectStage;
   type: "business" | "portfolio" | "landing" | "booking" | "ecommerce" | "custom";
   createdAt: string;
   updatedAt: string;
@@ -65,7 +74,7 @@ interface Project {
   progressPercentage: number;
   lastActivityAt: string;
   isApproved: boolean;
-  invoices: any[];
+  invoices: Invoice[];
   teamMembers: TeamMember[];
   milestones: ProjectMilestone[];
   assets: ProjectAsset[];
@@ -81,6 +90,15 @@ interface Project {
     maintenance: string;
     referenceWebsites: string;
   };
+}
+
+interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  status: "draft" | "pending_payment" | "paid" | "cancelled";
+  totalAmount: number;
+  dueDate: string;
+  createdAt: string;
 }
 
 export default function AdminProjectsPage() {
@@ -152,7 +170,7 @@ export default function AdminProjectsPage() {
       description: "Personal portfolio website for Jane Doe to showcase her design work.",
       clientName: "Jane Doe",
       clientEmail: "jane@janedoe.com",
-      status: "awaiting_invoice",
+      status: "invoice_sent",
       type: "portfolio",
       createdAt: "2023-06-10T14:20:00Z",
       updatedAt: "2023-06-15T16:30:00Z",

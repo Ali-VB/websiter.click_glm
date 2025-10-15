@@ -47,11 +47,6 @@ interface UserProfile {
 
 const navigationItems = [
   {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
     name: "Projects",
     href: "/dashboard/projects",
     icon: FolderOpen,

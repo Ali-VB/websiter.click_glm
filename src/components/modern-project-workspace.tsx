@@ -13,8 +13,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import CustomInvoiceModal from "@/components/CustomInvoiceModal";
 import { Upload, MessageSquare, Ticket, FileText, ArrowLeft, ToggleLeft, ToggleRight, Plus } from "lucide-react";
+import { ProjectTimeline } from "@/components/project-timeline";
+import { ProjectDetails } from "@/components/project-details";
+import {
+  ProjectStage,
+  getStageColor,
+  getStageProgress,
+  getNextStage,
+  canTransitionTo,
+  getAllStages,
+  getStageInfo,
+  adminStageInfo
+} from "@/lib/project-stages";
 
 // Types
 interface TeamMember {
@@ -76,7 +88,7 @@ interface Project {
   description: string;
   clientName: string;
   clientEmail: string;
-  status: "submitted" | "awaiting_invoice" | "approved" | "in_progress" | "completed" | "on_hold";
+  status: ProjectStage;
   type: "business" | "portfolio" | "landing" | "booking" | "ecommerce" | "custom";
   createdAt: string;
   updatedAt: string;
@@ -117,6 +129,8 @@ export default function ModernProjectWorkspace({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [isEditingDeadline, setIsEditingDeadline] = useState(false);
+  const [tempDeadline, setTempDeadline] = useState(project.deadline || "");
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
   const [invoiceData, setInvoiceData] = useState({
     ownerName: project.clientName,
@@ -276,7 +290,7 @@ export default function ModernProjectWorkspace({
       const updatedProject: Project = {
         ...project,
         isApproved: approved,
-        status: approved ? "approved" : "submitted",
+        status: approved ? "payment_pending" : "submitted",
         updatedAt: new Date().toISOString(),
         lastActivityAt: new Date().toISOString()
       };
@@ -361,7 +375,7 @@ export default function ModernProjectWorkspace({
       const updatedProject: Project = {
         ...project,
         invoices: [...(project.invoices || []), newInvoice],
-        status: "awaiting_invoice",
+        status: "invoice_sent",
         deadline: invoiceData.endDate, // Set deadline from invoice end date
         updatedAt: new Date().toISOString(),
         lastActivityAt: new Date().toISOString()
@@ -439,6 +453,173 @@ export default function ModernProjectWorkspace({
   const taxAmount = Math.round(subtotal * invoiceData.taxRate);
   const totalAmount = subtotal + taxAmount;
 
+  // Get primary actions based on current stage
+  const getPrimaryActions = (status: string) => {
+    const actions: Array<{
+      icon: string;
+      title: string;
+      description: string;
+      buttonText: string;
+      handler: () => void;
+    }> = [];
+
+    switch (status) {
+      case "submitted":
+        actions.push({
+          icon: "📋",
+          title: "Review Project Requirements",
+          description: "Check all project details and requirements",
+          buttonText: "Review Now",
+          handler: () => console.log("Review project")
+        });
+        actions.push({
+          icon: "✅",
+          title: "Approve Project",
+          description: "Approve and move to payment stage",
+          buttonText: "Approve",
+          handler: () => handleApprovalToggle(true)
+        });
+        break;
+
+      case "awaiting_confirmation":
+        actions.push({
+          icon: "💳",
+          title: "Create Invoice",
+          description: "Send invoice to client for payment",
+          buttonText: "Create Invoice",
+          handler: () => setShowInvoiceModal(true)
+        });
+        actions.push({
+          icon: "📅",
+          title: "Set Deadline",
+          description: "Set project completion deadline",
+          buttonText: "Set Deadline",
+          handler: () => {
+            const newDeadline = prompt("Enter deadline (YYYY-MM-DD):");
+            if (newDeadline) handleDeadlineUpdate(newDeadline);
+          }
+        });
+        break;
+
+      case "payment_pending":
+        actions.push({
+          icon: "✅",
+          title: "Confirm Payment",
+          description: "Mark payment as received",
+          buttonText: "Confirm Payment",
+          handler: () => handleStatusChange("designing")
+        });
+        actions.push({
+          icon: "📧",
+          title: "Send Payment Reminder",
+          description: "Send reminder to client",
+          buttonText: "Send Reminder",
+          handler: () => console.log("Send reminder")
+        });
+        break;
+
+      case "designing":
+        actions.push({
+          icon: "🎨",
+          title: "Review Design Deliverables",
+          description: "Check all design assets and mockups",
+          buttonText: "Review Design",
+          handler: () => console.log("Review design")
+        });
+        actions.push({
+          icon: "📤",
+          title: "Send Design to Client",
+          description: "Share design preview with client",
+          buttonText: "Send to Client",
+          handler: () => console.log("Send design to client")
+        });
+        break;
+
+      case "developing":
+        actions.push({
+          icon: "🚀",
+          title: "Deploy to Staging",
+          description: "Deploy project to staging server",
+          buttonText: "Deploy Now",
+          handler: () => console.log("Deploy to staging")
+        });
+        actions.push({
+          icon: "👀",
+          title: "Client Preview",
+          description: "Prepare client preview session",
+          buttonText: "Setup Preview",
+          handler: () => console.log("Setup preview")
+        });
+        break;
+
+      case "feedback":
+        actions.push({
+          icon: "✅",
+          title: "Mark as Completed",
+          description: "Finalize project and deliver to client",
+          buttonText: "Complete Project",
+          handler: () => handleStatusChange("completed")
+        });
+        actions.push({
+          icon: "🔄",
+          title: "Request Changes",
+          description: "Go back to design/development",
+          buttonText: "Request Changes",
+          handler: () => console.log("Request changes")
+        });
+        break;
+
+      case "completed":
+        actions.push({
+          icon: "📁",
+          title: "Archive Project",
+          description: "Archive completed project",
+          buttonText: "Archive",
+          handler: () => console.log("Archive project")
+        });
+        break;
+    }
+
+    return actions;
+  };
+
+  // Get secondary actions based on current stage
+  const getSecondaryActions = (status: string) => {
+    const actions: Array<{
+      icon: string;
+      title: string;
+      handler: () => void;
+    }> = [];
+
+    actions.push({
+      icon: "💬",
+      title: "Send Message",
+      handler: () => console.log("Send message")
+    });
+
+    actions.push({
+      icon: "📁",
+      title: "Upload Assets",
+      handler: () => console.log("Upload assets")
+    });
+
+    if (status !== "submitted" && status !== "completed") {
+      actions.push({
+        icon: "📊",
+        title: "Update Progress",
+        handler: () => console.log("Update progress")
+      });
+    }
+
+    actions.push({
+      icon: "📝",
+      title: "Add Note",
+      handler: () => console.log("Add note")
+    });
+
+    return actions;
+  };
+
   return (
     <div className="w-full">
       <div className="container mx-auto px-4 py-6">
@@ -484,440 +665,380 @@ export default function ModernProjectWorkspace({
             </div>
           </div>
 
-          {/* Project Details - Modern Card Design */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            
-            {/* Main Project Info Card */}
-            <div className="lg:col-span-3">
-              <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 rounded-2xl p-1">
-                <div className="bg-white dark:bg-gray-900 rounded-2xl p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                        <span className="text-white text-xl">🚀</span>
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Project Overview</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Core requirements & specifications</p>
-                      </div>
-                    </div>
-                    <Badge className={`${getStatusColor(project.status)} border-0`}>
-                      {project.status.replace('_', ' ')}
+
+        </Card>
+
+        {/* Project Actions */}
+        <Card className="p-6 mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold">🎯 PROJECT ACTIONS</h3>
+              <p className="text-sm text-muted-foreground">
+                Current Stage: <span className="font-semibold text-primary">{project.status.replace('_', ' ').toUpperCase()}</span>
+                {project.deadline && ` • Deadline: ${formatDate(project.deadline)}`}
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-muted-foreground">Progress</div>
+              <div className="text-2xl font-bold text-primary">{getStageProgress(project.status)}%</div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* PROJECT OVERVIEW BAR */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Stage:</span>
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
+                      {project.status.replace('_', ' ').toUpperCase()}
                     </Badge>
                   </div>
-
-                  {/* Complete Project Summary - All Required Data */}
-                  <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-                    <div className="space-y-6">
-                      {/* Website Purpose + Cost */}
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-5">
-                        <div className="flex items-center space-x-2 mb-3">
-                          <span className="text-xl">🎯</span>
-                          <h4 className="font-semibold text-gray-900 dark:text-white">Website Purpose & Cost</h4>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-700 dark:text-gray-300">
-                              <strong>• Website Type:</strong> {project.type.charAt(0).toUpperCase() + project.type.slice(1)} Website
-                            </span>
-                            <span className="font-bold text-blue-600 dark:text-blue-400">CAD $2,500</span>
-                          </div>
-                          <div className="text-gray-600 dark:text-gray-400 text-sm">
-                            <strong>• Purpose:</strong> {project.description}
-                          </div>
-                        </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Progress:</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-20 h-2 bg-blue-200 dark:bg-blue-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-600 dark:bg-blue-400 transition-all duration-300"
+                          style={{ width: `${getStageProgress(project.status)}%` }}
+                        />
                       </div>
-
-                      {/* Selected Additional Features + Cost */}
-                      {project.requirements.addons && project.requirements.addons.length > 0 && (
-                        <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-900/20 dark:via-orange-900/20 dark:to-yellow-900/20 rounded-xl p-5">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-xl">⭐</span>
-                              <h4 className="font-semibold text-gray-900 dark:text-white">Selected Additional Features & Cost</h4>
-                            </div>
-                            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200">
-                              {project.requirements.addons.length} items
-                            </Badge>
-                          </div>
-                          <div className="space-y-2">
-                            {project.requirements.addons.map((addon, index) => (
-                              <div key={index} className="flex justify-between items-center">
-                                <span className="text-gray-700 dark:text-gray-300">
-                                  <strong>• Feature {index + 1}:</strong> {addon}
-                                </span>
-                                <span className="font-bold text-amber-600 dark:text-amber-400">CAD $75</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Design Requirements */}
-                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-5">
-                        <div className="flex items-center space-x-2 mb-3">
-                          <span className="text-xl">🎨</span>
-                          <h4 className="font-semibold text-gray-900 dark:text-white">Design Requirements</h4>
-                        </div>
-                        <div className="space-y-2">
-                          {project.requirements.designStyle && (
-                            <div className="text-gray-700 dark:text-gray-300">
-                              <strong>• Design Style:</strong> {project.requirements.designStyle.charAt(0).toUpperCase() + project.requirements.designStyle.slice(1)}
-                            </div>
-                          )}
-                          {project.requirements.referenceWebsites && (
-                            <div className="text-gray-700 dark:text-gray-300">
-                              <strong>• Reference Websites:</strong> {project.requirements.referenceWebsites}
-                            </div>
-                          )}
-                          {project.requirements.colorScheme && (
-                            <div className="text-gray-700 dark:text-gray-300">
-                              <strong>• Color Scheme:</strong> {project.requirements.colorScheme.charAt(0).toUpperCase() + project.requirements.colorScheme.slice(1)}
-                            </div>
-                          )}
-                          {project.requirements.layoutPreference && (
-                            <div className="text-gray-700 dark:text-gray-300">
-                              <strong>• Layout Preferences:</strong> {project.requirements.layoutPreference.charAt(0).toUpperCase() + project.requirements.layoutPreference.slice(1)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Domain & Hosting + Cost */}
-                      <div className="bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 rounded-xl p-5">
-                        <div className="flex items-center space-x-2 mb-3">
-                          <span className="text-xl">🌐</span>
-                          <h4 className="font-semibold text-gray-900 dark:text-white">Domain & Hosting & Cost</h4>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-700 dark:text-gray-300">
-                              <strong>• Domain:</strong> {project.requirements.domain || 'Client provided domain'}
-                            </span>
-                            <span className="font-bold text-cyan-600 dark:text-cyan-400">CAD $12</span>
-                          </div>
-                          {project.requirements.hosting && (
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-700 dark:text-gray-300">
-                                <strong>• Hosting:</strong> {project.requirements.hosting.charAt(0).toUpperCase() + project.requirements.hosting.slice(1)}
-                              </span>
-                              <span className="font-bold text-cyan-600 dark:text-cyan-400">CAD $60/year</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Maintenance & Support + Cost */}
-                      {project.requirements.maintenance && (
-                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-5">
-                          <div className="flex items-center space-x-2 mb-3">
-                            <span className="text-xl">🔧</span>
-                            <h4 className="font-semibold text-gray-900 dark:text-white">Maintenance & Support & Cost</h4>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-700 dark:text-gray-300">
-                              <strong>• Maintenance Plan:</strong> {project.requirements.maintenance.charAt(0).toUpperCase() + project.requirements.maintenance.slice(1)}
-                            </span>
-                            <span className="font-bold text-green-600 dark:text-green-400">CAD $175/month</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Total Cost Summary */}
-                      <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800 dark:to-slate-800 rounded-xl p-5 border-2 border-gray-200 dark:border-gray-600">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xl font-bold text-gray-900 dark:text-white">Total Project Cost</span>
-                          <span className="text-2xl font-bold text-primary">
-                            CAD $2,647
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                          Includes one-time setup and annual recurring costs
-                        </p>
-                      </div>
+                      <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                        {getStageProgress(project.status)}%
+                      </span>
                     </div>
                   </div>
+                  {project.deadline && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Deadline:</span>
+                      <Badge variant={getDeadlineStatus(project.deadline) === "overdue" ? "destructive" :
+                        getDeadlineStatus(project.deadline) === "due-soon" ? "default" : "secondary"}
+                        className="text-xs">
+                        {formatDate(project.deadline)} ({getDaysUntilDeadline(project.deadline)} days)
+                      </Badge>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Team:</span>
+                    <div className="flex items-center space-x-1">
+                      <Avatar className="h-6 w-6 -ml-2 first:ml-0 border-2 border-white dark:border-gray-900">
+                        <AvatarFallback className="text-xs">
+                          {project.teamMembers?.[0]?.name?.split(' ').map(n => n[0]).join('') || 'T'}
+                        </AvatarFallback>
+                      </Avatar>
+                      {project.teamMembers && project.teamMembers.length > 1 && (
+                        <Avatar className="h-6 w-6 -ml-2 border-2 border-white dark:border-gray-900">
+                          <AvatarFallback className="text-xs">
+                            {project.teamMembers[1]?.name?.split(' ').map(n => n[0]).join('') || 'T'}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300 ml-2">
+                        {project.teamMembers?.length || 0} members
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {isEditingDeadline ? (
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        type="date"
+                        value={tempDeadline}
+                        onChange={(e) => setTempDeadline(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                        className="w-40 h-8 text-sm"
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          if (tempDeadline) {
+                            handleDeadlineUpdate(tempDeadline);
+                          }
+                          setIsEditingDeadline(false);
+                        }}
+                        disabled={!tempDeadline || isLoading}
+                        className="h-8 px-3"
+                      >
+                        {isLoading ? "..." : "✓"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setTempDeadline(project.deadline || "");
+                          setIsEditingDeadline(false);
+                        }}
+                        className="h-8 px-3"
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setTempDeadline(project.deadline || "");
+                        setIsEditingDeadline(true);
+                      }}
+                      className="text-blue-700 border-blue-300 hover:bg-blue-100 dark:text-blue-300 dark:border-blue-700 dark:hover:bg-blue-900/20"
+                    >
+                      📅 Edit Deadline
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-blue-700 border-blue-300 hover:bg-blue-100 dark:text-blue-300 dark:border-blue-700 dark:hover:bg-blue-900/20"
+                  >
+                    👥 Manage Team
+                  </Button>
                 </div>
               </div>
             </div>
 
-            {/* Right Sidebar */}
-            <div className="space-y-6">
-              {/* Deadline Card - Out of the Box */}
-              <div className="bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl p-6 text-white shadow-lg border-2 border-red-200">
-                <div className="text-center">
-                  <div className="flex items-center justify-center space-x-2 mb-4">
-                    <span className="text-2xl">📅</span>
-                    <h4 className="font-bold text-lg">Project Deadline</h4>
-                  </div>
-                  <div className="mb-4">
-                    <p className="text-3xl font-bold mb-2">
-                      {project.deadline ? formatDate(project.deadline) : 'Not Set'}
-                    </p>
-                    {project.deadline && (
-                      <Badge variant={getDeadlineStatus(project.deadline) === "overdue" ? "destructive" : 
-                                    getDeadlineStatus(project.deadline) === "due-soon" ? "default" : "secondary"}
-                                    className="bg-white text-red-600 hover:bg-red-50">
-                        {getDeadlineStatus(project.deadline)}
-                      </Badge>
-                    )}
-                  </div>
-                  <Button 
-                    variant="secondary" 
-                    size="sm"
-                    onClick={() => {
-                      const newDeadline = prompt("Enter deadline (YYYY-MM-DD):", project.deadline || "");
-                      if (newDeadline) {
-                        handleDeadlineUpdate(newDeadline);
-                      }
-                    }}
-                    className="w-full bg-white text-red-600 hover:bg-red-50 font-semibold"
-                  >
-                    Edit Deadline
+          </div>
+        </Card>
+
+        {/* Custom Invoice Modal */}
+        <CustomInvoiceModal
+          isOpen={showInvoiceModal}
+          onClose={() => setShowInvoiceModal(false)}
+          invoiceData={invoiceData}
+          setInvoiceData={setInvoiceData}
+          project={project}
+          onCreateInvoice={handleCreateInvoice}
+          isLoading={isLoading}
+        />
+
+        {/* SPLIT VIEW: Project Details (Left) + Timeline (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* Project Details - Left Side (2/3 width) */}
+          <div className="lg:col-span-2">
+            <Card className="p-6 h-full">
+              <h3 className="text-lg font-semibold mb-4">📋 Project Details</h3>
+              <ProjectDetails project={{
+                id: project.id,
+                website_type: project.type,
+                design_preferences: {
+                  designStyle: project.requirements.designStyle,
+                  referenceWebsites: project.requirements.referenceWebsites,
+                  colorScheme: project.requirements.colorScheme,
+                  layoutPreferences: project.requirements.layoutPreference,
+                },
+                add_ons: project.requirements.addons,
+                domain_info: {
+                  domainOption: project.requirements.domain,
+                  hostingOption: project.requirements.hosting,
+                },
+                maintenance_plan: project.requirements.maintenance,
+              }} />
+            </Card>
+          </div>
+
+          {/* Project Timeline - Right Side (1/3 width) */}
+          <div className="lg:col-span-1">
+            <Card className="p-6 h-full">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">📊 Project Timeline</h3>
+                <Badge variant="outline" className="animate-pulse">LIVE</Badge>
+              </div>
+              <ProjectTimeline
+                currentStage={project.status}
+                isAdmin={true}
+                onStageChange={handleStatusChange}
+                projectId={project.id}
+              />
+            </Card>
+          </div>
+        </div>
+
+        {/* ADMIN ACTIONS */}
+        <Card className="p-6 mb-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold">⚙️ ADMIN ACTIONS</h3>
+              <p className="text-sm text-muted-foreground">
+                Manage project workflow and client interactions
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-muted-foreground">Current Stage</div>
+              <div className="text-lg font-semibold text-primary">{project.status.replace('_', ' ').toUpperCase()}</div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            {/* Approve/Revoke Project - FIRST ITEM - Shows in submitted stage or when approved */}
+            {(project.status === 'submitted' || project.isApproved) && (
+              <Button
+                onClick={() => handleApprovalToggle(!project.isApproved)}
+                disabled={isLoading}
+                className={project.isApproved ? "bg-orange-600 hover:bg-orange-700" : "bg-green-600 hover:bg-green-700"}
+              >
+                {project.isApproved ? "🔄 Revoke Approval" : "✅ Approve Project"}
+              </Button>
+            )}
+
+            {/* Create Invoice - Available from initial stage */}
+            <Button
+              onClick={() => setShowInvoiceModal(true)}
+              disabled={isLoading}
+              variant="outline"
+            >
+              💳 Create Invoice
+            </Button>
+
+            {/* Confirm Payment - Available from initial stage */}
+            <Button
+              onClick={() => handleStatusChange("in_progress")}
+              disabled={isLoading}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              ✅ Confirm Payment
+            </Button>
+
+            {/* Send to Client - Available in in_progress stage */}
+            {project.status === 'in_progress' && (
+              <Button
+                variant="outline"
+                onClick={handleSendToClient}
+                disabled={isLoading}
+              >
+                📤 Send to Client
+              </Button>
+            )}
+
+            {/* Stage Selector - Always available for manual overrides */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium text-muted-foreground">Manual Stage Change:</span>
+              <Select value={project.status} onValueChange={handleStatusChange} disabled={isLoading}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Change Stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAllStages(true).map((stage) => (
+                    <SelectItem key={stage.value} value={stage.value}>
+                      {stage.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Action Instructions */}
+          <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+            <h4 className="font-medium text-sm mb-2">💡 Action Guide:</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground">
+              <div>• <strong>Submitted:</strong> Review client requirements and approve project</div>
+              <div>• <strong>Approved:</strong> Create invoice and set project timeline</div>
+              <div>• <strong>Payment Pending:</strong> Confirm payment receipt</div>
+              <div>• <strong>In Progress:</strong> Develop and deliver to client</div>
+            </div>
+          </div>
+        </Card>
+
+        {/* PROJECT NOTES WITH RICH TEXT EDITOR */}
+        <Card className="p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4">📝 Project Notes</h3>
+          <div className="space-y-4">
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <Badge variant="outline">Internal Notes</Badge>
+                  <span className="text-sm text-muted-foreground">Auto-saves as you type</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button variant="outline" size="sm">
+                    <Plus className="mr-1 h-3 w-3" />
+                    Add Note
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    📋 View History
                   </Button>
                 </div>
               </div>
 
-              {/* Team Members */}
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">👥 Team Members</h3>
-                <div className="space-y-3">
-                  {project.teamMembers?.map((member) => (
-                    <div key={member.id} className="flex items-center space-x-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.avatar} alt={member.name} />
-                        <AvatarFallback className="text-xs">
-                          {member.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{member.name}</div>
-                        <div className="text-xs text-muted-foreground">{member.role}</div>
-                      </div>
-                    </div>
-                  ))}
+              {/* Simple Rich Text Editor */}
+              <div className="border rounded-md p-3 bg-background">
+                <div className="flex items-center space-x-2 mb-3 pb-3 border-b">
+                  <Button variant="ghost" size="sm" className="h-8 px-2">
+                    <strong>B</strong>
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 px-2">
+                    <em>I</em>
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 px-2">
+                    • List
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 px-2">
+                    🔗 Link
+                  </Button>
                 </div>
-              </Card>
-            </div>
-          </div>
-
-        </Card>
-
-        {/* Project Controls */}
-        <Card className="p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-4">🎛️ Project Controls</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Status Dropdown */}
-            <div>
-              <Label className="text-sm font-medium">Status</Label>
-              <Select value={project.status} onValueChange={handleStatusChange} disabled={isLoading}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="submitted">Submitted</SelectItem>
-                  <SelectItem value="awaiting_invoice">Awaiting Invoice</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="on_hold">On Hold</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Approval Toggle */}
-            <div>
-              <Label className="text-sm font-medium">Approved</Label>
-              <div className="flex items-center space-x-2 mt-2">
-                <Switch
-                  checked={project.isApproved}
-                  onCheckedChange={handleApprovalToggle}
-                  disabled={isLoading}
+                <Textarea
+                  placeholder="Add your project notes here... This is a rich text editor where you can format text, add lists, and links."
+                  className="min-h-[150px] border-none resize-none focus:outline-none"
+                  defaultValue=""
                 />
-                <span className="text-sm text-muted-foreground">
-                  {project.isApproved ? "Approved" : "Not Approved"}
-                </span>
+              </div>
+
+              <div className="flex items-center justify-between mt-3 text-sm text-muted-foreground">
+                <span>Last edited: Just now by Admin</span>
+                <div className="flex items-center space-x-2">
+                  <span>Characters: 0</span>
+                  <span>•</span>
+                  <span>Saved: Auto</span>
+                </div>
               </div>
             </div>
 
-            {/* Invoice Button */}
-            <div>
-              <Label className="text-sm font-medium">Invoice</Label>
-              <Button 
-                variant="outline" 
-                className="w-full mt-2" 
-                onClick={() => setShowInvoiceModal(true)}
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                Create Invoice
-              </Button>
-              <Dialog open={showInvoiceModal} onOpenChange={setShowInvoiceModal}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>📄 Create Invoice</DialogTitle>
-                  </DialogHeader>
-
-                  <div className="space-y-6">
-                    {/* Owner Information */}
-                    <div>
-                      <h4 className="font-medium mb-3">Owner Information</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Name</Label>
-                          <Input value={invoiceData.ownerName} onChange={(e) => setInvoiceData({ ...invoiceData, ownerName: e.target.value })} />
-                        </div>
-                        <div>
-                          <Label>Email</Label>
-                          <Input value={invoiceData.ownerEmail} onChange={(e) => setInvoiceData({ ...invoiceData, ownerEmail: e.target.value })} />
-                        </div>
-                        <div>
-                          <Label>Company</Label>
-                          <Input value={invoiceData.ownerCompany} onChange={(e) => setInvoiceData({ ...invoiceData, ownerCompany: e.target.value })} />
-                        </div>
-                        <div>
-                          <Label>Address</Label>
-                          <Input value={invoiceData.ownerAddress} onChange={(e) => setInvoiceData({ ...invoiceData, ownerAddress: e.target.value })} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Project Details */}
-                    <div>
-                      <h4 className="font-medium mb-3">Project Details</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Project</Label>
-                          <Input value={invoiceData.projectName} onChange={(e) => setInvoiceData({ ...invoiceData, projectName: e.target.value })} />
-                        </div>
-                        <div>
-                          <Label>Duration</Label>
-                          <Input value={invoiceData.duration} onChange={(e) => setInvoiceData({ ...invoiceData, duration: e.target.value })} />
-                        </div>
-                        <div>
-                          <Label>Start Date</Label>
-                          <Input type="date" value={invoiceData.startDate} onChange={(e) => setInvoiceData({ ...invoiceData, startDate: e.target.value })} />
-                        </div>
-                        <div>
-                          <Label>End Date</Label>
-                          <Input type="date" value={invoiceData.endDate} onChange={(e) => setInvoiceData({ ...invoiceData, endDate: e.target.value })} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Pricing */}
-                    <div>
-                      <h4 className="font-medium mb-3">Pricing</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Base Price ($)</Label>
-                          <Input type="number" value={invoiceData.basePrice} onChange={(e) => setInvoiceData({ ...invoiceData, basePrice: parseInt(e.target.value) || 0 })} />
-                        </div>
-                        <div>
-                          <Label>Add-ons Price ($)</Label>
-                          <Input type="number" value={invoiceData.addonsPrice} onChange={(e) => setInvoiceData({ ...invoiceData, addonsPrice: parseInt(e.target.value) || 0 })} />
-                        </div>
-                        <div>
-                          <Label>Tax Rate</Label>
-                          <Input type="number" step="0.01" value={invoiceData.taxRate} onChange={(e) => setInvoiceData({ ...invoiceData, taxRate: parseFloat(e.target.value) || 0 })} />
-                        </div>
-                        <div>
-                          <Label>Payment Terms</Label>
-                          <Select value={invoiceData.paymentTerms} onValueChange={(value) => setInvoiceData({ ...invoiceData, paymentTerms: value })}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="net_15">Net 15</SelectItem>
-                              <SelectItem value="net_30">Net 30</SelectItem>
-                              <SelectItem value="net_60">Net 60</SelectItem>
-                              <SelectItem value="due_on_receipt">Due on Receipt</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label>Due Date</Label>
-                          <Input type="date" value={invoiceData.dueDate} onChange={(e) => setInvoiceData({ ...invoiceData, dueDate: e.target.value })} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Summary */}
-                    <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-                      <h4 className="font-medium mb-3">Summary</h4>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span>Subtotal:</span>
-                          <span>${subtotal.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Tax:</span>
-                          <span>${taxAmount.toLocaleString()}</span>
-                        </div>
-                        <div className="flex justify-between font-bold text-lg">
-                          <span>Total:</span>
-                          <span>${totalAmount.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end space-x-3">
-                      <Button variant="outline" onClick={() => setShowInvoiceModal(false)}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleCreateInvoice} disabled={isLoading}>
-                        {isLoading ? "Creating..." : "Create Invoice"}
-                      </Button>
-                    </div>
+            {/* Recent Notes History */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Recent Notes</h4>
+              <div className="space-y-2">
+                <div className="border rounded-md p-3 bg-muted/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Initial project review completed</span>
+                    <span className="text-xs text-muted-foreground">2 hours ago</span>
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {/* Send to Client */}
-            <div>
-              <Label className="text-sm font-medium">Actions</Label>
-              <Button
-                onClick={handleSendToClient}
-                disabled={isLoading || project.status !== "in_progress"}
-                className="w-full mt-2 bg-green-600 hover:bg-green-700"
-              >
-                {isLoading ? "Sending..." : "🚀 Send to Client"}
-              </Button>
+                  <p className="text-sm text-muted-foreground">Client requirements reviewed. All specifications look good. Ready to move to approval stage.</p>
+                </div>
+                <div className="border rounded-md p-3 bg-muted/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Design preferences noted</span>
+                    <span className="text-xs text-muted-foreground">Yesterday</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Client prefers modern, clean design with blue color scheme. Reference websites provided.</p>
+                </div>
+              </div>
             </div>
           </div>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Quick Actions & Activity Feed */}
-          <div className="lg:col-span-2 space-y-6">
-
-
-            {/* Activity Feed */}
-            <Card className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">🔄 Recent Activity</h3>
-                <Badge variant="outline" className="animate-pulse">LIVE</Badge>
-              </div>
-              <div className="space-y-4">
-                {activityFeed.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                    <div className="text-lg">{getActivityIcon(activity.type)}</div>
-                    <div className="flex-1">
-                      <p className="text-sm">{activity.description}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {activity.user} • {formatDateTime(activity.timestamp)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-
+        {/* Activity Feed */}
+        <Card className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">🔄 Recent Activity</h3>
+            <Badge variant="outline" className="animate-pulse">LIVE</Badge>
           </div>
-
-
-        </div>
+          <div className="space-y-4">
+            {activityFeed.map((activity) => (
+              <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                <div className="text-lg">{getActivityIcon(activity.type)}</div>
+                <div className="flex-1">
+                  <p className="text-sm">{activity.description}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {activity.user} • {formatDateTime(activity.timestamp)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
     </div>
   );

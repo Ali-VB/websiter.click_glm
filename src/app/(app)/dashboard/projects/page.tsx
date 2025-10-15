@@ -2,24 +2,83 @@
 
 import { supabase } from '@/lib/supabase';
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ClientSidebar } from "@/components/client-sidebar";
 import { ClientHeader } from "@/components/client-header";
+import { ProjectTimeline } from "@/components/project-timeline";
+import { ProjectDetails } from "@/components/project-details";
 import { useTheme } from "@/components/theme-provider";
-import { FolderOpen, Plus, Eye } from "lucide-react";
+import { ProjectStage, mapLegacyStatus } from "@/lib/project-stages";
+import { 
+  FolderOpen, 
+  Plus, 
+  Eye, 
+  Calendar,
+  DollarSign,
+  MessageSquare,
+  HelpCircle,
+  Upload,
+  FileText,
+  CheckCircle,
+  Clock,
+  AlertCircle
+} from "lucide-react";
 
 interface Project {
   id: string;
   name: string;
   description: string;
-  status: "pending" | "in_progress" | "completed" | "cancelled";
+  status: ProjectStage;
   created_at: string;
   updated_at: string;
+  deadline?: string;
+  budget?: number;
+  client_notes?: string;
+  website_type: string;
+  design_preferences?: {
+    designStyle?: string;
+    referenceWebsites?: string;
+    colorScheme?: string;
+    layoutPreferences?: string;
+  };
+  add_ons?: string[];
+  domain_info?: {
+    domainOption?: string;
+    hostingOption?: string;
+  };
+  maintenance_plan?: string;
+}
+
+interface Invoice {
+  id: string;
+  project_id: string;
+  amount: number;
+  status: "draft" | "pending_payment" | "paid" | "cancelled";
+  created_at: string;
+  due_date?: string;
+}
+
+interface SupportTicket {
+  id: string;
+  project_id?: string;
+  subject: string;
+  status: "open" | "in_progress" | "resolved" | "closed";
+  created_at: string;
+}
+
+interface Asset {
+  id: string;
+  project_id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number;
+  uploaded_at: string;
 }
 
 interface UserData {
@@ -30,13 +89,18 @@ interface UserData {
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { theme, setTheme, isDark } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
   const fetchProjectsData = useCallback(async (token: string) => {
     setIsLoading(true);
@@ -54,6 +118,14 @@ export default function ProjectsPage() {
       if (projectsResponse.ok) {
         const projectsData = await projectsResponse.json();
         setProjects(projectsData.projects || []);
+        
+        // Set selected project from URL or first project
+        const urlProjectId = searchParams.get('project');
+        if (urlProjectId && projectsData.projects?.find((p: Project) => p.id === urlProjectId)) {
+          setSelectedProjectId(urlProjectId);
+        } else if (projectsData.projects?.length > 0) {
+          setSelectedProjectId(projectsData.projects[0].id);
+        }
       }
 
       // Fetch user profile
@@ -83,13 +155,39 @@ export default function ProjectsPage() {
         setUnreadNotifications(unreadCount);
       }
 
+      // Fetch invoices
+      const invoicesResponse = await fetch("/api/invoices", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (invoicesResponse.ok) {
+        const invoicesData = await invoicesResponse.json();
+        setInvoices(invoicesData.invoices || []);
+      }
+
+      // Fetch support tickets
+      const ticketsResponse = await fetch("/api/support", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (ticketsResponse.ok) {
+        const ticketsData = await ticketsResponse.json();
+        setSupportTickets(ticketsData.tickets || []);
+      }
+
     } catch (err) {
       setError("An error occurred while loading your projects");
       console.error("Projects error:", err);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -114,18 +212,56 @@ export default function ProjectsPage() {
     setTheme(isDark ? "light" : "dark");
   };
 
+  const handleProjectChange = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    const url = new URL(window.location.href);
+    if (projectId) {
+      url.searchParams.set('project', projectId);
+    } else {
+      url.searchParams.delete('project');
+    }
+    window.history.replaceState({}, '', url.toString());
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-      case "in_progress":
+      case "submitted":
         return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+      case "awaiting_confirmation":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+      case "payment_pending":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
+      case "designing":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
+      case "developing":
+        return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200";
+      case "feedback":
+        return "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200";
       case "completed":
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      case "cancelled":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "submitted":
+        return <FileText className="h-4 w-4" />;
+      case "awaiting_confirmation":
+        return <Clock className="h-4 w-4" />;
+      case "payment_pending":
+        return <DollarSign className="h-4 w-4" />;
+      case "designing":
+        return <Eye className="h-4 w-4" />;
+      case "developing":
+        return <FolderOpen className="h-4 w-4" />;
+      case "feedback":
+        return <MessageSquare className="h-4 w-4" />;
+      case "completed":
+        return <CheckCircle className="h-4 w-4" />;
+      default:
+        return <AlertCircle className="h-4 w-4" />;
     }
   };
 
@@ -137,10 +273,52 @@ export default function ProjectsPage() {
     });
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-CA", {
+      style: "currency",
+      currency: "CAD",
+    }).format(amount);
+  };
+
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const projectInvoices = invoices.filter(i => i.project_id === selectedProjectId);
+  const projectTickets = supportTickets.filter(t => t.project_id === selectedProjectId);
+  const projectAssets = assets.filter(a => a.project_id === selectedProjectId);
+
   // Check if client can create a new project
   const hasActiveProject = projects.some(p => 
-    p.status === "in_progress" || p.status === "pending"
+    p.status !== "completed"
   );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <ClientSidebar
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          isDarkMode={isDark}
+          onThemeToggle={handleThemeToggle}
+          unreadNotifications={0}
+          projectsCount={0}
+          invoicesCount={0}
+        />
+        <div className="lg:pl-64">
+          <ClientHeader
+            onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
+            isDarkMode={isDark}
+            onThemeToggle={handleThemeToggle}
+            unreadNotifications={0}
+            onLogout={handleLogout}
+          />
+          <main className="p-6">
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -152,7 +330,7 @@ export default function ProjectsPage() {
         onThemeToggle={handleThemeToggle}
         unreadNotifications={unreadNotifications}
         projectsCount={projects.length}
-        invoicesCount={0}
+        invoicesCount={invoices.length}
       />
 
       {/* Main Content */}
@@ -178,10 +356,16 @@ export default function ProjectsPage() {
             </div>
           )}
 
-          {isLoading ? (
-            <div className="flex justify-center py-12" role="status" aria-live="polite">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary" aria-label="Loading projects"></div>
-              <span className="sr-only">Loading projects</span>
+          {projects.length === 0 ? (
+            <div className="text-center py-12">
+              <FolderOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No projects yet</h3>
+              <p className="text-muted-foreground mb-6">
+                You don't have any projects yet. Create your first website project to get started.
+              </p>
+              <Button asChild>
+                <Link href="/onboarding">Create Your First Project</Link>
+              </Button>
             </div>
           ) : (
             <div className="space-y-6">
@@ -190,7 +374,7 @@ export default function ProjectsPage() {
                 <div>
                   <h1 className="text-3xl font-bold mb-2">Your Projects</h1>
                   <p className="text-muted-foreground">
-                    View and manage all your website projects
+                    Manage all your website projects in one place
                   </p>
                 </div>
                 <Button 
@@ -198,7 +382,7 @@ export default function ProjectsPage() {
                   title={hasActiveProject ? "You can only have one active project at a time" : ""}
                   onClick={() => {
                     if (hasActiveProject) {
-                      alert("You can only have one active project at a time. Please complete or cancel your current project before starting a new one.");
+                      alert("You can only have one active project at a time. Please complete your current project before starting a new one.");
                     } else {
                       router.push("/onboarding");
                     }
@@ -212,139 +396,191 @@ export default function ProjectsPage() {
                 </Button>
               </div>
 
-              {/* Projects List */}
-              <Card>
-                <CardContent className="p-0">
-                  {projects.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FolderOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-2">No projects yet</h3>
-                      <p className="text-muted-foreground mb-6">
-                        You don't have any projects yet. Create your first website project to get started.
-                      </p>
-                      <Button asChild>
-                        <Link href="/onboarding">Create Your First Project</Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full" aria-label="Projects table">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-4 px-6 font-medium" scope="col">Project Name</th>
-                            <th className="text-left py-4 px-6 font-medium" scope="col">Owner</th>
-                            <th className="text-left py-4 px-6 font-medium" scope="col">Status</th>
-                            <th className="text-left py-4 px-6 font-medium" scope="col">Created</th>
-                            <th className="text-left py-4 px-6 font-medium" scope="col">Updated</th>
-                            <th className="text-left py-4 px-6 font-medium" scope="col">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {projects.map((project) => (
-                            <tr key={project.id} className="border-b hover:bg-muted/50 transition-colors">
-                              <td className="py-4 px-6">
-                                <div>
-                                  <div className="font-medium">{project.name}</div>
-                                  <div className="text-sm text-muted-foreground mt-1">{project.description}</div>
-                                </div>
-                              </td>
-                              <td className="py-4 px-6">
-                                <div className="flex items-center space-x-3">
-                                  <Avatar className="w-8 h-8">
-                                    <AvatarFallback>{userData?.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
-                                  </Avatar>
+              {/* Horizontal Project Tabs */}
+              <Tabs value={selectedProjectId} onValueChange={handleProjectChange} className="w-full">
+                <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 auto-rows-max">
+                  {projects.map((project) => (
+                    <TabsTrigger 
+                      key={project.id} 
+                      value={project.id}
+                      className="flex items-center gap-2 justify-start p-3 h-auto data-[state=active]:bg-muted"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {getStatusIcon(project.status)}
+                        <span className="truncate text-sm font-medium">{project.name}</span>
+                      </div>
+                      <Badge variant="outline" className={`ml-auto flex-shrink-0 text-xs ${getStatusColor(project.status)}`}>
+                        {project.status.replace("_", " ")}
+                      </Badge>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+
+                {/* Project Content */}
+                {projects.map((project) => (
+                  <TabsContent key={project.id} value={project.id} className="mt-6 space-y-6">
+                    {/* Project Overview */}
+                    <Card>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle className="flex items-center gap-2">
+                              {getStatusIcon(project.status)}
+                              {project.name}
+                            </CardTitle>
+                            <CardDescription className="mt-2">
+                              {project.description}
+                            </CardDescription>
+                          </div>
+                          <Badge variant="outline" className={getStatusColor(project.status)}>
+                            {project.status.replace("_", " ").toUpperCase()}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">Created: {formatDate(project.created_at)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">Updated: {formatDate(project.updated_at)}</span>
+                          </div>
+                          {project.deadline && (
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">Deadline: {formatDate(project.deadline)}</span>
+                            </div>
+                          )}
+                        </div>
+                        {project.budget && (
+                          <div className="mt-4 flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">Budget: {formatCurrency(project.budget)}</span>
+                          </div>
+                        )}
+                        {project.client_notes && (
+                          <div className="mt-4 p-3 bg-muted rounded-lg">
+                            <p className="text-sm font-medium mb-1">Client Notes:</p>
+                            <p className="text-sm text-muted-foreground">{project.client_notes}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Project Timeline */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Project Timeline</CardTitle>
+                        <CardDescription>
+                          Track your project progress through each stage
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <ProjectTimeline currentStage={project.status} />
+                      </CardContent>
+                    </Card>
+
+                    {/* Project Details */}
+                    <ProjectDetails project={project} />
+
+                    {/* Project Details Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Invoices */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            Invoices
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {projectInvoices.length === 0 ? (
+                            <p className="text-muted-foreground text-sm">No invoices yet</p>
+                          ) : (
+                            <div className="space-y-3">
+                              {projectInvoices.map((invoice) => (
+                                <div key={invoice.id} className="flex justify-between items-center p-3 border rounded-lg">
                                   <div>
-                                    <div className="font-medium">{userData?.name || 'Unknown User'}</div>
-                                    <div className="text-sm text-muted-foreground">{userData?.email || ''}</div>
+                                    <p className="font-medium text-sm">Invoice #{invoice.id.slice(-8)}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {formatDate(invoice.created_at)}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-medium">{formatCurrency(invoice.amount)}</p>
+                                    <Badge variant="outline" className={`text-xs ${getStatusColor(invoice.status)}`}>
+                                      {invoice.status.replace("_", " ")}
+                                    </Badge>
                                   </div>
                                 </div>
-                              </td>
-                              <td className="py-4 px-6">
-                                <Badge variant="outline" className={getStatusColor(project.status)}>
-                                  {project.status.replace("_", " ")}
-                                </Badge>
-                              </td>
-                              <td className="py-4 px-6 text-muted-foreground">
-                                {formatDate(project.created_at)}
-                              </td>
-                              <td className="py-4 px-6 text-muted-foreground">
-                                {formatDate(project.updated_at)}
-                              </td>
-                              <td className="py-4 px-6">
-                                <Button variant="outline" size="sm" asChild>
-                                  <Link href={`/projects/${project.id}`} aria-label={`View details for project ${project.name}`}>
-                                    <Eye className="mr-2 h-4 w-4" />
-                                    View
-                                  </Link>
-                                </Button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
 
-              {/* Project Statistics */}
-              {projects.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Total Projects</p>
-                          <p className="text-2xl font-bold">{projects.length}</p>
+                      {/* Support Tickets */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <HelpCircle className="h-5 w-5" />
+                            Support Tickets
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {projectTickets.length === 0 ? (
+                            <p className="text-muted-foreground text-sm">No support tickets</p>
+                          ) : (
+                            <div className="space-y-3">
+                              {projectTickets.map((ticket) => (
+                                <div key={ticket.id} className="flex justify-between items-center p-3 border rounded-lg">
+                                  <div>
+                                    <p className="font-medium text-sm">{ticket.subject}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {formatDate(ticket.created_at)}
+                                    </p>
+                                  </div>
+                                  <Badge variant="outline" className={`text-xs ${getStatusColor(ticket.status)}`}>
+                                    {ticket.status.replace("_", " ")}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Quick Actions</CardTitle>
+                        <CardDescription>
+                          Common actions for your project
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <Button variant="outline" className="justify-start">
+                            <Upload className="mr-2 h-4 w-4" />
+                            Upload Files
+                          </Button>
+                          <Button variant="outline" className="justify-start">
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            Send Message
+                          </Button>
+                          <Button variant="outline" className="justify-start">
+                            <HelpCircle className="mr-2 h-4 w-4" />
+                            Get Support
+                          </Button>
                         </div>
-                        <FolderOpen className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">In Progress</p>
-                          <p className="text-2xl font-bold">{projects.filter(p => p.status === "in_progress").length}</p>
-                        </div>
-                        <div className="w-8 h-8 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full flex items-center justify-center">
-                          →
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                          <p className="text-2xl font-bold">{projects.filter(p => p.status === "pending").length}</p>
-                        </div>
-                        <div className="w-8 h-8 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded-full flex items-center justify-center">
-                          !
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">Completed</p>
-                          <p className="text-2xl font-bold">{projects.filter(p => p.status === "completed").length}</p>
-                        </div>
-                        <div className="w-8 h-8 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full flex items-center justify-center">
-                          ✓
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                ))}
+              </Tabs>
             </div>
           )}
         </main>
