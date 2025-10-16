@@ -154,13 +154,13 @@ export default function AdminProjectsPage() {
       ],
       requirements: {
         basePackage: "Business Website",
-        addons: ["Contact Form / Extra Forms", "SEO Starter Pack"],
+        addons: ["contact-form", "seo-starter"],
         designStyle: "Corporate",
         colorScheme: "Blue and white",
         layoutPreference: "Multi-section",
-        domain: "abccorp.com",
-        hosting: "Basic Hosting",
-        maintenance: "Basic Plan",
+        domain: "com",
+        hosting: "basic",
+        maintenance: "basic",
         referenceWebsites: "https://www.example.com, https://www.another.com"
       }
     },
@@ -198,13 +198,13 @@ export default function AdminProjectsPage() {
       ],
       requirements: {
         basePackage: "Portfolio / Blog Website",
-        addons: ["Photo Gallery / Portfolio Grid", "Blog System Add-on"],
+        addons: ["photo-gallery", "blog-addon"],
         designStyle: "Creative",
         colorScheme: "Pink and gray",
         layoutPreference: "Grid-based",
-        domain: "janedoe.com",
-        hosting: "Basic Hosting",
-        maintenance: "Basic Plan",
+        domain: "com",
+        hosting: "basic",
+        maintenance: "basic",
         referenceWebsites: "https://www.example.com, https://www.another.com"
       }
     },
@@ -237,13 +237,13 @@ export default function AdminProjectsPage() {
       ],
       requirements: {
         basePackage: "E-commerce Website",
-        addons: ["E-commerce Expansion (add 50 products)", "Analytics & Reports"],
+        addons: ["ecommerce-expansion", "analytics"],
         designStyle: "Modern",
         colorScheme: "Black and orange",
         layoutPreference: "Multi-section",
-        domain: "xyzstore.com",
-        hosting: "E-commerce Hosting",
-        maintenance: "Growth Plan",
+        domain: "com",
+        hosting: "ecommerce",
+        maintenance: "growth",
         referenceWebsites: "https://www.example.com, https://www.another.com"
       }
     }

@@ -199,9 +199,15 @@ export async function GET(request: NextRequest) {
       const domainInfo = project.domain_info as {
         domain?: string;
         hosting?: string;
+        domainOption?: string;
+        hostingOption?: string;
       } || {};
 
       const addons = (project.add_ons as string[]) || [];
+
+      // Handle domain data with multiple fallbacks (matching client dashboard logic)
+      const domainOption = domainInfo.domainOption || domainInfo.domain || 'none';
+      const hostingOption = domainInfo.hostingOption || domainInfo.hosting || 'basic';
 
       const requirements: ProjectRequirement = {
         basePackage: project.website_type || '',
@@ -210,8 +216,8 @@ export async function GET(request: NextRequest) {
         colorScheme: designPreferences.colorScheme || '',
         layoutPreference: designPreferences.layoutPreference || '',
         referenceWebsites: designPreferences.referenceWebsites || '',
-        domain: domainInfo.domain || '',
-        hosting: domainInfo.hosting || '',
+        domain: domainOption,
+        hosting: hostingOption,
         maintenance: project.maintenance_plan || ''
       };
 

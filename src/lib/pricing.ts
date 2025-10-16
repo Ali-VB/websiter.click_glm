@@ -336,14 +336,14 @@ export function calculateProjectCosts({
   };
 
   // Base package cost (one-time development)
-  const packageInfo = WEBSITE_PACKAGES.find(pkg => pkg.id === websiteType);
+  const packageInfo = getPackageInfo(websiteType);
   if (packageInfo) {
     costs.development.basePackage = packageInfo.price;
   }
 
   // Add-ons costs
-  addOns.forEach(addOnId => {
-    const addOnInfo = ADD_ONS.find(addon => addon.id === addOnId);
+  addOns.forEach(addOnIdOrLabel => {
+    const addOnInfo = getAddOnInfo(addOnIdOrLabel);
     if (addOnInfo) {
       if (addOnInfo.isAnnual) {
         costs.annual.addOnsAnnual += addOnInfo.price;
@@ -354,19 +354,19 @@ export function calculateProjectCosts({
   });
 
   // Domain cost (annual)
-  const domainInfo = DOMAIN_OPTIONS.find(domain => domain.id === domainOption);
+  const domainInfo = getDomainInfo(domainOption);
   if (domainInfo) {
     costs.annual.domain = domainInfo.price;
   }
 
   // Hosting cost (annualized)
-  const hostingInfo = HOSTING_OPTIONS.find(hosting => hosting.id === hostingOption);
+  const hostingInfo = getHostingInfo(hostingOption);
   if (hostingInfo) {
     costs.annual.hosting = hostingInfo.price * 12;
   }
 
   // Maintenance cost (annualized)
-  const maintenanceInfo = MAINTENANCE_PLANS.find(plan => plan.id === maintenancePlan);
+  const maintenanceInfo = getMaintenanceInfo(maintenancePlan);
   if (maintenanceInfo) {
     const months = maintenanceInfo.hasFreeMonth ? 11 : 12;
     costs.annual.maintenance = maintenanceInfo.price * months;
@@ -398,34 +398,34 @@ export function formatCurrency(amount: number): string {
 /**
  * Get package info by ID
  */
-export function getPackageInfo(id: string): PackageInfo | undefined {
-  return WEBSITE_PACKAGES.find(pkg => pkg.id === id);
+export function getPackageInfo(idOrLabel: string): PackageInfo | undefined {
+  return WEBSITE_PACKAGES.find(pkg => pkg.id === idOrLabel || pkg.label === idOrLabel);
 }
 
 /**
- * Get add-on info by ID
+ * Get add-on info by ID or Label
  */
-export function getAddOnInfo(id: string): AddOnInfo | undefined {
-  return ADD_ONS.find(addon => addon.id === id);
+export function getAddOnInfo(idOrLabel: string): AddOnInfo | undefined {
+  return ADD_ONS.find(addon => addon.id === idOrLabel || addon.label === idOrLabel);
 }
 
 /**
- * Get domain info by ID
+ * Get domain info by ID or Label
  */
-export function getDomainInfo(id: string): DomainInfo | undefined {
-  return DOMAIN_OPTIONS.find(domain => domain.id === id);
+export function getDomainInfo(idOrLabel: string): DomainInfo | undefined {
+  return DOMAIN_OPTIONS.find(domain => domain.id === idOrLabel || domain.label.includes(idOrLabel));
 }
 
 /**
- * Get hosting info by ID
+ * Get hosting info by ID or Label
  */
-export function getHostingInfo(id: string): HostingInfo | undefined {
-  return HOSTING_OPTIONS.find(hosting => hosting.id === id);
+export function getHostingInfo(idOrLabel: string): HostingInfo | undefined {
+  return HOSTING_OPTIONS.find(hosting => hosting.id === idOrLabel || hosting.label.includes(idOrLabel));
 }
 
 /**
- * Get maintenance info by ID
+ * Get maintenance info by ID or Label
  */
-export function getMaintenanceInfo(id: string): MaintenanceInfo | undefined {
-  return MAINTENANCE_PLANS.find(plan => plan.id === id);
+export function getMaintenanceInfo(idOrLabel: string): MaintenanceInfo | undefined {
+  return MAINTENANCE_PLANS.find(plan => plan.id === idOrLabel || plan.label.includes(idOrLabel));
 }

@@ -117,8 +117,8 @@ export default function CustomInvoiceModal({
     const costs = calculateProjectCosts({
       websiteType: project.type,
       addOns: project.requirements.addons,
-      domainOption: project.domain_info?.domainOption || 'none',
-      hostingOption: project.domain_info?.hostingOption || 'basic',
+      domainOption: project.domain_info?.domainOption || project.requirements?.domain || 'none',
+      hostingOption: project.domain_info?.hostingOption || project.requirements?.hosting || 'basic',
       maintenancePlan: project.requirements.maintenance || 'none'
     });
 
@@ -510,11 +510,11 @@ export default function CustomInvoiceModal({
                   <div className="space-y-2">
                     <div className="flex justify-between items-center py-1">
                       <span className="text-sm">Domain:</span>
-                      <span className="font-semibold text-sm">{formatCurrency(getDomainInfo(project.domain_info?.domainOption || 'none')?.price || 0)}</span>
+                      <span className="font-semibold text-sm">{formatCurrency(getDomainInfo(project.domain_info?.domainOption || project.requirements?.domain || 'none')?.price || 0)}</span>
                     </div>
                     <div className="flex justify-between items-center py-1">
                       <span className="text-sm">Hosting:</span>
-                      <span className="font-semibold text-sm">{formatCurrency((getHostingInfo(project.domain_info?.hostingOption || 'basic')?.price || 0) * 12)}</span>
+                      <span className="font-semibold text-sm">{formatCurrency((getHostingInfo(project.domain_info?.hostingOption || project.requirements?.hosting || 'basic')?.price || 0) * 12)}</span>
                     </div>
                     <div className="flex justify-between items-center py-1">
                       <span className="text-sm">Maintenance:</span>

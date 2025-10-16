@@ -112,6 +112,12 @@ interface Project {
     hosting: string;
     maintenance: string;
   };
+  domain_info?: {
+    domainOption?: string;
+    hostingOption?: string;
+    domain?: string;
+    hosting?: string;
+  };
 }
 
 interface ModernProjectWorkspaceProps {
@@ -809,7 +815,13 @@ export default function ModernProjectWorkspace({
           onClose={() => setShowInvoiceModal(false)}
           invoiceData={invoiceData}
           setInvoiceData={setInvoiceData}
-          project={project}
+          project={{
+            ...project,
+            domain_info: {
+              domainOption: project.requirements.domain,
+              hostingOption: project.requirements.hosting,
+            },
+          }}
           onCreateInvoice={handleCreateInvoice}
           isLoading={isLoading}
         />

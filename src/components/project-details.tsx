@@ -91,11 +91,11 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
     maintenancePlan: maintenance_plan || 'none'
   });
 
-  const selectedPackage = getPackageInfo(website_type);
+  const selectedPackage = getPackageInfo(website_type || '');
   const selectedColorScheme = COLOR_SCHEMES.find(scheme => scheme.id === design_preferences.colorScheme);
-  const selectedDomain = getDomainInfo(domain_info.domainOption);
-  const selectedHosting = getHostingInfo(domain_info.hostingOption);
-  const selectedMaintenance = getMaintenanceInfo(maintenance_plan);
+  const selectedDomain = getDomainInfo(domain_info.domainOption || 'none');
+  const selectedHosting = getHostingInfo(domain_info.hostingOption || 'basic');
+  const selectedMaintenance = getMaintenanceInfo(maintenance_plan || 'none');
 
   return (
     <div className="space-y-6">
@@ -271,9 +271,9 @@ export function ProjectDetails({ project }: ProjectDetailsProps) {
             </div>
             <div className="text-right">
               <p className="font-semibold">
-                {selectedHosting ? formatCurrency(selectedHosting.price) : "N/A"}
+                {selectedHosting ? formatCurrency(selectedHosting.price * 12) : "N/A"}
               </p>
-              <p className="text-xs text-muted-foreground">per month</p>
+              <p className="text-xs text-muted-foreground">per year</p>
             </div>
           </div>
         </CardContent>
