@@ -195,16 +195,16 @@ export default function ProjectDetailPage() {
         id: '2',
         title: 'Design Phase',
         description: 'Website design and mockups creation',
-        status: project.status === 'submitted' || project.status === 'reviewing' ? 'pending' : 'completed',
+        status: project.status === 'pending' ? 'pending' : 'completed',
         due_date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-        completed_at: project.status !== 'submitted' && project.status !== 'reviewing' ? new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() : undefined,
+        completed_at: project.status !== 'pending' ? new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() : undefined,
       },
       {
         id: '3',
         title: 'Development',
         description: 'Website development and implementation',
         status: project.status === 'in_progress' ? 'in_progress' : 
-                project.status === 'completed' || project.status === 'review_needed' ? 'completed' : 'pending',
+                project.status === 'completed' || project.status === 'review' ? 'completed' : 'pending',
         due_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
         completed_at: project.status === 'completed' ? new Date().toISOString() : undefined,
       },
@@ -401,7 +401,9 @@ export default function ProjectDetailPage() {
                     <div className="flex items-center space-x-2">
                       <User className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm font-medium">Maintenance:</span>
-                      <span className="text-sm text-muted-foreground">{project.maintenance_plan || 'None'}</span>
+                      <Badge variant={project.maintenance_plan === 'none' || project.maintenance_plan === 'payg' || !project.maintenance_plan ? 'secondary' : 'default'} className="text-xs">
+                        {project.maintenance_plan === 'none' || project.maintenance_plan === 'payg' || !project.maintenance_plan ? 'Pay-As-You-Go' : 'Active'}
+                      </Badge>
                     </div>
                     {project.domain_info && typeof project.domain_info === 'object' && 'domain' in project.domain_info && (
                       <div className="flex items-center space-x-2">

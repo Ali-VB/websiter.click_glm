@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
           email
         )
       `)
-      .in('status', ['submitted', 'awaiting_invoice'])
+      .in('status', ['pending'])
       .order('created_at', { ascending: false });
 
     // Fetch invoices pending review
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
           title: 'Project Approval Required',
           description: `Project "${project.name}" from ${client.name} is awaiting approval`,
           clientId: client.id,
-          priority: project.status === 'submitted' ? 'high' : 'normal',
+          priority: 'high',
           timestamp: project.created_at
         });
       }

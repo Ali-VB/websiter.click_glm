@@ -196,17 +196,17 @@ export async function POST(request: NextRequest) {
     let isNewUser = false;
 
     if (existingUser) {
-      // User exists, check if they already have an ongoing project
+      // User exists, check if they already have a pending project
       const { data: ongoingProject } = await supabase
         .from('projects')
         .select('id')
         .eq('client_id', existingUser.id)
-        .eq('status', 'ongoing')
+        .eq('status', 'pending')
         .single();
 
       if (ongoingProject) {
         return NextResponse.json(
-          { success: false, message: 'You already have an ongoing project. Only one project at a time is allowed.' },
+          { success: false, message: 'You already have a pending project. Only one project at a time is allowed.' },
           { status: 409 }
         );
       }
@@ -270,12 +270,12 @@ export async function POST(request: NextRequest) {
       isNewUser = true;
     }
 
-    // Create project in Supabase with "ongoing" status
+    // Create project in Supabase with new 4-stage status system
     console.log("DEBUG: Creating project with userId:", userId);
     const projectDataToInsert = {
       client_id: userId,
       name: `Project ${selectedPackage}`, // Add required name field
-      status: 'pending', // Changed from 'ongoing' to 'pending'
+      status: 'pending', // Using new 4-stage system: pending, in_progress, review, completed
       website_type: selectedPackage,
       design_preferences: {
         designStyle,

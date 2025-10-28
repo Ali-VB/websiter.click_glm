@@ -194,25 +194,6 @@ export default function ModernProjectWorkspace({
     setActivityFeed(mockActivity);
   }, [project.id]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "submitted":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-      case "awaiting_invoice":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "approved":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      case "in_progress":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-      case "completed":
-        return "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200";
-      case "on_hold":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -296,7 +277,7 @@ export default function ModernProjectWorkspace({
       const updatedProject: Project = {
         ...project,
         isApproved: approved,
-        status: approved ? "payment_pending" : "submitted",
+        status: "pending",
         updatedAt: new Date().toISOString(),
         lastActivityAt: new Date().toISOString()
       };
@@ -381,7 +362,7 @@ export default function ModernProjectWorkspace({
       const updatedProject: Project = {
         ...project,
         invoices: [...(project.invoices || []), newInvoice],
-        status: "invoice_sent",
+        status: "pending",
         deadline: invoiceData.endDate, // Set deadline from invoice end date
         updatedAt: new Date().toISOString(),
         lastActivityAt: new Date().toISOString()
@@ -459,173 +440,6 @@ export default function ModernProjectWorkspace({
   const taxAmount = Math.round(subtotal * invoiceData.taxRate);
   const totalAmount = subtotal + taxAmount;
 
-  // Get primary actions based on current stage
-  const getPrimaryActions = (status: string) => {
-    const actions: Array<{
-      icon: string;
-      title: string;
-      description: string;
-      buttonText: string;
-      handler: () => void;
-    }> = [];
-
-    switch (status) {
-      case "submitted":
-        actions.push({
-          icon: "📋",
-          title: "Review Project Requirements",
-          description: "Check all project details and requirements",
-          buttonText: "Review Now",
-          handler: () => console.log("Review project")
-        });
-        actions.push({
-          icon: "✅",
-          title: "Approve Project",
-          description: "Approve and move to payment stage",
-          buttonText: "Approve",
-          handler: () => handleApprovalToggle(true)
-        });
-        break;
-
-      case "awaiting_confirmation":
-        actions.push({
-          icon: "💳",
-          title: "Create Invoice",
-          description: "Send invoice to client for payment",
-          buttonText: "Create Invoice",
-          handler: () => setShowInvoiceModal(true)
-        });
-        actions.push({
-          icon: "📅",
-          title: "Set Deadline",
-          description: "Set project completion deadline",
-          buttonText: "Set Deadline",
-          handler: () => {
-            const newDeadline = prompt("Enter deadline (YYYY-MM-DD):");
-            if (newDeadline) handleDeadlineUpdate(newDeadline);
-          }
-        });
-        break;
-
-      case "payment_pending":
-        actions.push({
-          icon: "✅",
-          title: "Confirm Payment",
-          description: "Mark payment as received",
-          buttonText: "Confirm Payment",
-          handler: () => handleStatusChange("designing")
-        });
-        actions.push({
-          icon: "📧",
-          title: "Send Payment Reminder",
-          description: "Send reminder to client",
-          buttonText: "Send Reminder",
-          handler: () => console.log("Send reminder")
-        });
-        break;
-
-      case "designing":
-        actions.push({
-          icon: "🎨",
-          title: "Review Design Deliverables",
-          description: "Check all design assets and mockups",
-          buttonText: "Review Design",
-          handler: () => console.log("Review design")
-        });
-        actions.push({
-          icon: "📤",
-          title: "Send Design to Client",
-          description: "Share design preview with client",
-          buttonText: "Send to Client",
-          handler: () => console.log("Send design to client")
-        });
-        break;
-
-      case "developing":
-        actions.push({
-          icon: "🚀",
-          title: "Deploy to Staging",
-          description: "Deploy project to staging server",
-          buttonText: "Deploy Now",
-          handler: () => console.log("Deploy to staging")
-        });
-        actions.push({
-          icon: "👀",
-          title: "Client Preview",
-          description: "Prepare client preview session",
-          buttonText: "Setup Preview",
-          handler: () => console.log("Setup preview")
-        });
-        break;
-
-      case "feedback":
-        actions.push({
-          icon: "✅",
-          title: "Mark as Completed",
-          description: "Finalize project and deliver to client",
-          buttonText: "Complete Project",
-          handler: () => handleStatusChange("completed")
-        });
-        actions.push({
-          icon: "🔄",
-          title: "Request Changes",
-          description: "Go back to design/development",
-          buttonText: "Request Changes",
-          handler: () => console.log("Request changes")
-        });
-        break;
-
-      case "completed":
-        actions.push({
-          icon: "📁",
-          title: "Archive Project",
-          description: "Archive completed project",
-          buttonText: "Archive",
-          handler: () => console.log("Archive project")
-        });
-        break;
-    }
-
-    return actions;
-  };
-
-  // Get secondary actions based on current stage
-  const getSecondaryActions = (status: string) => {
-    const actions: Array<{
-      icon: string;
-      title: string;
-      handler: () => void;
-    }> = [];
-
-    actions.push({
-      icon: "💬",
-      title: "Send Message",
-      handler: () => console.log("Send message")
-    });
-
-    actions.push({
-      icon: "📁",
-      title: "Upload Assets",
-      handler: () => console.log("Upload assets")
-    });
-
-    if (status !== "submitted" && status !== "completed") {
-      actions.push({
-        icon: "📊",
-        title: "Update Progress",
-        handler: () => console.log("Update progress")
-      });
-    }
-
-    actions.push({
-      icon: "📝",
-      title: "Add Note",
-      handler: () => console.log("Add note")
-    });
-
-    return actions;
-  };
-
   return (
     <div className="w-full">
       <div className="container mx-auto px-4 py-6">
@@ -646,8 +460,8 @@ export default function ModernProjectWorkspace({
                 </Button>
                 <h1 className="text-3xl font-bold flex items-center gap-3">
                   🚀 {project.name}
-                  <Badge className={getStatusColor(project.status).replace('bg-', 'bg-').replace('text-', 'text-')}>
-                    {project.status.replace('_', ' ')}
+                  <Badge className={getStageColor(project.status, true)}>
+                    {getStageInfo(project.status, true).title}
                   </Badge>
                 </h1>
               </div>
@@ -680,7 +494,7 @@ export default function ModernProjectWorkspace({
             <div>
               <h3 className="text-xl font-bold">🎯 PROJECT ACTIONS</h3>
               <p className="text-sm text-muted-foreground">
-                Current Stage: <span className="font-semibold text-primary">{project.status.replace('_', ' ').toUpperCase()}</span>
+                Current Stage: <span className="font-semibold text-primary">{getStageInfo(project.status, true).title}</span>
                 {project.deadline && ` • Deadline: ${formatDate(project.deadline)}`}
               </p>
             </div>
@@ -698,7 +512,7 @@ export default function ModernProjectWorkspace({
                   <div className="flex items-center space-x-2">
                     <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Stage:</span>
                     <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
-                      {project.status.replace('_', ' ').toUpperCase()}
+                      {getStageInfo(project.status, true).title}
                     </Badge>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -879,50 +693,21 @@ export default function ModernProjectWorkspace({
             </div>
             <div className="text-right">
               <div className="text-sm text-muted-foreground">Current Stage</div>
-              <div className="text-lg font-semibold text-primary">{project.status.replace('_', ' ').toUpperCase()}</div>
+              <div className="text-lg font-semibold text-primary">{getStageInfo(project.status, true).title}</div>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-4">
-            {/* Approve/Revoke Project - FIRST ITEM - Shows in submitted stage or when approved */}
-            {(project.status === 'submitted' || project.isApproved) && (
+            {adminStageInfo[project.status].adminActions.map((action) => (
               <Button
-                onClick={() => handleApprovalToggle(!project.isApproved)}
+                key={action}
+                onClick={() => console.log(action)}
                 disabled={isLoading}
-                className={project.isApproved ? "bg-orange-600 hover:bg-orange-700" : "bg-green-600 hover:bg-green-700"}
-              >
-                {project.isApproved ? "🔄 Revoke Approval" : "✅ Approve Project"}
-              </Button>
-            )}
-
-            {/* Create Invoice - Available from initial stage */}
-            <Button
-              onClick={() => setShowInvoiceModal(true)}
-              disabled={isLoading}
-              variant="outline"
-            >
-              💳 Create Invoice
-            </Button>
-
-            {/* Confirm Payment - Available from initial stage */}
-            <Button
-              onClick={() => handleStatusChange("in_progress")}
-              disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              ✅ Confirm Payment
-            </Button>
-
-            {/* Send to Client - Available in in_progress stage */}
-            {project.status === 'in_progress' && (
-              <Button
                 variant="outline"
-                onClick={handleSendToClient}
-                disabled={isLoading}
               >
-                📤 Send to Client
+                {action}
               </Button>
-            )}
+            ))}
 
             {/* Stage Selector - Always available for manual overrides */}
             <div className="flex items-center space-x-2">
@@ -946,10 +731,9 @@ export default function ModernProjectWorkspace({
           <div className="mt-6 p-4 bg-muted/50 rounded-lg">
             <h4 className="font-medium text-sm mb-2">💡 Action Guide:</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground">
-              <div>• <strong>Submitted:</strong> Review client requirements and approve project</div>
-              <div>• <strong>Approved:</strong> Create invoice and set project timeline</div>
-              <div>• <strong>Payment Pending:</strong> Confirm payment receipt</div>
-              <div>• <strong>In Progress:</strong> Develop and deliver to client</div>
+              {Object.entries(adminStageInfo).map(([stage, info]) => (
+                <div key={stage}>• <strong>{info.title}:</strong> {info.description}</div>
+              ))}
             </div>
           </div>
         </Card>

@@ -255,31 +255,55 @@ export const MAINTENANCE_PLANS: MaintenanceInfo[] = [
     label: "No Maintenance",
     price: 0,
     period: 'month',
-    description: "No ongoing maintenance support"
+    description: "No ongoing maintenance support. Pay-as-you-go for any needed help."
   },
   {
     id: "basic",
     label: "Basic Plan",
     price: 75,
     period: 'month',
-    description: "Includes updates, backups, and security monitoring.",
+    description: "Essential security and maintenance for peace of mind. 2 months free trial!",
     hasFreeMonth: true
   },
   {
-    id: "growth",
-    label: "Growth Plan",
-    price: 175,
+    id: "plus",
+    label: "Plus Plan",
+    price: 125,
     period: 'month',
-    description: "Priority support, updates, and light feature tweaks."
+    description: "Basic maintenance plus 1 hour of content updates monthly. 2 months free trial!",
+    hasFreeMonth: true
   },
   {
-    id: "premium",
-    label: "Premium Plan",
-    price: 300,
+    id: "payg",
+    label: "Pay-As-You-Go",
+    price: 0,
     period: 'month',
-    description: "Comprehensive support with content updates and analytics."
+    description: "No monthly fee. Pay $40/hour only when you need help. 15-minute increments, $10 minimum."
   },
+  {
+    id: "custom",
+    label: "Custom Plan",
+    price: 0,
+    period: 'month',
+    description: "Custom solutions - contact us for pricing"
+  }
 ];
+
+// Pay-As-You-Go Pricing Configuration
+export const PAYG_PRICING = {
+  hourlyRate: 40, // $40 per hour
+  minimumCharge: 10, // $10 minimum charge
+  incrementMinutes: 15, // Bill in 15-minute increments
+  incrementHours: 0.25 // 15 minutes in decimal hours
+};
+
+// Maintenance Plan Configuration
+export const MAINTENANCE_CONFIG = {
+  trialMonths: 2, // 2 months free trial for paid plans
+  plusPlanContentHours: 1, // 1 hour content updates per month for Plus plan
+  billingDay: 1, // Day of month for billing
+  gracePeriodDays: 7 // Grace period for missed payments
+};
 
 // Tax rates by region
 export const TAX_RATES = {
@@ -428,4 +452,93 @@ export function getHostingInfo(idOrLabel: string): HostingInfo | undefined {
  */
 export function getMaintenanceInfo(idOrLabel: string): MaintenanceInfo | undefined {
   return MAINTENANCE_PLANS.find(plan => plan.id === idOrLabel || plan.label.includes(idOrLabel));
+}
+
+/**
+ * Calculate pay-as-you-go cost based on time worked
+ * @param hours - Hours worked (decimal, e.g., 1.5 for 1 hour 30 minutes)
+ * @returns Calculated cost in CAD
+ */
+export function calculatePAYGCost(hours: number): number {
+  if (hours <= 0) return 0;
+  
+  // Calculate cost based on hourly rate
+  let cost = hours * PAYG_PRICING.hourlyRate;
+  
+  // Apply minimum charge
+  if (cost < PAYG_PRICING.minimumCharge && hours > 0) {
+    cost = PAYG_PRICING.minimumCharge;
+  }
+  
+  return Math.round(cost * 100) / 100; // Round to 2 decimal places
+}
+
+/**
+ * Calculate billable hours (rounded to 15-minute increments)
+ * @param actualHours - Actual hours worked
+ * @returns Billable hours rounded to increments
+ */
+export function calculateBillableHours(actualHours: number): number {
+  if (actualHours <= 0) return 0;
+  
+  // Round up to nearest 15-minute increment
+  const increments = Math.ceil(actualHours / PAYG_PRICING.incrementHours);
+  return increments * PAYG_PRICING.incrementHours;
+}
+
+/**
+ * Generate time estimate range for a task
+ * @param minHours - Minimum estimated hours
+ * @param maxHours - Maximum estimated hours
+ * @returns Formatted estimate string
+ */
+export function generateTimeEstimate(minHours: number, maxHours: number): string {
+  const minCost = calculatePAYGCost(calculateBillableHours(minHours));
+  const maxCost = calculatePAYGCost(calculateBillableHours(maxHours));
+  
+  return `${minHours}-${maxHours} hours, ${formatCurrency(minCost)}-${formatCurrency(maxCost)}`;
+}
+
+/**
+ * Check if a maintenance plan has trial period
+ * @param planId - Maintenance plan ID
+ * @returns True if plan has trial period
+ */
+export function hasTrialPeriod(planId: string): boolean {
+  const plan = getMaintenanceInfo(planId);
+  return plan?.hasFreeMonth || false;
+}
+
+/**
+ * Calculate maintenance billing amount for a month
+ * @param planId - Maintenance plan ID
+ * @param isInTrial - Whether client is in trial period
+ * @returns Monthly billing amount
+ */
+export function calculateMaintenanceBilling(planId: string, isInTrial: boolean = false): number {
+  if (isInTrial) return 0;
+  
+  const plan = getMaintenanceInfo(planId);
+  return plan?.price || 0;
+}
+
+/**
+ * Determine if work is covered by maintenance plan
+ * @param maintenancePlan - Client's maintenance plan
+ * @param workType - Type of work ('emergency', 'content', 'development')
+ * @returns True if work is covered by plan
+ */
+export function isWorkCoveredByPlan(maintenancePlan: string, workType: string): boolean {
+  switch (maintenancePlan) {
+    case 'basic':
+      return workType === 'emergency';
+    case 'plus':
+      return workType === 'emergency' || workType === 'content';
+    case 'payg':
+    case 'none':
+    case 'custom':
+      return false;
+    default:
+      return false;
+  }
 }

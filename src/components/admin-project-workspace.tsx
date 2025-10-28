@@ -92,7 +92,7 @@ interface Project {
     description: string;
     clientName: string;
     clientEmail: string;
-    status: "submitted" | "awaiting_invoice" | "approved" | "in_progress" | "completed" | "on_hold";
+    status: "pending" | "in_progress" | "review" | "completed";
     type: "business" | "portfolio" | "landing" | "booking" | "ecommerce" | "custom";
     website_type?: string;
     createdAt: string;
@@ -178,18 +178,14 @@ export default function AdminProjectWorkspace({
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "submitted":
+            case "pending":
                 return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-            case "awaiting_invoice":
-                return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-            case "approved":
-                return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
             case "in_progress":
+                return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+            case "review":
                 return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
             case "completed":
-                return "bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200";
-            case "on_hold":
-                return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+                return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
             default:
                 return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
         }
@@ -264,7 +260,7 @@ export default function AdminProjectWorkspace({
 
             const updatedProject = {
                 ...project,
-                status: "approved" as const,
+                status: "in_progress" as const,
                 updatedAt: new Date().toISOString(),
                 lastActivityAt: new Date().toISOString()
             };
@@ -516,9 +512,9 @@ export default function AdminProjectWorkspace({
                 id: '2',
                 title: 'Design Phase',
                 description: 'Website design and mockups creation',
-                status: project.status === 'submitted' ? 'pending' : 'completed',
+                status: project.status === 'pending' ? 'pending' : 'completed',
                 dueDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-                completedAt: project.status !== 'submitted' ? new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() : undefined,
+                completedAt: project.status !== 'pending' ? new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() : undefined,
             },
             {
                 id: '3',
@@ -583,7 +579,7 @@ export default function AdminProjectWorkspace({
 
                             {/* Quick Actions */}
                             <div className="flex gap-3 flex-wrap">
-                                {project.status === "submitted" && (
+                                {project.status === "pending" && (
                                     <Button
                                         onClick={handleConfirmProject}
                                         disabled={isLoading}
@@ -592,7 +588,7 @@ export default function AdminProjectWorkspace({
                                         {isLoading ? "Confirming..." : "✓ Confirm Project"}
                                     </Button>
                                 )}
-                                {project.status === "approved" && (
+                                {project.status === "in_progress" && (
                                     <Button
                                         onClick={() => setShowInvoiceCreator(true)}
                                         className="bg-blue-600 hover:bg-blue-700"

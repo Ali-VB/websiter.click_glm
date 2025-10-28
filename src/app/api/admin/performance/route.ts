@@ -4,11 +4,10 @@ import { requireAdminFromToken } from '@/lib/auth-helpers';
 
 interface PerformanceData {
   projectStatusDistribution: {
-    planning: number;
+    pending: number;
     in_progress: number;
     review: number;
     completed: number;
-    on_hold: number;
   };
   revenueTrends: Array<{
     month: string;
@@ -36,20 +35,17 @@ export async function GET(request: NextRequest) {
       .select('status');
 
     const projectStatusDistribution = {
-      planning: 0,
+      pending: 0,
       in_progress: 0,
       review: 0,
-      completed: 0,
-      on_hold: 0
+      completed: 0
     };
 
     projects?.forEach(project => {
       switch (project.status) {
-        case 'submitted':
-        case 'awaiting_invoice':
-          projectStatusDistribution.planning++;
+        case 'pending':
+          projectStatusDistribution.pending++;
           break;
-        case 'approved':
         case 'in_progress':
           projectStatusDistribution.in_progress++;
           break;
@@ -58,9 +54,6 @@ export async function GET(request: NextRequest) {
           break;
         case 'completed':
           projectStatusDistribution.completed++;
-          break;
-        case 'on_hold':
-          projectStatusDistribution.on_hold++;
           break;
       }
     });

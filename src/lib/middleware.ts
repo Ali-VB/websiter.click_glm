@@ -161,7 +161,7 @@ export async function hasOngoingProject(userId: string): Promise<boolean> {
     .from('projects')
     .select('id')
     .eq('client_id', userId)
-    .eq('status', 'ongoing')
+    .eq('status', 'pending')
     .single();
   
   return !!ongoingProject;

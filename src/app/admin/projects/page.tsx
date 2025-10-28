@@ -127,7 +127,7 @@ export default function AdminProjectsPage() {
       createdAt: "2023-05-15T10:30:00Z",
       updatedAt: "2023-06-20T14:45:00Z",
       deadline: "2023-07-30T23:59:59Z",
-      progressPercentage: 65,
+      progressPercentage: 50,
       lastActivityAt: "2023-06-20T14:45:00Z",
       isApproved: true,
       invoices: [],
@@ -170,12 +170,12 @@ export default function AdminProjectsPage() {
       description: "Personal portfolio website for Jane Doe to showcase her design work.",
       clientName: "Jane Doe",
       clientEmail: "jane@janedoe.com",
-      status: "invoice_sent",
+      status: "pending",
       type: "portfolio",
       createdAt: "2023-06-10T14:20:00Z",
       updatedAt: "2023-06-15T16:30:00Z",
       deadline: "2023-07-15T23:59:59Z",
-      progressPercentage: 85,
+      progressPercentage: 10,
       lastActivityAt: "2023-06-15T16:30:00Z",
       isApproved: false,
       invoices: [],
@@ -214,7 +214,7 @@ export default function AdminProjectsPage() {
       description: "Online store for XYZ Store with product catalog and shopping cart.",
       clientName: "Mike Johnson",
       clientEmail: "mike@xyzstore.com",
-      status: "submitted",
+      status: "pending",
       type: "ecommerce",
       createdAt: "2023-06-25T09:15:00Z",
       updatedAt: "2023-06-25T09:15:00Z",
@@ -316,25 +316,6 @@ export default function AdminProjectsPage() {
     
     setFilteredProjects(result);
   }, [projects, statusFilter, clientFilter]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "submitted":
-        return "bg-yellow-100 text-yellow-800";
-      case "awaiting_invoice":
-        return "bg-blue-100 text-blue-800";
-      case "approved":
-        return "bg-green-100 text-green-800";
-      case "in_progress":
-        return "bg-purple-100 text-purple-800";
-      case "completed":
-        return "bg-teal-100 text-teal-800";
-      case "on_hold":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
 
   const getMilestoneStatusColor = (status: string) => {
     switch (status) {
@@ -494,12 +475,11 @@ export default function AdminProjectsPage() {
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
                   <option value="all">All Statuses</option>
-                  <option value="submitted">Submitted</option>
-                  <option value="awaiting_invoice">Awaiting Invoice</option>
-                  <option value="approved">Approved</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="on_hold">On Hold</option>
+                  {getAllStages(true).map((stage) => (
+                    <option key={stage.value} value={stage.value}>
+                      {stage.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               
@@ -606,8 +586,8 @@ export default function AdminProjectsPage() {
                                 </div>
                               </td>
                               <td className="py-3 px-4">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
-                                  {project.status.replace('_', ' ')}
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStageColor(project.status, true)}`}>
+                                  {getStageInfo(project.status, true).title}
                                 </span>
                               </td>
                               <td className="py-3 px-4">

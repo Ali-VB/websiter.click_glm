@@ -12,11 +12,13 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AdminLayout } from "@/components/admin-layout";
+import { getStageColor, getStageInfo } from "@/lib/project-stages";
+import type { ProjectStage } from "@/lib/project-stages";
 
 interface ClientProject {
   id: string;
   name: string;
-  status: string;
+  status: ProjectStage;
   progressPercentage: number;
   lastActivityAt: string;
   budget?: number;
@@ -122,7 +124,7 @@ export default function AdminClientsPage() {
           id: "1", 
           name: "Business Website for ABC Corp", 
           status: "in_progress", 
-          progressPercentage: 65,
+          progressPercentage: 50,
           lastActivityAt: "2023-06-20T14:45:00Z",
           budget: 5000,
           spent: 3250
@@ -197,8 +199,8 @@ export default function AdminClientsPage() {
         { 
           id: "2", 
           name: "Portfolio for Jane Doe", 
-          status: "awaiting_invoice", 
-          progressPercentage: 85,
+          status: "pending", 
+          progressPercentage: 10,
           lastActivityAt: "2023-06-15T16:30:00Z",
           budget: 3500,
           spent: 2975
@@ -258,7 +260,7 @@ export default function AdminClientsPage() {
         { 
           id: "3", 
           name: "E-commerce for XYZ Store", 
-          status: "submitted", 
+          status: "pending", 
           progressPercentage: 10,
           lastActivityAt: "2023-06-25T09:15:00Z",
           budget: 12000,
@@ -761,7 +763,7 @@ export default function AdminClientsPage() {
                               )}
                               <div className="flex justify-between">
                                 <span className="text-muted-foreground">Status:</span>
-                                <Badge className={getStatusColor(selectedClient.status).replace('bg-', 'bg-').replace('text-', 'text-')}>
+                                <Badge className={getStatusColor(selectedClient.status)}>
                                   {selectedClient.status}
                                 </Badge>
                               </div>
@@ -838,7 +840,9 @@ export default function AdminClientsPage() {
                                     <div>
                                       <h4 className="font-medium">{project.name}</h4>
                                       <div className="flex items-center space-x-4 mt-1">
-                                        <Badge variant="outline">{project.status.replace('_', ' ')}</Badge>
+                                        <Badge variant="outline" className={getStageColor(project.status, true)}>
+                                          {getStageInfo(project.status, true).title}
+                                        </Badge>
                                         <span className="text-sm text-muted-foreground">
                                           Last activity: {formatDateTime(project.lastActivityAt)}
                                         </span>

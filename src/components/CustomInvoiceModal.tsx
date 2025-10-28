@@ -15,10 +15,12 @@ import {
   getDomainInfo, 
   getHostingInfo, 
   getMaintenanceInfo,
+  PAYG_PRICING,
+  calculatePAYGCost,
   TAX_RATES
 } from "@/lib/pricing";
 
-interface InvoiceData {
+export interface InvoiceData {
   ownerName: string;
   ownerEmail: string;
   ownerCompany: string;
@@ -32,6 +34,7 @@ interface InvoiceData {
   taxRate: number;
   paymentTerms: string;
   dueDate: string;
+  invoiceType: 'development' | 'maintenance' | 'payg';
 }
 
 interface Project {
@@ -544,6 +547,65 @@ export default function CustomInvoiceModal({
                       {formatCurrency(calculatedPricing.firstYearTotal / 12)}
                     </span>
                   </div>
+                </div>
+              </div>
+
+              {/* Invoice Type Selection */}
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-6 border border-indigo-200 dark:border-indigo-800">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  📋 Invoice Type
+                </h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Select Invoice Type</Label>
+                    <Select value={invoiceData.invoiceType} onValueChange={(value: 'development' | 'maintenance' | 'payg') => setInvoiceData({ ...invoiceData, invoiceType: value })}>
+                      <SelectTrigger className="mt-1 h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="development">🚀 Development Invoice</SelectItem>
+                        <SelectItem value="maintenance">🔧 Maintenance Invoice</SelectItem>
+                        <SelectItem value="payg">⏱️ Pay-As-You-Go Invoice</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {invoiceData.invoiceType === 'development' && 'One-time development costs for website creation'}
+                      {invoiceData.invoiceType === 'maintenance' && 'Monthly or annual maintenance plan subscription'}
+                      {invoiceData.invoiceType === 'payg' && 'Billable hours for support and updates'}
+                    </p>
+                  </div>
+
+                  {/* Maintenance Plan Selector for Maintenance Invoices */}
+                  {invoiceData.invoiceType === 'maintenance' && (
+                    <div>
+                      <Label className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Maintenance Plan</Label>
+                      <Select defaultValue={project.requirements.maintenance || 'none'}>
+                        <SelectTrigger className="mt-1 h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="basic">Basic Plan - $75/month</SelectItem>
+                          <SelectItem value="plus">Plus Plan - $125/month</SelectItem>
+                          <SelectItem value="payg">Pay-As-You-Go - $40/hour</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Pay-As-You-Go Hours Input */}
+                  {invoiceData.invoiceType === 'payg' && (
+                    <div>
+                      <Label className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Hours Worked</Label>
+                      <Input
+                        type="number"
+                        step="0.25"
+                        min="0.25"
+                        placeholder="1.5"
+                        className="mt-1 h-10"
+                      />
+                      <p className="text-sm text-gray-500 mt-1">Enter hours worked (in 15-minute increments)</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -1,18 +1,15 @@
-// Unified Project Stage System
+// Simplified Project Stage System
 // This file contains the stage definitions, mappings, and helper functions
 
 export type ProjectStage = 
-  | 'submitted'
-  | 'reviewing'
-  | 'invoice_sent'
-  | 'payment_pending'
+  | 'pending'
   | 'in_progress'
-  | 'review_needed'
+  | 'review'
   | 'completed';
 
 // Client-facing stage information
 export const clientStageInfo = {
-  submitted: {
+  pending: {
     title: 'Project Submitted',
     description: 'We have received your project requirements and will start reviewing them shortly.',
     color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
@@ -20,42 +17,18 @@ export const clientStageInfo = {
     actionRequired: false,
     nextStep: 'Our team will review your requirements'
   },
-  reviewing: {
-    title: 'Under Review',
-    description: 'Our team is reviewing your requirements and preparing your project proposal.',
-    color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    icon: '👀',
-    actionRequired: false,
-    nextStep: 'We will send you an invoice shortly'
-  },
-  invoice_sent: {
-    title: 'Invoice Sent',
-    description: 'Your invoice has been sent to your email. Please review and proceed with payment.',
-    color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-    icon: '📧',
-    actionRequired: true,
-    nextStep: 'Complete payment to begin development'
-  },
-  payment_pending: {
-    title: 'Awaiting Payment',
-    description: 'We are waiting for your payment confirmation to begin development.',
-    color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-    icon: '💳',
-    actionRequired: true,
-    nextStep: 'Complete your payment to proceed'
-  },
   in_progress: {
     title: 'In Development',
     description: 'Your website is currently being built. We will update you on progress.',
-    color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
     icon: '🚀',
     actionRequired: false,
     nextStep: 'We will notify you when ready for review'
   },
-  review_needed: {
+  review: {
     title: 'Ready for Review',
     description: 'Your website is ready! Please review it and provide any feedback.',
-    color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+    color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
     icon: '✨',
     actionRequired: true,
     nextStep: 'Provide feedback or approve the final version'
@@ -72,45 +45,24 @@ export const clientStageInfo = {
 
 // Admin-facing stage information
 export const adminStageInfo = {
-  submitted: {
-    title: 'Submitted',
-    description: 'Client submitted project through onboarding',
+  pending: {
+    title: 'Pending Review',
+    description: 'Client submitted project, awaiting admin review',
     color: 'bg-yellow-100 text-yellow-800',
-    adminActions: ['Review project', 'Send to reviewing', 'Request more info'],
-    nextStage: 'reviewing'
-  },
-  reviewing: {
-    title: 'Admin Review',
-    description: 'Admin reviewing project requirements',
-    color: 'bg-blue-100 text-blue-800',
-    adminActions: ['Create invoice', 'Request changes', 'Approve project'],
-    nextStage: 'invoice_sent'
-  },
-  invoice_sent: {
-    title: 'Invoice Created',
-    description: 'Invoice generated and sent to client',
-    color: 'bg-orange-100 text-orange-800',
-    adminActions: ['View invoice', 'Send reminder', 'Mark as paid'],
-    nextStage: 'payment_pending'
-  },
-  payment_pending: {
-    title: 'Awaiting Payment',
-    description: 'Waiting for client payment confirmation',
-    color: 'bg-red-100 text-red-800',
-    adminActions: ['Confirm payment', 'Send reminder', 'Cancel project'],
+    adminActions: ['Review project', 'Start development', 'Request more info'],
     nextStage: 'in_progress'
   },
   in_progress: {
     title: 'In Development',
     description: 'Active design and development phase',
-    color: 'bg-purple-100 text-purple-800',
+    color: 'bg-blue-100 text-blue-800',
     adminActions: ['Update progress', 'Add assets', 'Send for review'],
-    nextStage: 'review_needed'
+    nextStage: 'review'
   },
-  review_needed: {
+  review: {
     title: 'Client Review',
     description: 'Project ready, waiting for client feedback',
-    color: 'bg-indigo-100 text-indigo-800',
+    color: 'bg-purple-100 text-purple-800',
     adminActions: ['View feedback', 'Make revisions', 'Complete project'],
     nextStage: 'completed'
   },
@@ -125,12 +77,9 @@ export const adminStageInfo = {
 
 // Stage order for progress calculation
 export const stageOrder: ProjectStage[] = [
-  'submitted',
-  'reviewing',
-  'invoice_sent',
-  'payment_pending',
+  'pending',
   'in_progress',
-  'review_needed',
+  'review',
   'completed'
 ];
 
@@ -172,17 +121,20 @@ export function isActionRequired(stage: ProjectStage): boolean {
 // Legacy status mapping for backward compatibility
 export function mapLegacyStatus(legacyStatus: string): ProjectStage {
   const mapping: Record<string, ProjectStage> = {
-    'submitted': 'submitted',
-    'awaiting_invoice': 'invoice_sent',
-    'approved': 'payment_pending',
+    // Map old 7-stage system to new 4-stage system
+    'submitted': 'pending',
+    'reviewing': 'pending',
+    'invoice_sent': 'pending',
+    'payment_pending': 'pending',
     'in_progress': 'in_progress',
+    'review_needed': 'review',
     'completed': 'completed',
-    'on_hold': 'reviewing',
-    'pending': 'submitted',
-    'cancelled': 'submitted' // Reset cancelled projects to submitted
+    // Handle other legacy statuses
+    'ongoing': 'in_progress',
+    'cancelled': 'pending' // Reset cancelled projects to pending
   };
   
-  return mapping[legacyStatus] || 'submitted';
+  return mapping[legacyStatus] || 'pending';
 }
 
 // Get all available stages for dropdowns

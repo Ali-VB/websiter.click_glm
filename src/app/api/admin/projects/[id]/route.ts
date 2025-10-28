@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+import { ProjectStage } from '@/lib/project-stages';
+
 // Define the Project interface with new unified stage system
 interface Project {
   id: string;
   client_id: string;
   name?: string;
   description?: string;
-  status: "submitted" | "reviewing" | "invoice_sent" | "payment_pending" | "in_progress" | "review_needed" | "completed";
+  status: ProjectStage;
   website_type: string;
   design_preferences?: Record<string, unknown>;
   add_ons?: Record<string, unknown>;
@@ -175,7 +177,7 @@ export async function PUT(
 
     // Validate the request body
     const allowedFields = ['name', 'description', 'status', 'deadline', 'design_preferences', 'add_ons', 'domain_info', 'maintenance_plan'];
-    const validStatuses = ['submitted', 'reviewing', 'invoice_sent', 'payment_pending', 'in_progress', 'review_needed', 'completed'];
+    const validStatuses = ['pending', 'in_progress', 'review', 'completed'];
     const updates: Record<string, unknown> = {};
 
     for (const field of allowedFields) {

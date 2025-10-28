@@ -14,7 +14,7 @@ import { ClientHeader } from "@/components/client-header";
 import { ProjectTimeline } from "@/components/project-timeline";
 import { ProjectDetails } from "@/components/project-details";
 import { useTheme } from "@/components/theme-provider";
-import { ProjectStage, mapLegacyStatus } from "@/lib/project-stages";
+import { ProjectStage, mapLegacyStatus, getStageColor, getStageInfo } from "@/lib/project-stages";
 import { 
   FolderOpen, 
   Plus, 
@@ -223,48 +223,6 @@ export default function ProjectsPage() {
     window.history.replaceState({}, '', url.toString());
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "submitted":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "awaiting_confirmation":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-      case "payment_pending":
-        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200";
-      case "designing":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-      case "developing":
-        return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200";
-      case "feedback":
-        return "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200";
-      case "completed":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "submitted":
-        return <FileText className="h-4 w-4" />;
-      case "awaiting_confirmation":
-        return <Clock className="h-4 w-4" />;
-      case "payment_pending":
-        return <DollarSign className="h-4 w-4" />;
-      case "designing":
-        return <Eye className="h-4 w-4" />;
-      case "developing":
-        return <FolderOpen className="h-4 w-4" />;
-      case "feedback":
-        return <MessageSquare className="h-4 w-4" />;
-      case "completed":
-        return <CheckCircle className="h-4 w-4" />;
-      default:
-        return <AlertCircle className="h-4 w-4" />;
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -278,6 +236,38 @@ export default function ProjectsPage() {
       style: "currency",
       currency: "CAD",
     }).format(amount);
+  };
+
+  // Invoice status color function
+  const getInvoiceStatusColor = (status: string) => {
+    switch (status) {
+      case "draft":
+        return "bg-gray-100 text-gray-800";
+      case "pending_payment":
+        return "bg-yellow-100 text-yellow-800";
+      case "paid":
+        return "bg-green-100 text-green-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  // Support ticket status color function
+  const getSupportTicketStatusColor = (status: string) => {
+    switch (status) {
+      case "open":
+        return "bg-red-100 text-red-800";
+      case "in_progress":
+        return "bg-blue-100 text-blue-800";
+      case "resolved":
+        return "bg-green-100 text-green-800";
+      case "closed":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
   const selectedProject = projects.find(p => p.id === selectedProjectId);
@@ -406,11 +396,11 @@ export default function ProjectsPage() {
                       className="flex items-center gap-2 justify-start p-3 h-auto data-[state=active]:bg-muted"
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {getStatusIcon(project.status)}
+                        {getStageInfo(project.status, false).icon}
                         <span className="truncate text-sm font-medium">{project.name}</span>
                       </div>
-                      <Badge variant="outline" className={`ml-auto flex-shrink-0 text-xs ${getStatusColor(project.status)}`}>
-                        {project.status.replace("_", " ")}
+                      <Badge variant="outline" className={`ml-auto flex-shrink-0 text-xs ${getStageColor(project.status, false)}`}>
+                        {getStageInfo(project.status, false).title}
                       </Badge>
                     </TabsTrigger>
                   ))}
@@ -425,15 +415,15 @@ export default function ProjectsPage() {
                         <div className="flex justify-between items-start">
                           <div>
                             <CardTitle className="flex items-center gap-2">
-                              {getStatusIcon(project.status)}
+                              {getStageInfo(project.status, false).icon}
                               {project.name}
                             </CardTitle>
                             <CardDescription className="mt-2">
                               {project.description}
                             </CardDescription>
                           </div>
-                          <Badge variant="outline" className={getStatusColor(project.status)}>
-                            {project.status.replace("_", " ").toUpperCase()}
+                          <Badge variant="outline" className={getStageColor(project.status, false)}>
+                            {getStageInfo(project.status, false).title}
                           </Badge>
                         </div>
                       </CardHeader>
@@ -510,7 +500,7 @@ export default function ProjectsPage() {
                                   </div>
                                   <div className="text-right">
                                     <p className="font-medium">{formatCurrency(invoice.amount)}</p>
-                                    <Badge variant="outline" className={`text-xs ${getStatusColor(invoice.status)}`}>
+                                    <Badge variant="outline" className={`text-xs ${getInvoiceStatusColor(invoice.status)}`}>
                                       {invoice.status.replace("_", " ")}
                                     </Badge>
                                   </div>
@@ -542,7 +532,7 @@ export default function ProjectsPage() {
                                       {formatDate(ticket.created_at)}
                                     </p>
                                   </div>
-                                  <Badge variant="outline" className={`text-xs ${getStatusColor(ticket.status)}`}>
+                                  <Badge variant="outline" className={`text-xs ${getSupportTicketStatusColor(ticket.status)}`}>
                                     {ticket.status.replace("_", " ")}
                                   </Badge>
                                 </div>

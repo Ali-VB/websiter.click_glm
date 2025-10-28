@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const { count: activeProjects, error: projectsError } = await supabase
       .from('projects')
       .select('*', { count: 'exact', head: true })
-      .in('status', ['submitted', 'awaiting_invoice', 'approved', 'in_progress']);
+      .in('status', ['pending', 'in_progress', 'review']);
 
     if (projectsError) {
       console.error('Error fetching active projects count:', projectsError);
