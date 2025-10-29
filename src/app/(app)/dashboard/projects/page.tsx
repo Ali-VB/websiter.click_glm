@@ -27,8 +27,20 @@ import {
   FileText,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  FileEdit,
+  Rocket,
+  Sparkles,
+  PartyPopper
 } from "lucide-react";
+
+// Stage icon mapping
+const stageIcons = {
+  pending: FileEdit,
+  in_progress: Rocket,
+  review: Sparkles,
+  completed: PartyPopper
+} as const;
 
 interface Project {
   id: string;
@@ -335,7 +347,7 @@ export default function ProjectsPage() {
         />
 
         {/* Projects Content */}
-        <main className="p-6">
+        <main className="p-6 space-y-8">
           {error && (
             <div
               className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive"
@@ -388,97 +400,329 @@ export default function ProjectsPage() {
 
               {/* Horizontal Project Tabs */}
               <Tabs value={selectedProjectId} onValueChange={handleProjectChange} className="w-full">
-                <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 auto-rows-max">
-                  {projects.map((project) => (
-                    <TabsTrigger 
-                      key={project.id} 
-                      value={project.id}
-                      className="flex items-center gap-2 justify-start p-3 h-auto data-[state=active]:bg-muted"
-                    >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {getStageInfo(project.status, false).icon}
-                        <span className="truncate text-sm font-medium">{project.name}</span>
-                      </div>
-                      <Badge variant="outline" className={`ml-auto flex-shrink-0 text-xs ${getStageColor(project.status, false)}`}>
-                        {getStageInfo(project.status, false).title}
-                      </Badge>
-                    </TabsTrigger>
-                  ))}
+                    <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 auto-rows-max">
+                  {projects.map((project) => {
+                    const StageIcon = stageIcons[project.status];
+                    return (
+                      <TabsTrigger 
+                        key={project.id} 
+                        value={project.id}
+                        className="flex items-center gap-2 justify-start p-3 h-auto data-[state=active]:bg-muted"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <StageIcon className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate text-sm font-medium">{project.name}</span>
+                        </div>
+                        <Badge variant="outline" className={`ml-auto flex-shrink-0 text-xs ${getStageColor(project.status, false)}`}>
+                          {getStageInfo(project.status, false).title}
+                        </Badge>
+                      </TabsTrigger>
+                    );
+                  })}
                 </TabsList>
 
                 {/* Project Content */}
-                {projects.map((project) => (
+                {projects.map((project) => {
+                  const StageIcon = stageIcons[project.status];
+                  return (
                   <TabsContent key={project.id} value={project.id} className="mt-6 space-y-6">
                     {/* Project Overview */}
-                    <Card>
-                      <CardHeader>
+                    <Card className="asana-card">
+                      <CardHeader className="pb-4">
                         <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="flex items-center gap-2">
-                              {getStageInfo(project.status, false).icon}
-                              {project.name}
-                            </CardTitle>
-                            <CardDescription className="mt-2">
-                              {project.description}
-                            </CardDescription>
-                          </div>
-                          <Badge variant="outline" className={getStageColor(project.status, false)}>
-                            {getStageInfo(project.status, false).title}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">Created: {formatDate(project.created_at)}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">Updated: {formatDate(project.updated_at)}</span>
-                          </div>
-                          {project.deadline && (
-                            <div className="flex items-center gap-2">
-                              <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">Deadline: {formatDate(project.deadline)}</span>
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <CardTitle className="flex items-center gap-3 text-xl">
+                                  <div className="p-2 rounded-lg bg-primary/10">
+                                    <StageIcon className="h-5 w-5 text-primary" />
+                                  </div>
+                                  {project.name}
+                                </CardTitle>
+                                <CardDescription className="mt-3 text-base asana-text-muted">
+                                  {project.description}
+                                </CardDescription>
+                              </div>
+                              <div className="text-right text-sm text-muted-foreground space-y-1">
+                                <div>Created: {formatDate(project.created_at)}</div>
+                                <div>Updated: {formatDate(project.updated_at)}</div>
+                                {project.deadline && (
+                                  <div>Deadline: {formatDate(project.deadline)}</div>
+                                )}
+                              </div>
                             </div>
-                          )}
+                          </div>
                         </div>
-                        {project.budget && (
-                          <div className="mt-4 flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">Budget: {formatCurrency(project.budget)}</span>
-                          </div>
-                        )}
-                        {project.client_notes && (
-                          <div className="mt-4 p-3 bg-muted rounded-lg">
-                            <p className="text-sm font-medium mb-1">Client Notes:</p>
-                            <p className="text-sm text-muted-foreground">{project.client_notes}</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    {/* Project Timeline */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Project Timeline</CardTitle>
-                        <CardDescription>
-                          Track your project progress through each stage
-                        </CardDescription>
                       </CardHeader>
-                      <CardContent>
-                        <ProjectTimeline currentStage={project.status} />
+                      <CardContent className="space-y-4">
+                        {project.budget && (
+                          <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
+                            <DollarSign className="h-5 w-5 text-green-600" />
+                            <div>
+                              <p className="text-xs font-medium text-green-600">Budget</p>
+                              <p className="text-lg font-semibold text-green-600">{formatCurrency(project.budget)}</p>
+                            </div>
+                          </div>
+                        )}
+                        {/* Next Steps Guidance */}
+                        <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+                          <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-blue-600" />
+                            Your Next Steps
+                          </p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {project.status === 'pending' && (
+                              <>
+                                <div className="space-y-2">
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-blue-900">📧 Check email for invoice</p>
+                                      <p className="text-xs text-blue-700">Watch for invoice notification</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-blue-800">💳 Complete payment</p>
+                                      <p className="text-xs text-blue-600">Pay invoice to start development</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-blue-800">📋 Save confirmation</p>
+                                      <p className="text-xs text-blue-600">Keep payment receipt</p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-blue-800">📞 Be available</p>
+                                      <p className="text-xs text-blue-600">Answer developer questions</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-blue-800">📝 Prepare requirements</p>
+                                      <p className="text-xs text-blue-600">Gather any additional info</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-blue-800">⏳ Wait for start</p>
+                                      <p className="text-xs text-blue-600">Development begins soon</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                            
+                            {project.status === 'in_progress' && (
+                              <>
+                                <div className="space-y-2">
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-yellow-900">📧 Monitor email</p>
+                                      <p className="text-xs text-yellow-700">Watch for progress updates</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-yellow-800">📱 Test preview</p>
+                                      <p className="text-xs text-yellow-600">Check development preview</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-yellow-800">📝 Note concerns</p>
+                                      <p className="text-xs text-yellow-600">Document any issues</p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-yellow-800">🔄 Respond quickly</p>
+                                      <p className="text-xs text-yellow-600">Reply to developer questions</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-yellow-800">📋 Prepare feedback</p>
+                                      <p className="text-xs text-yellow-600">Get ready for review stage</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-yellow-800">⏳ Wait for review</p>
+                                      <p className="text-xs text-yellow-600">Review notification coming</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                            
+                            {project.status === 'review' && (
+                              <>
+                                <div className="space-y-2">
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-orange-900">👀 Review website</p>
+                                      <p className="text-xs text-orange-700">Check design and layout</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-orange-800">🧪 Test features</p>
+                                      <p className="text-xs text-orange-600">Try all pages and functions</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-orange-800">📱 Check mobile</p>
+                                      <p className="text-xs text-orange-600">Test on phone/tablet</p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-orange-800">💬 Give feedback</p>
+                                      <p className="text-xs text-orange-600">Share specific thoughts</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-orange-800">✏️ Request changes</p>
+                                      <p className="text-xs text-orange-600">Ask for needed edits</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-orange-800">👍 Approve final</p>
+                                      <p className="text-xs text-orange-600">Give approval to launch</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                            
+                            {project.status === 'completed' && (
+                              <>
+                                <div className="space-y-2">
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-green-900">🌐 Visit website</p>
+                                      <p className="text-xs text-green-700">Explore your new site</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-green-800">📊 Monitor performance</p>
+                                      <p className="text-xs text-green-600">Check site speed and uptime</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-green-800">🔧 Consider maintenance</p>
+                                      <p className="text-xs text-green-600">Keep site updated and secure</p>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-green-800">📈 Plan improvements</p>
+                                      <p className="text-xs text-green-600">Think about future features</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-green-800">🆘 Contact support</p>
+                                      <p className="text-xs text-green-600">Get help with any issues</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-start gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-300 mt-2 flex-shrink-0" />
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-green-800">🎉 Share website</p>
+                                      <p className="text-xs text-green-600">Tell others about your site</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {project.client_notes && (
+                          <div className="p-4 rounded-lg bg-accent/50 border border-border">
+                            <p className="text-sm font-semibold mb-2 flex items-center gap-2">
+                              <FileText className="h-4 w-4" />
+                              Client Notes
+                            </p>
+                            <p className="text-sm asana-text-muted leading-relaxed">{project.client_notes}</p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
 
-                    {/* Project Details */}
-                    <ProjectDetails project={project} />
+                    {/* Main Content Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {/* Left Column - Main Project Info */}
+                      <div className="lg:col-span-2 space-y-6">
+                        {/* Project Details */}
+                        <ProjectDetails project={project} />
+                      </div>
 
-                    {/* Project Details Grid */}
+                      {/* Right Column - Timeline & Guidance */}
+                      <div className="space-y-6">
+                        {/* Project Timeline */}
+                        <Card className="asana-card">
+                          <CardHeader className="pb-4">
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                              <div className="p-2 rounded-lg bg-primary/10">
+                                <Clock className="h-5 w-5 text-primary" />
+                              </div>
+                              Progress
+                            </CardTitle>
+                            <CardDescription className="text-sm asana-text-muted">
+                              Track your project journey
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="p-4">
+                            <ProjectTimeline currentStage={project.status} />
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+
+                    {/* Invoices & Support Section */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Invoices */}
-                      <Card>
+                      <Card className="asana-card">
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
                             <FileText className="h-5 w-5" />
@@ -512,7 +756,7 @@ export default function ProjectsPage() {
                       </Card>
 
                       {/* Support Tickets */}
-                      <Card>
+                      <Card className="asana-card">
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2">
                             <HelpCircle className="h-5 w-5" />
@@ -542,34 +786,9 @@ export default function ProjectsPage() {
                         </CardContent>
                       </Card>
                     </div>
-
-                    {/* Quick Actions */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Quick Actions</CardTitle>
-                        <CardDescription>
-                          Common actions for your project
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <Button variant="outline" className="justify-start">
-                            <Upload className="mr-2 h-4 w-4" />
-                            Upload Files
-                          </Button>
-                          <Button variant="outline" className="justify-start">
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                            Send Message
-                          </Button>
-                          <Button variant="outline" className="justify-start">
-                            <HelpCircle className="mr-2 h-4 w-4" />
-                            Get Support
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
                   </TabsContent>
-                ))}
+                  );
+                })}
               </Tabs>
             </div>
           )}

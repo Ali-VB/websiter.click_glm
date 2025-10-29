@@ -214,10 +214,8 @@ export function ClientSidebar({
                   key={item.name}
                   onClick={() => handleNavigation(item.href)}
                   className={cn(
-                    "w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors text-left",
-                    isActive
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:text-accent-foreground hover:bg-accent"
+                    "asana-sidebar-item w-full flex items-center text-left",
+                    isActive && "asana-sidebar-item-active"
                   )}
                 >
                   <item.icon className="mr-3 h-4 w-4 flex-shrink-0" />
