@@ -42,7 +42,10 @@ export default function RootLayout({
 
   return (
     <html lang="en">
-      <head>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable}`}
+        suppressHydrationWarning
+      >
         {process.env.NODE_ENV === "development" && (
           <Script
             src="//unpkg.com/react-grab/dist/index.global.js"
@@ -51,11 +54,6 @@ export default function RootLayout({
             data-enabled="true"
           />
         )}
-      </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable}`}
-        suppressHydrationWarning
-      >
         <AuthProvider>
           {children}
         </AuthProvider>
